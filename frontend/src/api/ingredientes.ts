@@ -1,6 +1,7 @@
 import { Ingrediente, IngredienteCreate } from '../types';
+import { API_URL } from '../config';
 
-const BASE = 'http://localhost:8000/ingredientes';
+const BASE = `${API_URL}/ingredientes`;
 
 export const getIngredientes = async (): Promise<Ingrediente[]> => {
   const res = await fetch(BASE);

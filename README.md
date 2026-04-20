@@ -28,6 +28,13 @@ npm install
 npm run dev
 ```
 
+### Docker
+```bash
+cp backend/env.example backend/.env.docker
+cp frontend/.env.example frontend/.env.docker
+docker compose up --build
+```
+
 ## Endpoints principales
 - `GET/POST /categorias`
 - `GET/PATCH/DELETE /categorias/{id}`

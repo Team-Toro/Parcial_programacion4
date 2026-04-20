@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: food_store
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./backend/
+      network: host
+    depends_on:
+      - db
+    env_file:
+      - ./backend/.env
+      - ./backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/food_store
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+
+  frontend:
+    build:
+      context: ./frontend/
+    ports:
+      - "5173:5173"
+    env_file:
+      - ./frontend/.env.docker
+
+volumes:
+  postgres_data:

@@ -1,6 +1,7 @@
 import { Categoria, CategoriaCreate } from '../types';
+import { API_URL } from '../config';
 
-const BASE = 'http://localhost:8000/categorias';
+const BASE = `${API_URL}/categorias`;
 
 export const getCategorias = async (): Promise<Categoria[]> => {
   const res = await fetch(BASE);
