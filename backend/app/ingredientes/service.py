@@ -1,8 +1,8 @@
 from typing import List
 from sqlmodel import Session, select
 from fastapi import HTTPException
-from ..models.ingrediente import Ingrediente
-from ..schemas.ingrediente import IngredienteCreate, IngredienteUpdate
+from .model import Ingrediente
+from .schema import IngredienteCreate, IngredienteUpdate
 
 
 def get_all(session: Session, offset: int = 0, limit: int = 20) -> List[Ingrediente]:

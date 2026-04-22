@@ -2,8 +2,8 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, Query, Path
 from sqlmodel import Session
 from ..database import get_session
-from ..schemas.categoria import CategoriaCreate, CategoriaRead, CategoriaUpdate
-from ..services import categoria_service
+from .schema import CategoriaCreate, CategoriaRead, CategoriaUpdate
+from . import service as categoria_service
 
 router = APIRouter(prefix="/categorias", tags=["Categorías"])
 

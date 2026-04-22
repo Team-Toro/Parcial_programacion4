@@ -1,8 +1,9 @@
 from typing import List
+from datetime import datetime
 from sqlmodel import Session, select
 from fastapi import HTTPException
-from ..models.categoria import Categoria
-from ..schemas.categoria import CategoriaCreate, CategoriaUpdate
+from .model import Categoria
+from .schema import CategoriaCreate, CategoriaUpdate
 
 
 def get_all(session: Session, offset: int = 0, limit: int = 20) -> List[Categoria]:
@@ -30,6 +31,7 @@ def create(session: Session, data: CategoriaCreate) -> Categoria:
 def update(session: Session, categoria_id: int, data: CategoriaUpdate) -> Categoria:
     categoria = get_by_id(session, categoria_id)
     update_data = data.model_dump(exclude_unset=True)
+    update_data["updated_at"] = datetime.utcnow()
     for key, value in update_data.items():
         setattr(categoria, key, value)
     session.add(categoria)

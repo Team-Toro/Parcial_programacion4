@@ -2,7 +2,7 @@ from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
-    from .producto import ProductoIngrediente
+    from ..productos.model import ProductoIngrediente
 
 
 class Ingrediente(SQLModel, table=True):

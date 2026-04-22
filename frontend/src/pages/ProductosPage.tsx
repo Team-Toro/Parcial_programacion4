@@ -9,16 +9,16 @@ import {
 } from '../api/productos';
 import { getCategorias } from '../api/categorias';
 import { getIngredientes } from '../api/ingredientes';
-import { Producto, ProductoCreate } from '../types';
+import { Producto, ProductoCreate, IngredienteEnProducto } from '../types';
 import Modal from '../components/ui/Modal';
 
 const defaultForm: ProductoCreate = {
   nombre: '',
   descripcion: '',
-  precio: 0,
+  precio_base: 0,
   disponible: true,
   categoria_ids: [],
-  ingrediente_ids: [],
+  ingredientes: [],
 };
 
 export default function ProductosPage() {
@@ -79,10 +79,15 @@ export default function ProductosPage() {
     setForm({
       nombre: p.nombre,
       descripcion: p.descripcion ?? '',
-      precio: Number(p.precio),
+      precio_base: Number(p.precio_base),
+      tiempo_prep_min: p.tiempo_prep_min,
       disponible: p.disponible,
       categoria_ids: p.categorias.map(pc => pc.categoria?.id).filter((id): id is number => id !== undefined),
-      ingrediente_ids: p.ingredientes.map(pi => pi.ingrediente.id),
+      ingredientes: p.ingredientes.map(pi => ({
+        ingrediente_id: pi.ingrediente.id,
+        es_removible: pi.es_removible,
+        es_opcional: pi.es_opcional,
+      })),
     });
     setError('');
     setIsOpen(true);
@@ -99,7 +104,7 @@ export default function ProductosPage() {
       setError('El nombre es obligatorio');
       return;
     }
-    if (form.precio < 0) {
+    if (form.precio_base < 0) {
       setError('El precio no puede ser negativo');
       return;
     }
@@ -110,8 +115,35 @@ export default function ProductosPage() {
     }
   };
 
-  const toggleId = (list: number[], id: number): number[] =>
-    list.includes(id) ? list.filter(x => x !== id) : [...list, id];
+  const toggleCategoria = (id: number) =>
+    setForm(f => ({
+      ...f,
+      categoria_ids: f.categoria_ids.includes(id)
+        ? f.categoria_ids.filter(x => x !== id)
+        : [...f.categoria_ids, id],
+    }));
+
+  const isIngSelected = (id: number) => form.ingredientes.some(pi => pi.ingrediente_id === id);
+
+  const toggleIngrediente = (id: number) => {
+    const exists = form.ingredientes.find(pi => pi.ingrediente_id === id);
+    if (exists) {
+      setForm(f => ({ ...f, ingredientes: f.ingredientes.filter(pi => pi.ingrediente_id !== id) }));
+    } else {
+      setForm(f => ({
+        ...f,
+        ingredientes: [...f.ingredientes, { ingrediente_id: id, es_removible: true, es_opcional: false }],
+      }));
+    }
+  };
+
+  const updateIngProp = (id: number, prop: keyof IngredienteEnProducto, value: boolean) =>
+    setForm(f => ({
+      ...f,
+      ingredientes: f.ingredientes.map(pi =>
+        pi.ingrediente_id === id ? { ...pi, [prop]: value } : pi
+      ),
+    }));
 
   if (isLoading) return <div className="p-8 text-slate-500">Cargando productos...</div>;
   if (isError) return <div className="p-8 text-red-500">Error al cargar los productos.</div>;
@@ -146,7 +178,7 @@ export default function ProductosPage() {
                 <td className="px-6 py-4 text-slate-400">{p.id}</td>
                 <td className="px-6 py-4 font-medium text-slate-800">{p.nombre}</td>
                 <td className="px-6 py-4 text-slate-700 font-semibold">
-                  ${Number(p.precio).toFixed(2)}
+                  ${Number(p.precio_base).toFixed(2)}
                 </td>
                 <td className="px-6 py-4">
                   {p.disponible ? (
@@ -167,9 +199,14 @@ export default function ProductosPage() {
                       p.categorias.map(pc => (
                         <span
                           key={pc.categoria?.id ?? Math.random()}
-                          className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-medium"
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            pc.es_principal
+                              ? 'bg-orange-500 text-white'
+                              : 'bg-orange-100 text-orange-700'
+                          }`}
                         >
                           {pc.categoria?.nombre ?? '—'}
+                          {pc.es_principal && ' ★'}
                         </span>
                       ))
                     )}
@@ -234,16 +271,32 @@ export default function ProductosPage() {
               placeholder="Descripción opcional..."
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Precio *</label>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              value={form.precio}
-              onChange={e => setForm(f => ({ ...f, precio: parseFloat(e.target.value) || 0 }))}
-            />
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Precio base *</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={form.precio_base}
+                onChange={e => setForm(f => ({ ...f, precio_base: parseFloat(e.target.value) || 0 }))}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Tiempo prep. (min)</label>
+              <input
+                type="number"
+                min={0}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={form.tiempo_prep_min ?? ''}
+                onChange={e => setForm(f => ({
+                  ...f,
+                  tiempo_prep_min: e.target.value ? parseInt(e.target.value) : undefined,
+                }))}
+                placeholder="Ej: 15"
+              />
+            </div>
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
             <input
@@ -265,9 +318,7 @@ export default function ProductosPage() {
                   <input
                     type="checkbox"
                     checked={form.categoria_ids.includes(cat.id)}
-                    onChange={() =>
-                      setForm(f => ({ ...f, categoria_ids: toggleId(f.categoria_ids, cat.id) }))
-                    }
+                    onChange={() => toggleCategoria(cat.id)}
                     className="w-4 h-4 accent-orange-500"
                   />
                   {cat.nombre}
@@ -277,29 +328,51 @@ export default function ProductosPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Ingredientes</label>
-            <div className="max-h-32 overflow-y-auto border border-slate-300 rounded-lg p-2 flex flex-col gap-1">
+            <div className="max-h-48 overflow-y-auto border border-slate-300 rounded-lg p-2 flex flex-col gap-2">
               {ingredientes.length === 0 && (
                 <span className="text-slate-400 text-xs">Sin ingredientes disponibles</span>
               )}
-              {ingredientes.map(ing => (
-                <label key={ing.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.ingrediente_ids.includes(ing.id)}
-                    onChange={() =>
-                      setForm(f => ({
-                        ...f,
-                        ingrediente_ids: toggleId(f.ingrediente_ids, ing.id),
-                      }))
-                    }
-                    className="w-4 h-4 accent-orange-500"
-                  />
-                  {ing.nombre}
-                  {ing.es_alergeno && (
-                    <span className="text-xs text-red-500">⚠</span>
-                  )}
-                </label>
-              ))}
+              {ingredientes.map(ing => {
+                const sel = form.ingredientes.find(pi => pi.ingrediente_id === ing.id);
+                return (
+                  <div key={ing.id}>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!sel}
+                        onChange={() => toggleIngrediente(ing.id)}
+                        className="w-4 h-4 accent-orange-500"
+                      />
+                      {ing.nombre}
+                      {ing.es_alergeno && (
+                        <span className="text-xs text-red-500">⚠ Alérgeno</span>
+                      )}
+                    </label>
+                    {sel && (
+                      <div className="ml-6 mt-1 flex gap-4">
+                        <label className="flex items-center gap-1 text-xs text-slate-600 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={sel.es_removible}
+                            onChange={e => updateIngProp(ing.id, 'es_removible', e.target.checked)}
+                            className="w-3 h-3 accent-orange-500"
+                          />
+                          Removible
+                        </label>
+                        <label className="flex items-center gap-1 text-xs text-slate-600 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={sel.es_opcional}
+                            onChange={e => updateIngProp(ing.id, 'es_opcional', e.target.checked)}
+                            className="w-3 h-3 accent-orange-500"
+                          />
+                          Opcional
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div className="flex gap-3 justify-end pt-2">

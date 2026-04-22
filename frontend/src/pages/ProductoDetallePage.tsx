@@ -33,9 +33,16 @@ export default function ProductoDetallePage() {
           </span>
         </div>
         <p className="text-slate-500 mb-4">{producto.descripcion ?? 'Sin descripción.'}</p>
-        <p className="text-2xl font-bold text-orange-500 mb-6">
-          ${Number(producto.precio).toFixed(2)}
-        </p>
+        <div className="flex items-center gap-4 mb-6">
+          <p className="text-2xl font-bold text-orange-500">
+            ${Number(producto.precio_base).toFixed(2)}
+          </p>
+          {producto.tiempo_prep_min != null && (
+            <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+              ⏱ {producto.tiempo_prep_min} min
+            </span>
+          )}
+        </div>
 
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-2">
@@ -48,9 +55,14 @@ export default function ProductoDetallePage() {
               producto.categorias.map(pc => (
                 <span
                   key={pc.categoria?.id ?? Math.random()}
-                  className="bg-orange-100 text-orange-700 text-xs px-3 py-1 rounded-full font-medium"
+                  className={`text-xs px-3 py-1 rounded-full font-medium ${
+                    pc.es_principal
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-orange-100 text-orange-700'
+                  }`}
                 >
                   {pc.categoria?.nombre ?? 'Categoría'}
+                  {pc.es_principal && ' ★'}
                 </span>
               ))
             )}
@@ -66,14 +78,25 @@ export default function ProductoDetallePage() {
           ) : (
             <ul className="divide-y divide-slate-100">
               {producto.ingredientes.map(pi => (
-                <li key={pi.ingrediente.id} className="py-2 flex justify-between text-sm">
+                <li key={pi.ingrediente.id} className="py-2 flex justify-between items-center text-sm">
                   <span className="text-slate-700 font-medium">
                     {pi.ingrediente.nombre}
                     {pi.ingrediente.es_alergeno && (
                       <span className="ml-2 text-xs text-red-500 font-semibold">⚠ Alérgeno</span>
                     )}
                   </span>
-                  {pi.cantidad && <span className="text-slate-400">{pi.cantidad}</span>}
+                  <div className="flex gap-2">
+                    {pi.es_removible && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                        Removible
+                      </span>
+                    )}
+                    {pi.es_opcional && (
+                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                        Opcional
+                      </span>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

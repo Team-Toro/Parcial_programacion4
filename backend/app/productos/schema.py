@@ -1,18 +1,21 @@
 from typing import Optional, List
 from decimal import Decimal
+from datetime import datetime
 from sqlmodel import SQLModel
 from pydantic import field_validator
-from .categoria import CategoriaRead
-from .ingrediente import IngredienteRead
+from ..categorias.schema import CategoriaRead
+from ..ingredientes.schema import IngredienteRead
 
 
 class ProductoBase(SQLModel):
     nombre: str
     descripcion: Optional[str] = None
-    precio: Decimal
+    precio_base: Decimal
+    imagenes_url: Optional[List[str]] = None
+    tiempo_prep_min: Optional[int] = None
     disponible: bool = True
 
-    @field_validator("precio")
+    @field_validator("precio_base")
     @classmethod
     def precio_positivo(cls, v: Decimal) -> Decimal:
         if v < 0:
@@ -27,30 +30,43 @@ class ProductoBase(SQLModel):
         return v.strip()
 
 
+class IngredienteEnProducto(SQLModel):
+    ingrediente_id: int
+    es_removible: bool
+    es_opcional: bool = False
+
+
 class ProductoCreate(ProductoBase):
     categoria_ids: List[int] = []
-    ingrediente_ids: List[int] = []
+    ingredientes: List[IngredienteEnProducto] = []
 
 
 class ProductoUpdate(SQLModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
-    precio: Optional[Decimal] = None
+    precio_base: Optional[Decimal] = None
+    imagenes_url: Optional[List[str]] = None
+    tiempo_prep_min: Optional[int] = None
     disponible: Optional[bool] = None
     categoria_ids: Optional[List[int]] = None
-    ingrediente_ids: Optional[List[int]] = None
+    ingredientes: Optional[List[IngredienteEnProducto]] = None
 
 
 class ProductoCategoriaRead(SQLModel):
     categoria: Optional[CategoriaRead] = None
+    es_principal: bool = False
 
 
-class IngredienteConCantidad(SQLModel):
+class IngredienteConDetalles(SQLModel):
     ingrediente: IngredienteRead
-    cantidad: Optional[str] = None
+    es_removible: bool
+    es_opcional: bool
 
 
 class ProductoRead(ProductoBase):
     id: int
     categorias: List[ProductoCategoriaRead] = []
-    ingredientes: List[IngredienteConCantidad] = []
+    ingredientes: List[IngredienteConDetalles] = []
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: Optional[datetime] = None

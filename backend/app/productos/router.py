@@ -2,8 +2,8 @@ from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, Query, Path
 from sqlmodel import Session
 from ..database import get_session
-from ..schemas.producto import ProductoCreate, ProductoRead, ProductoUpdate
-from ..services import producto_service
+from .schema import ProductoCreate, ProductoRead, ProductoUpdate
+from . import service as producto_service
 
 router = APIRouter(prefix="/productos", tags=["Productos"])
 
