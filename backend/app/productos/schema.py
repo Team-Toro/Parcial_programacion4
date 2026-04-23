@@ -3,8 +3,8 @@ from decimal import Decimal
 from datetime import datetime
 from sqlmodel import SQLModel
 from pydantic import field_validator
-from ..categorias.schema import CategoriaRead
-from ..ingredientes.schema import IngredienteRead
+from ..categorias.schema import CategoriaRead, CategoriaPublic
+from ..ingredientes.schema import IngredienteRead, IngredientePublic
 
 
 class ProductoBase(SQLModel):
@@ -70,3 +70,20 @@ class ProductoRead(ProductoBase):
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None
+
+
+class ProductoCategoriaPublic(SQLModel):
+    categoria: Optional[CategoriaPublic] = None
+    es_principal: bool = False
+
+
+class IngredienteConDetallesPublic(SQLModel):
+    ingrediente: IngredientePublic
+    es_removible: bool
+    es_opcional: bool
+
+
+class ProductoPublic(ProductoBase):
+    id: int
+    categorias: List[ProductoCategoriaPublic] = []
+    ingredientes: List[IngredienteConDetallesPublic] = []

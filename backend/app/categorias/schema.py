@@ -36,3 +36,7 @@ class CategoriaRead(CategoriaBase):
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None
+
+
+class CategoriaPublic(CategoriaBase):
+    id: int

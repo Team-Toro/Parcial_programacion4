@@ -1,44 +1,48 @@
 from typing import List
-from sqlmodel import Session, select
+from datetime import datetime
 from fastapi import HTTPException
 from .model import Ingrediente
 from .schema import IngredienteCreate, IngredienteUpdate
+from .repository import IngredienteRepository
+from ..uow.unit_of_work import UnitOfWork
 
 
-def get_all(session: Session, offset: int = 0, limit: int = 20) -> List[Ingrediente]:
-    return session.exec(select(Ingrediente).offset(offset).limit(limit)).all()
+class IngredienteService:
 
+    def get_all(self, uow: UnitOfWork, offset: int = 0, limit: int = 20) -> List[Ingrediente]:
+        repo = IngredienteRepository(uow.session)
+        return repo.get_all(offset, limit)
 
-def get_by_id(session: Session, ingrediente_id: int) -> Ingrediente:
-    ing = session.get(Ingrediente, ingrediente_id)
-    if not ing:
-        raise HTTPException(status_code=404, detail=f"Ingrediente {ingrediente_id} no encontrado")
-    return ing
+    def get_by_id(self, uow: UnitOfWork, ingrediente_id: int) -> Ingrediente:
+        repo = IngredienteRepository(uow.session)
+        ing = repo.get_by_id(ingrediente_id)
+        if not ing:
+            raise HTTPException(status_code=404, detail=f"Ingrediente {ingrediente_id} no encontrado")
+        return ing
 
+    def create(self, uow: UnitOfWork, data: IngredienteCreate) -> Ingrediente:
+        repo = IngredienteRepository(uow.session)
+        if repo.get_by_nombre(data.nombre):
+            raise HTTPException(status_code=409, detail="Ya existe un ingrediente con ese nombre")
+        ing = Ingrediente.model_validate(data)
+        repo.save(ing)
+        return ing
 
-def create(session: Session, data: IngredienteCreate) -> Ingrediente:
-    existing = session.exec(select(Ingrediente).where(Ingrediente.nombre == data.nombre)).first()
-    if existing:
-        raise HTTPException(status_code=409, detail="Ya existe un ingrediente con ese nombre")
-    ing = Ingrediente.model_validate(data)
-    session.add(ing)
-    session.commit()
-    session.refresh(ing)
-    return ing
+    def update(self, uow: UnitOfWork, ingrediente_id: int, data: IngredienteUpdate) -> Ingrediente:
+        repo = IngredienteRepository(uow.session)
+        ing = self.get_by_id(uow, ingrediente_id)
+        if data.nombre is not None:
+            if repo.get_by_nombre(data.nombre, exclude_id=ingrediente_id):
+                raise HTTPException(status_code=409, detail="Ya existe un ingrediente con ese nombre")
+        update_data = data.model_dump(exclude_unset=True)
+        update_data["updated_at"] = datetime.utcnow()
+        for key, value in update_data.items():
+            setattr(ing, key, value)
+        repo.save(ing)
+        return ing
 
-
-def update(session: Session, ingrediente_id: int, data: IngredienteUpdate) -> Ingrediente:
-    ing = get_by_id(session, ingrediente_id)
-    update_data = data.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(ing, key, value)
-    session.add(ing)
-    session.commit()
-    session.refresh(ing)
-    return ing
-
-
-def delete(session: Session, ingrediente_id: int) -> None:
-    ing = get_by_id(session, ingrediente_id)
-    session.delete(ing)
-    session.commit()
+    def delete(self, uow: UnitOfWork, ingrediente_id: int) -> None:
+        repo = IngredienteRepository(uow.session)
+        ing = self.get_by_id(uow, ingrediente_id)
+        ing.deleted_at = datetime.utcnow()
+        repo.save(ing)
