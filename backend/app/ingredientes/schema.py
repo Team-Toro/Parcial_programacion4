@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 from sqlmodel import SQLModel
 from pydantic import field_validator
 
@@ -27,4 +28,11 @@ class IngredienteUpdate(SQLModel):
 
 
 class IngredienteRead(IngredienteBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: Optional[datetime] = None
+
+
+class IngredientePublic(IngredienteBase):
     id: int

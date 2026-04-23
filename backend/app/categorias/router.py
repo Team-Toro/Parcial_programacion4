@@ -1,56 +1,50 @@
 from typing import Annotated, List
 from fastapi import APIRouter, Depends, Query, Path
-from sqlmodel import Session
-from ..database import get_session
-from .schema import CategoriaCreate, CategoriaRead, CategoriaUpdate
-from . import service as categoria_service
+from .schema import CategoriaCreate, CategoriaRead, CategoriaUpdate, CategoriaPublic
+from .service import CategoriaService
+from ..uow.unit_of_work import UnitOfWork, get_uow
 
 router = APIRouter(prefix="/categorias", tags=["Categorías"])
+categoria_service = CategoriaService()
 
 
-@router.get("/", response_model=List[CategoriaRead])
+@router.get("/", response_model=List[CategoriaPublic], summary="Listar todas las categorías")
 def listar_categorias(
-    session: Annotated[Session, Depends(get_session)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
     offset: Annotated[int, Query(ge=0, description="Registros a omitir")] = 0,
     limit: Annotated[int, Query(ge=1, le=100, description="Máximo de registros")] = 20,
 ):
-    return categoria_service.get_all(session, offset, limit)
+    return categoria_service.get_all(uow, offset, limit)
 
 
-@router.get("/{categoria_id}", response_model=CategoriaRead)
+@router.get("/{categoria_id}", response_model=CategoriaPublic, summary="Obtener una categoría por ID")
 def obtener_categoria(
     categoria_id: Annotated[int, Path(ge=1)],
-    session: Annotated[Session, Depends(get_session)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    return categoria_service.get_by_id(session, categoria_id)
+    return categoria_service.get_by_id(uow, categoria_id)
 
 
-@router.post("/", response_model=CategoriaRead, status_code=201)
+@router.post("/", response_model=CategoriaPublic, status_code=201, summary="Crear una nueva categoría")
 def crear_categoria(
     data: CategoriaCreate,
-    session: Annotated[Session, Depends(get_session)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    return categoria_service.create(session, data)
+    return categoria_service.create(uow, data)
 
 
-@router.patch("/{categoria_id}", response_model=CategoriaRead)
+@router.patch("/{categoria_id}", response_model=CategoriaPublic, summary="Actualizar parcialmente una categoría")
 def actualizar_categoria(
     categoria_id: Annotated[int, Path(ge=1)],
     data: CategoriaUpdate,
-    session: Annotated[Session, Depends(get_session)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    return categoria_service.update(session, categoria_id, data)
+    return categoria_service.update(uow, categoria_id, data)
 
 
-@router.delete("/{categoria_id}", status_code=204)
+@router.delete("/{categoria_id}", status_code=204, summary="Eliminar una categoría (soft delete)")
 def eliminar_categoria(
     categoria_id: Annotated[int, Path(ge=1)],
-    session: Annotated[Session, Depends(get_session)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    print(f">>> Intentando eliminar categoria {categoria_id}")
-    try:
-        categoria_service.delete(session, categoria_id)
-        print(f">>> Categoria {categoria_id} eliminada OK")
-    except Exception as e:
-        print(f">>> ERROR al eliminar: {e}")
-        raise
+    categoria_service.delete(uow, categoria_id)

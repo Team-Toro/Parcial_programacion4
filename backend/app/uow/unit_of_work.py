@@ -21,3 +21,15 @@ class UnitOfWork:
 
     def rollback(self):
         self.session.rollback()
+
+
+def get_uow():
+    uow = UnitOfWork()
+    try:
+        yield uow
+        uow.session.commit()
+    except Exception:
+        uow.session.rollback()
+        raise
+    finally:
+        uow.session.close()
