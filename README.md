@@ -5,6 +5,12 @@ Aplicación Fullstack (FastAPI + React) para gestión de productos, categorías 
 ## Video de presentación
 https://youtu.be/87lTfzlcr_o
 
+## Integrantes
+Arena Lucio
+Cunto Tiago
+Lopez Mariano
+Rojo Emiliano
+
 ## Tecnologías
 - **Backend**: FastAPI, SQLModel, PostgreSQL, Pydantic v2
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS 4, TanStack Query v5, React Router v6
