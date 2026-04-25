@@ -3,7 +3,7 @@
 Aplicación Fullstack (FastAPI + React) para gestión de productos, categorías e ingredientes de un negocio gastronómico.
 
 ## Video de presentación
-[Link al video aquí]
+https://youtu.be/87lTfzlcr_o
 
 ## Tecnologías
 - **Backend**: FastAPI, SQLModel, PostgreSQL, Pydantic v2
