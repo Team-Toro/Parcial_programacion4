@@ -49,7 +49,12 @@ export default function CategoriasPage() {
 
   const openEdit = (cat: Categoria) => {
     setEditing(cat);
-    setForm({ nombre: cat.nombre, descripcion: cat.descripcion ?? '' });
+    setForm({
+      nombre: cat.nombre,
+      descripcion: cat.descripcion ?? '',
+      parent_id: cat.parent_id,
+      imagen_url: cat.imagen_url,
+    });
     setError('');
     setIsOpen(true);
   };
@@ -93,7 +98,9 @@ export default function CategoriasPage() {
             <tr>
               <th className="px-6 py-3 text-left">ID</th>
               <th className="px-6 py-3 text-left">Nombre</th>
+              <th className="px-6 py-3 text-left">Categoría padre</th>
               <th className="px-6 py-3 text-left">Descripción</th>
+              <th className="px-6 py-3 text-left">Imagen</th>
               <th className="px-6 py-3 text-right">Acciones</th>
             </tr>
           </thead>
@@ -101,8 +108,23 @@ export default function CategoriasPage() {
             {categorias.map(cat => (
               <tr key={cat.id} className="hover:bg-slate-50">
                 <td className="px-6 py-4 text-slate-400">{cat.id}</td>
-                <td className="px-6 py-4 font-medium text-slate-800">{cat.nombre}</td>
+                <td className="px-6 py-4 font-medium text-slate-800">
+                  {cat.parent_id && <span className="text-orange-500 mr-1">└─</span>}
+                  {cat.nombre}
+                </td>
+                <td className="px-6 py-4 text-slate-500">
+                  {cat.parent_id 
+                    ? categorias.find(c => c.id === cat.parent_id)?.nombre ?? '—'
+                    : <span className="text-slate-400">—</span>}
+                </td>
                 <td className="px-6 py-4 text-slate-500">{cat.descripcion ?? '—'}</td>
+                <td className="px-6 py-4">
+                  {cat.imagen_url ? (
+                    <img src={cat.imagen_url} alt={cat.nombre} className="h-10 w-10 object-cover rounded" />
+                  ) : (
+                    <span className="text-slate-400">—</span>
+                  )}
+                </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex gap-2 justify-end">
                     <button
@@ -154,6 +176,30 @@ export default function CategoriasPage() {
               onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
               rows={3}
               placeholder="Descripción opcional..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Categoría padre</label>
+            <select
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              value={form.parent_id ?? ''}
+              onChange={e => setForm(f => ({ ...f, parent_id: e.target.value ? parseInt(e.target.value) : undefined }))}
+            >
+              <option value="">Ninguna (categoría raíz)</option>
+              {categorias.filter(c => c.id !== editing?.id).map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.parent_id ? '└─ ' : ''}{cat.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">URL de imagen</label>
+            <input
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              value={form.imagen_url ?? ''}
+              onChange={e => setForm(f => ({ ...f, imagen_url: e.target.value || undefined }))}
+              placeholder="https://ejemplo.com/imagen.jpg"
             />
           </div>
           <div className="flex gap-3 justify-end pt-2">

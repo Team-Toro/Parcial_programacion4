@@ -33,7 +33,7 @@ class ProductoService:
             descripcion=data.descripcion,
             precio_base=data.precio_base,
             imagenes_url=data.imagenes_url,
-            tiempo_prep_min=data.tiempo_prep_min,
+            stock_cantidad=data.stock_cantidad,
             disponible=data.disponible,
         )
         repo.add(producto)
@@ -51,7 +51,6 @@ class ProductoService:
                 producto_id=producto.id,
                 ingrediente_id=ing_data.ingrediente_id,
                 es_removible=ing_data.es_removible,
-                es_opcional=ing_data.es_opcional,
             ))
 
         repo.flush()
@@ -86,7 +85,6 @@ class ProductoService:
                     producto_id=producto_id,
                     ingrediente_id=ing_data.ingrediente_id,
                     es_removible=ing_data.es_removible,
-                    es_opcional=ing_data.es_opcional,
                 ))
 
         repo.add(producto)

@@ -8,7 +8,7 @@ class CategoriaBase(SQLModel):
     nombre: str
     descripcion: Optional[str] = None
     parent_id: Optional[int] = None
-    orden_display: int = 0
+    imagen_url: Optional[str] = None
 
     @field_validator("nombre")
     @classmethod
@@ -28,7 +28,7 @@ class CategoriaUpdate(SQLModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
     parent_id: Optional[int] = None
-    orden_display: Optional[int] = None
+    imagen_url: Optional[str] = None
 
 
 class CategoriaRead(CategoriaBase):
