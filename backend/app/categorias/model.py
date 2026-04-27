@@ -12,7 +12,7 @@ class Categoria(SQLModel, table=True):
     parent_id: Optional[int] = Field(default=None, foreign_key="categorias.id")
     nombre: str = Field(max_length=100, unique=True, nullable=False)
     descripcion: Optional[str] = Field(default=None)
-    imagen_url: Optional[str] = Field(default=None)
+    orden_display: int = Field(default=0, nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     deleted_at: Optional[datetime] = Field(default=None)
