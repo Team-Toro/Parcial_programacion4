@@ -7,7 +7,37 @@ interface ProductoFormProps {
   ingredientes: Ingrediente[];
 }
 
+const sortCategorias = (categorias: Categoria[]): Categoria[] => {
+  return [...categorias].sort((a, b) => {
+    const aGroup = a.parent_id ?? a.id;
+    const bGroup = b.parent_id ?? b.id;
+    
+    if (aGroup !== bGroup) {
+      return aGroup - bGroup;
+    }
+    
+    if (a.parent_id === null && b.parent_id !== null) return -1;
+    if (a.parent_id !== null && b.parent_id === null) return 1;
+    
+    return a.nombre.localeCompare(b.nombre);
+  });
+};
+
 export default function ProductoForm({ form, onChange, categorias, ingredientes }: ProductoFormProps) {
+  const getChildCount = (parentId: number) => 
+    categorias.filter(c => c.parent_id === parentId).length;
+
+  const renderCategoriasOptions = (): JSX.Element[] => {
+    return sortCategorias(categorias).map(cat => {
+      const level = cat.parent_id ? 1 : 0;
+      return (
+        <option key={cat.id} value={cat.id}>
+          {'  '.repeat(level) + (level > 0 ? '└ ' : '') + cat.nombre + (getChildCount(cat.id) > 0 ? ` (${getChildCount(cat.id)} sub)` : '')}
+        </option>
+      );
+    });
+  };
+
   const toggleCategoria = (id: number) => {
     const ids = form.categoria_ids.includes(id)
       ? form.categoria_ids.filter(x => x !== id)
@@ -94,20 +124,37 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
       </label>
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">Categorías</label>
-        <div className="max-h-32 overflow-y-auto border border-slate-300 rounded-lg p-2 flex flex-col gap-1">
-          {categorias.length === 0 && <span className="text-slate-400 text-xs">Sin categorías disponibles</span>}
-          {categorias.map(cat => (
-            <label key={cat.id} className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.categoria_ids.includes(cat.id)}
-                onChange={() => toggleCategoria(cat.id)}
-                className="w-4 h-4 accent-orange-500"
-              />
-              {cat.nombre}
-            </label>
-          ))}
-        </div>
+        <select
+          multiple
+          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+          value={form.categoria_ids.map(String)}
+          onChange={e => {
+            const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
+            onChange({ ...form, categoria_ids: selected });
+          }}
+        >
+          <option value="" disabled>Seleccionar categorías...</option>
+          {renderCategoriasOptions()}
+        </select>
+        {form.categoria_ids.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {form.categoria_ids.map(catId => {
+              const cat = categorias.find(c => c.id === catId);
+              return cat ? (
+                <span key={cat.id} className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
+                  {cat.nombre}
+                  <button
+                    type="button"
+                    onClick={() => toggleCategoria(cat.id)}
+                    className="hover:text-orange-900"
+                  >
+                    ×
+                  </button>
+                </span>
+              ) : null;
+            })}
+          </div>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">Ingredientes</label>

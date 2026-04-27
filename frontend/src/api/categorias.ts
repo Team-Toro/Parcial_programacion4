@@ -9,6 +9,12 @@ export const getCategorias = async (): Promise<Categoria[]> => {
   return res.json();
 };
 
+export const getCategoriaStats = async (id: number): Promise<{ subcategorias_count: number; productos_count: number }> => {
+  const res = await fetch(`${BASE}/${id}/stats`);
+  if (!res.ok) throw new Error('Error al obtener estadísticas');
+  return res.json();
+};
+
 export const createCategoria = async (data: CategoriaCreate): Promise<Categoria> => {
   const res = await fetch(BASE, {
     method: 'POST',

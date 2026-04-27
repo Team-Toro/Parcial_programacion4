@@ -15,9 +15,11 @@ class ProductoService:
         offset: int = 0,
         limit: int = 20,
         disponible: Optional[bool] = None,
+        categoria_id: Optional[int] = None,
+        include_children: bool = True,
     ) -> List[Producto]:
         repo = ProductoRepository(uow.session)
-        return repo.get_all(offset, limit, disponible)
+        return repo.get_all(offset, limit, disponible, categoria_id, include_children)
 
     def get_by_id(self, uow: UnitOfWork, producto_id: int) -> Producto:
         repo = ProductoRepository(uow.session)
