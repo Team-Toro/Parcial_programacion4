@@ -23,7 +23,8 @@ class ProductoIngrediente(SQLModel, table=True):
     __tablename__ = "producto_ingrediente"
     producto_id: Optional[int] = Field(default=None, foreign_key="productos.id", primary_key=True)
     ingrediente_id: Optional[int] = Field(default=None, foreign_key="ingredientes.id", primary_key=True)
-    es_removible: bool = Field(default=False, nullable=False)
+    es_removible: bool = Field(nullable=False)
+    es_opcional: bool = Field(default=False, nullable=False)
     producto: Optional["Producto"] = Relationship(back_populates="ingredientes")
     ingrediente: Optional["Ingrediente"] = Relationship(back_populates="productos")
 
@@ -35,7 +36,7 @@ class Producto(SQLModel, table=True):
     descripcion: Optional[str] = Field(default=None)
     precio_base: Decimal = Field(decimal_places=2, max_digits=10, ge=0)
     imagenes_url: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
-    stock_cantidad: int = Field(default=0, ge=0)
+    tiempo_prep_min: Optional[int] = Field(default=None)
     disponible: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
