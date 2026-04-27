@@ -4,10 +4,10 @@ interface CategoriaFormProps {
   form: CategoriaCreate;
   onChange: (form: CategoriaCreate) => void;
   categorias: Categoria[];
-  editingId?: number;
+  excludeId?: number;
 }
 
-export default function CategoriaForm({ form, onChange, categorias, editingId }: CategoriaFormProps) {
+export default function CategoriaForm({ form, onChange, categorias, excludeId }: CategoriaFormProps) {
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -37,7 +37,7 @@ export default function CategoriaForm({ form, onChange, categorias, editingId }:
           onChange={e => onChange({ ...form, parent_id: e.target.value ? parseInt(e.target.value) : undefined })}
         >
           <option value="">Ninguna (categoría raíz)</option>
-          {categorias.filter(c => c.id !== editingId).map(cat => (
+          {categorias.filter(c => c.id !== excludeId).map(cat => (
             <option key={cat.id} value={cat.id}>
               {cat.parent_id ? '└─ ' : ''}{cat.nombre}
             </option>
