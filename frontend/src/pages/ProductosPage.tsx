@@ -80,13 +80,12 @@ export default function ProductosPage() {
       nombre: p.nombre,
       descripcion: p.descripcion ?? '',
       precio_base: Number(p.precio_base),
-      tiempo_prep_min: p.tiempo_prep_min,
+      stock_cantidad: p.stock_cantidad,
       disponible: p.disponible,
       categoria_ids: p.categorias.map(pc => pc.categoria?.id).filter((id): id is number => id !== undefined),
       ingredientes: p.ingredientes.map(pi => ({
         ingrediente_id: pi.ingrediente.id,
         es_removible: pi.es_removible,
-        es_opcional: pi.es_opcional,
       })),
     });
     setError('');
@@ -132,7 +131,7 @@ export default function ProductosPage() {
     } else {
       setForm(f => ({
         ...f,
-        ingredientes: [...f.ingredientes, { ingrediente_id: id, es_removible: true, es_opcional: false }],
+        ingredientes: [...f.ingredientes, { ingrediente_id: id, es_removible: true }],
       }));
     }
   };
@@ -167,7 +166,8 @@ export default function ProductosPage() {
               <th className="px-6 py-3 text-left">ID</th>
               <th className="px-6 py-3 text-left">Nombre</th>
               <th className="px-6 py-3 text-left">Precio</th>
-              <th className="px-6 py-3 text-left">Disponible</th>
+              <th className="px-6 py-3 text-left">Stock</th>
+              <th className="px-6 py-3 text-left">Estado</th>
               <th className="px-6 py-3 text-left">Categorías</th>
               <th className="px-6 py-3 text-right">Acciones</th>
             </tr>
@@ -180,16 +180,28 @@ export default function ProductosPage() {
                 <td className="px-6 py-4 text-slate-700 font-semibold">
                   ${Number(p.precio_base).toFixed(2)}
                 </td>
+                <td className="px-6 py-4 text-slate-600">
+                  {p.stock_cantidad}
+                </td>
                 <td className="px-6 py-4">
-                  {p.disponible ? (
-                    <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">
-                      Sí
-                    </span>
-                  ) : (
-                    <span className="bg-red-100 text-red-600 text-xs font-semibold px-2 py-1 rounded-full">
-                      No
+                  {p.stock_cantidad === 0 && p.disponible && (
+                    <span className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-1 rounded-full mr-1">
+                      Sin stock
                     </span>
                   )}
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                    p.disponible
+                      ? p.stock_cantidad > 0
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-slate-100 text-slate-500'
+                      : 'bg-red-100 text-red-600'
+                  }`}>
+                    {p.disponible 
+                      ? p.stock_cantidad > 0 
+                        ? 'Activo' 
+                        : 'Agotado'
+                      : 'Deshabilitado'}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1 flex-wrap">
@@ -284,17 +296,17 @@ export default function ProductosPage() {
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tiempo prep. (min)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Stock</label>
               <input
                 type="number"
                 min={0}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                value={form.tiempo_prep_min ?? ''}
+                value={form.stock_cantidad ?? 0}
                 onChange={e => setForm(f => ({
                   ...f,
-                  tiempo_prep_min: e.target.value ? parseInt(e.target.value) : undefined,
+                  stock_cantidad: parseInt(e.target.value) || 0,
                 }))}
-                placeholder="Ej: 15"
+                placeholder="Ej: 100"
               />
             </div>
           </div>
@@ -309,22 +321,41 @@ export default function ProductosPage() {
           </label>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Categorías</label>
-            <div className="max-h-32 overflow-y-auto border border-slate-300 rounded-lg p-2 flex flex-col gap-1">
-              {categorias.length === 0 && (
-                <span className="text-slate-400 text-xs">Sin categorías disponibles</span>
-              )}
+            <select
+              multiple
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              value={form.categoria_ids.map(String)}
+              onChange={e => {
+                const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
+                setForm(f => ({ ...f, categoria_ids: selected }));
+              }}
+            >
+              <option value="" disabled>Seleccionar categorías...</option>
               {categorias.map(cat => (
-                <label key={cat.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.categoria_ids.includes(cat.id)}
-                    onChange={() => toggleCategoria(cat.id)}
-                    className="w-4 h-4 accent-orange-500"
-                  />
-                  {cat.nombre}
-                </label>
+                <option key={cat.id} value={cat.id}>
+                  {cat.parent_id ? '└ ' : ''}{cat.nombre}
+                </option>
               ))}
-            </div>
+            </select>
+            {form.categoria_ids.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {form.categoria_ids.map(catId => {
+                  const cat = categorias.find(c => c.id === catId);
+                  return cat ? (
+                    <span key={cat.id} className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
+                      {cat.nombre}
+                      <button
+                        type="button"
+                        onClick={() => toggleCategoria(cat.id)}
+                        className="hover:text-orange-900"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Ingredientes</label>
@@ -358,15 +389,6 @@ export default function ProductosPage() {
                             className="w-3 h-3 accent-orange-500"
                           />
                           Removible
-                        </label>
-                        <label className="flex items-center gap-1 text-xs text-slate-600 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={sel.es_opcional}
-                            onChange={e => updateIngProp(ing.id, 'es_opcional', e.target.checked)}
-                            className="w-3 h-3 accent-orange-500"
-                          />
-                          Opcional
                         </label>
                       </div>
                     )}
