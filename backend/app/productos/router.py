@@ -14,8 +14,10 @@ def listar_productos(
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     disponible: Annotated[Optional[bool], Query(description="Filtrar por disponibilidad")] = None,
+    categoria_id: Annotated[Optional[int], Query(description="Filtrar por categoría (incluye subcategorías)")] = None,
+    include_children: Annotated[bool, Query(description="Incluir subcategorías en filtro")] = True,
 ):
-    return producto_service.get_all(uow, offset, limit, disponible)
+    return producto_service.get_all(uow, offset, limit, disponible, categoria_id, include_children)
 
 
 @router.get("/{producto_id}", response_model=ProductoPublic, summary="Obtener un producto por ID")
