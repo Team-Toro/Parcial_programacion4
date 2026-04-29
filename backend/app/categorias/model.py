@@ -17,3 +17,9 @@ class Categoria(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     deleted_at: Optional[datetime] = Field(default=None)
     productos: List["ProductoCategoria"] = Relationship(back_populates="categoria")
+    subcategorias: List["Categoria"] = Relationship(
+        sa_relationship_kwargs={
+            "remote_side": "Categoria.id",
+            "foreign_keys": "[Categoria.parent_id]"
+        }
+    )

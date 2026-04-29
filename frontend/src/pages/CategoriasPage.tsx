@@ -41,7 +41,7 @@ export default function CategoriasPage() {
   const [form, setForm] = useState<CategoriaCreate>({ nombre: '', descripcion: '' });
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<Categoria | null>(null);
-  const [deleteStats, setDeleteStats] = useState<{ subcategorias_count: number; productos_count: number } | null>(null);
+  const [deleteStats, setDeleteStats] = useState<{ subcategorias_count: number; productos_count: number; nivel: number } | null>(null);
 
   const { data: categorias = [], isLoading, isError } = useQuery({
     queryKey: ['categorias'],
@@ -84,7 +84,7 @@ export default function CategoriasPage() {
 
   const handleDeleteClick = (cat: Categoria) => {
     setDeleteConfirm(cat);
-    getCategoriaStats(cat.id).then(setDeleteStats).catch(() => setDeleteStats({ subcategorias_count: 0, productos_count: 0 }));
+    getCategoriaStats(cat.id).then(setDeleteStats).catch(() => setDeleteStats({ subcategorias_count: 0, productos_count: 0, nivel: 0 }));
   };
 
   const handleDeleteConfirm = () => {

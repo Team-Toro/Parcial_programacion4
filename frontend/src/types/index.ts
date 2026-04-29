@@ -4,6 +4,7 @@ export interface Categoria {
   descripcion?: string;
   parent_id?: number;
   imagen_url?: string;
+  subcategorias?: Categoria[];
   created_at: string;
   updated_at: string;
   deleted_at?: string;
