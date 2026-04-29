@@ -3,7 +3,7 @@ export interface Categoria {
   nombre: string;
   descripcion?: string;
   parent_id?: number;
-  orden_display: number;
+  imagen_url?: string;
   created_at: string;
   updated_at: string;
   deleted_at?: string;
@@ -13,7 +13,7 @@ export interface CategoriaCreate {
   nombre: string;
   descripcion?: string;
   parent_id?: number;
-  orden_display?: number;
+  imagen_url?: string;
 }
 
 export interface Ingrediente {
@@ -21,6 +21,9 @@ export interface Ingrediente {
   nombre: string;
   descripcion?: string;
   es_alergeno: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
 }
 
 export interface IngredienteCreate {
@@ -32,13 +35,11 @@ export interface IngredienteCreate {
 export interface IngredienteEnProducto {
   ingrediente_id: number;
   es_removible: boolean;
-  es_opcional: boolean;
 }
 
 export interface IngredienteConDetalles {
   ingrediente: Ingrediente;
   es_removible: boolean;
-  es_opcional: boolean;
 }
 
 export interface ProductoCategoria {
@@ -52,7 +53,7 @@ export interface Producto {
   descripcion?: string;
   precio_base: number;
   imagenes_url?: string[];
-  tiempo_prep_min?: number;
+  stock_cantidad: number;
   disponible: boolean;
   categorias: ProductoCategoria[];
   ingredientes: IngredienteConDetalles[];
@@ -66,7 +67,7 @@ export interface ProductoCreate {
   descripcion?: string;
   precio_base: number;
   imagenes_url?: string[];
-  tiempo_prep_min?: number;
+  stock_cantidad?: number;
   disponible: boolean;
   categoria_ids: number[];
   ingredientes: IngredienteEnProducto[];
