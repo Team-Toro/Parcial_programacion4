@@ -1,7 +1,6 @@
 from typing import List
 from datetime import datetime
 from fastapi import HTTPException, status
-from sqlmodel import select, func, col
 from .model import Categoria
 from .schema import CategoriaCreate, CategoriaUpdate, CategoriaStats
 from .repository import CategoriaRepository
@@ -31,19 +30,9 @@ class CategoriaService:
         
         with uow:
             repo = CategoriaRepository(uow.session)
-            subcategorias_count = uow.session.exec(
-                select(func.count(Categoria.id))
-                .where(Categoria.parent_id == categoria_id)
-                .where(col(Categoria.deleted_at).is_(None))
-            ).one()
-            
-            from ..productos.model import ProductoCategoria
-            productos_count = uow.session.exec(
-                select(func.count(ProductoCategoria.id))
-                .where(ProductoCategoria.categoria_id == categoria_id)
-            ).one()
-            
-            nivel = repo.get_level(categoria_id)
+            subcategorias_count = repo.count_subcategorias(categoria_id)
+            productos_count = repo.count_productos(categoria_id)
+            nivel = self.get_level(repo, categoria_id)
             
             return CategoriaStats(
                 subcategorias_count=subcategorias_count,
@@ -55,7 +44,8 @@ class CategoriaService:
         if parent_id is None:
             return
         
-        if not repo.can_be_parent(parent_id, MAX_CATEGORY_DEPTH):
+        nivel = self.get_level(repo, parent_id)
+        if nivel >= MAX_CATEGORY_DEPTH:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Se alcanzó el límite máximo de {MAX_CATEGORY_DEPTH + 1} niveles de profundidad"
@@ -70,11 +60,41 @@ class CategoriaService:
         if new_parent_id is None:
             return
         
-        if repo.has_circular_reference(categoria_id, new_parent_id):
+        if self._has_circular_reference(repo, categoria_id, new_parent_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No se puede establecer una referencia circular entre categorías"
             )
+
+    def _has_circular_reference(
+        self, 
+        repo: CategoriaRepository, 
+        categoria_id: int, 
+        new_parent_id: int
+    ) -> bool:
+        if new_parent_id == categoria_id:
+            return True
+        ancestors = self._get_ancestors(repo, new_parent_id)
+        return categoria_id in {cat.id for cat in ancestors}
+
+    def _get_ancestors(self, repo: CategoriaRepository, categoria_id: int) -> List[Categoria]:
+        ancestors = []
+        current_id = categoria_id
+        visited = set()
+        
+        while current_id and current_id not in visited:
+            visited.add(current_id)
+            cat = repo.get_by_id(current_id)
+            if not cat or not cat.parent_id:
+                break
+            ancestors.append(cat)
+            current_id = cat.parent_id
+        
+        return ancestors
+
+    def get_level(self, repo: CategoriaRepository, categoria_id: int) -> int:
+        ancestors = self._get_ancestors(repo, categoria_id)
+        return len(ancestors)
 
     def _validate_parent_exists(self, repo: CategoriaRepository, parent_id: int | None) -> None:
         if parent_id is None:
@@ -160,11 +180,7 @@ class CategoriaService:
                 sub.deleted_at = now
                 repo.save(sub)
             
-            from ..productos.model import ProductoCategoria
-            productos_relaciones = uow.session.exec(
-                select(ProductoCategoria)
-                .where(ProductoCategoria.categoria_id == categoria_id)
-            ).all()
+            productos_relaciones = repo.get_productos_relaciones(categoria_id)
             
             for pc in productos_relaciones:
                 uow.session.delete(pc)

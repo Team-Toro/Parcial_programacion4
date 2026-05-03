@@ -23,7 +23,9 @@ class ProductoRepository:
         
         if categoria_id is not None:
             if include_children:
-                categoria_ids = self._get_categoria_and_children_ids(categorias)
+                from ..categorias.repository import CategoriaRepository
+                cat_repo = CategoriaRepository(self.session)
+                categoria_ids = cat_repo.get_all_children_ids(categoria_id)
             else:
                 categoria_ids = [categoria_id]
             
@@ -32,23 +34,6 @@ class ProductoRepository:
             )
         
         return self.session.exec(query.offset(offset).limit(limit)).all()
-
-    def _get_categoria_and_children_ids(self, categoria_id: int) -> List[int]:
-        ids = [categoria_id]
-        self._collect_children_ids(categoria_id, ids)
-        return ids
-
-    def _collect_children_ids(self, parent_id: int, ids: List[int]) -> None:
-        children = self.session.exec(
-            select(Categoria.id).where(
-                Categoria.parent_id == parent_id,
-                Categoria.deleted_at == None
-            )
-        ).all()
-        for child_id in children:
-            if child_id not in ids:
-                ids.append(child_id)
-                self._collect_children_ids(child_id, ids)
 
     def get_by_id(self, producto_id: int) -> Optional[Producto]:
         p = self.session.get(Producto, producto_id)

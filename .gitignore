@@ -20,3 +20,6 @@ Thumbs.db
 # Env
 .env.docker
 .env.local
+
+# Docs
+ARCHITECTURE.md

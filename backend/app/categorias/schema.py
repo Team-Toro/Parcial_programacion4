@@ -8,26 +8,32 @@ class CategoriaBase(BaseModel):
     parent_id: Optional[int] = Field(None, ge=1, description="ID de la categoría padre")
     imagen_url: Optional[str] = Field(None, max_length=500, description="URL de la imagen")
 
+
+class CategoriaCreate(CategoriaBase):
     @field_validator("nombre")
     @classmethod
-    def nombre_no_vacio(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
+    def nombre_no_vacio(cls, v: str) -> str:
         v_stripped = v.strip()
         if not v_stripped:
             raise ValueError("El nombre no puede estar vacío")
         return v_stripped
 
 
-class CategoriaCreate(CategoriaBase):
-    pass
-
-
-class CategoriaUpdate(CategoriaBase):
+class CategoriaUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=1, max_length=100)
-    descripcion: Optional[str] = None
-    parent_id: Optional[int] = None
-    imagen_url: Optional[str] = None
+    descripcion: Optional[str] = Field(None, max_length=500)
+    parent_id: Optional[int] = Field(None, ge=1)
+    imagen_url: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("nombre")
+    @classmethod
+    def nombre_no_vacio(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v_stripped = v.strip()
+        if not v_stripped:
+            raise ValueError("El nombre no puede estar vacío")
+        return v_stripped
 
 
 class CategoriaRead(CategoriaBase):

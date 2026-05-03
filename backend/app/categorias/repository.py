@@ -53,45 +53,52 @@ class CategoriaRepository:
         subcategorias = self.get_subcategorias(categoria_id)
         return [categoria] + subcategorias
 
-    def has_circular_reference(self, categoria_id: int, new_parent_id: Optional[int]) -> bool:
-        """Verifica si asignar new_parent_id crearía una referencia circular."""
-        if new_parent_id is None:
-            return False
-        if new_parent_id == categoria_id:
-            return True
-        
-        ancestors = self._get_ancestors(new_parent_id)
-        return categoria_id in {cat.id for cat in ancestors}
+    def get_all_children_ids(self, categoria_id: int) -> List[int]:
+        """Obtiene el ID de la categoría y todos sus descendientes."""
+        ids = [categoria_id]
+        self._collect_children_ids(categoria_id, ids)
+        return ids
 
-    def _get_ancestors(self, categoria_id: int) -> List[Categoria]:
-        """Obtiene todos los ancestros de una categoría (privado)."""
-        ancestors = []
-        current_id = categoria_id
-        visited = set()
-        
-        while current_id and current_id not in visited:
-            visited.add(current_id)
-            cat = self.get_by_id(current_id)
-            if not cat or not cat.parent_id:
-                break
-            ancestors.append(cat)
-            current_id = cat.parent_id
-        
-        return ancestors
-
-    def get_level(self, categoria_id: int) -> int:
-        """Calcula el nivel de profundidad de una categoría."""
-        ancestors = self._get_ancestors(categoria_id)
-        return len(ancestors)
-
-    def can_be_parent(self, categoria_id: int, max_level: int = 2) -> bool:
-        """Verifica si una categoría puede tener hijos según el nivel máximo."""
-        return self.get_level(categoria_id) < max_level
+    def _collect_children_ids(self, parent_id: int, ids: List[int]) -> None:
+        children = self.session.exec(
+            select(Categoria.id).where(
+                Categoria.parent_id == parent_id,
+                col(Categoria.deleted_at).is_(None)
+            )
+        ).all()
+        for child_id in children:
+            if child_id not in ids:
+                ids.append(child_id)
+                self._collect_children_ids(child_id, ids)
 
     def save(self, categoria: Categoria) -> Categoria:
         """Guarda una categoría (nueva o existente)."""
         self.session.add(categoria)
         return categoria
+
+    def count_subcategorias(self, categoria_id: int) -> int:
+        """Cuenta las subcategorías directas de una categoría."""
+        return self.session.exec(
+            select(func.count(Categoria.id))
+            .where(Categoria.parent_id == categoria_id)
+            .where(col(Categoria.deleted_at).is_(None))
+        ).one()
+
+    def count_productos(self, categoria_id: int) -> int:
+        """Cuenta los productos asociados a una categoría."""
+        from ..productos.model import ProductoCategoria
+        return self.session.exec(
+            select(func.count(ProductoCategoria.id))
+            .where(ProductoCategoria.categoria_id == categoria_id)
+        ).one()
+
+    def get_productos_relaciones(self, categoria_id: int):
+        """Obtiene las relaciones de productos con esta categoría."""
+        from ..productos.model import ProductoCategoria
+        return self.session.exec(
+            select(ProductoCategoria)
+            .where(ProductoCategoria.categoria_id == categoria_id)
+        ).all()
 
     def count_all(self) -> int:
         """Cuenta el total de categorías activas."""
