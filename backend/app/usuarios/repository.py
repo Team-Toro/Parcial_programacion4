@@ -12,7 +12,7 @@ NO conoce a: Service, Router
 from sqlmodel import Session, select
 
 from app.core.base_repository import BaseRepository
-from app.modules.usuarios.model import Usuario
+from app.usuarios.model import Usuario
 
 
 class UsuarioRepository(BaseRepository[Usuario]):

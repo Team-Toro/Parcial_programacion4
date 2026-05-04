@@ -16,8 +16,9 @@ from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.core.security import hash_password, verify_password, create_access_token
-from app.core.uow import UnitOfWork
-from app.modules.usuarios.model import Usuario, UserCreate, Token
+from app.uow.unit_of_work import UnitOfWork
+from app.usuarios.model import Usuario, UserCreate, Token
+from app.usuarios.repository import UsuarioRepository
 
 
 class UsuarioService:
@@ -25,16 +26,21 @@ class UsuarioService:
 
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
+        self.repo = UsuarioRepository(uow.session)
+
+    def get_by_username(self, username: str) -> Usuario | None:
+        """Obtiene un usuario por username (sin lanzar HTTPException)."""
+        return self.repo.get_by_username(username)
 
     def register(self, user_in: UserCreate) -> Usuario:
         """Registra un nuevo usuario. El rol siempre es 'user'."""
-        if self.uow.usuarios.get_by_username(user_in.username):
+        if self.repo.get_by_username(user_in.username):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="El nombre de usuario ya está en uso",
             )
 
-        if self.uow.usuarios.get_by_email(user_in.email):
+        if self.repo.get_by_email(user_in.email):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="El email ya está registrado",
@@ -47,11 +53,11 @@ class UsuarioService:
             hashed_password=hash_password(user_in.password),
             role="user",
         )
-        return self.uow.usuarios.add(usuario)
+        return self.repo.add(usuario)
 
     def authenticate(self, username: str, password: str) -> Token:
         """Autentica con username + password y retorna un Token con JWT."""
-        user = self.uow.usuarios.get_by_username(username)
+        user = self.repo.get_by_username(username)
 
         if not user or not verify_password(password, user.hashed_password):
             raise HTTPException(
@@ -77,15 +83,15 @@ class UsuarioService:
 
     def list_all(self) -> list[Usuario]:
         """Lista todos los usuarios."""
-        return self.uow.usuarios.get_all()
+        return self.repo.get_all()
 
     def set_disabled(self, user_id: int, disabled: bool) -> Usuario:
         """Activa o desactiva la cuenta de un usuario."""
-        user = self.uow.usuarios.get_by_id(user_id)
+        user = self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Usuario no encontrado",
             )
         user.disabled = disabled
-        return self.uow.usuarios.update(user)
+        return self.repo.update(user)

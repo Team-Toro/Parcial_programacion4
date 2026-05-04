@@ -22,8 +22,9 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.core.security import decode_access_token
-from app.core.uow import UnitOfWork, get_uow
-from app.modules.usuarios.model import Usuario
+from app.uow.unit_of_work import UnitOfWork, get_uow
+from app.usuarios.model import Usuario
+from app.usuarios.service import UsuarioService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
@@ -47,8 +48,8 @@ async def get_current_user(
     if username is None:
         raise credentials_exception
 
-    with uow:
-        user = uow.usuarios.get_by_username(username)
+    # busca al service en vez de que uow exponga el usuario
+    user = UsuarioService(uow).get_by_username(username)
 
     if user is None:
         raise credentials_exception
@@ -75,6 +76,7 @@ def require_role(allowed_roles: list[str]):
     Uso:
         @router.get("/admin/...", dependencies=[Depends(require_role(["admin"]))])
     """
+
     async def role_checker(
         current_user: Annotated[Usuario, Depends(get_current_active_user)],
     ) -> Usuario:

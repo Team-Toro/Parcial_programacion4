@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .database import create_db_and_tables
+from app.core.database import create_all_tables
 from .categorias.router import router as categorias_router
 from .ingredientes.router import router as ingredientes_router
 from .productos.router import router as productos_router
@@ -18,7 +18,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup():
-    create_db_and_tables()
+    create_all_tables()
 
 
 app.include_router(categorias_router)

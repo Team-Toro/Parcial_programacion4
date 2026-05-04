@@ -15,7 +15,7 @@ Crea:
 from sqlmodel import Session, select
 from app.core.database import engine, create_all_tables
 from app.core.security import hash_password
-from app.modules.usuarios.model import Usuario
+from app.usuarios.model import Usuario
 
 
 USUARIOS_INICIALES = [

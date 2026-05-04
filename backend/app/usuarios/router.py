@@ -17,10 +17,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.core.uow import UnitOfWork, get_uow
+from app.uow.unit_of_work import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
-from app.modules.usuarios.model import Usuario, UserCreate, UserPublic, Token
-from app.modules.usuarios.service import UsuarioService
+from app.usuarios.model import Usuario, UserCreate, UserPublic, Token
+from app.usuarios.service import UsuarioService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -32,9 +32,8 @@ def register(
     user_in: UserCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    with uow:
-        service = UsuarioService(uow)
-        return service.register(user_in)
+    service = UsuarioService(uow)
+    return service.register(user_in)
 
 
 # ─── Login (OAuth2 Password Flow) ────────────────────────────────────────────
@@ -44,9 +43,8 @@ def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    with uow:
-        service = UsuarioService(uow)
-        return service.authenticate(form_data.username, form_data.password)
+    service = UsuarioService(uow)
+    return service.authenticate(form_data.username, form_data.password)
 
 
 # ─── Rutas protegidas ────────────────────────────────────────────────────────
@@ -75,9 +73,8 @@ def list_users(
     _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    with uow:
-        service = UsuarioService(uow)
-        return service.list_all()
+    service = UsuarioService(uow)
+    return service.list_all()
 
 
 @router.post("/admin/usuarios/{user_id}/desactivar", response_model=UserPublic)
@@ -86,9 +83,8 @@ def deactivate_user(
     _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    with uow:
-        service = UsuarioService(uow)
-        return service.set_disabled(user_id, disabled=True)
+    service = UsuarioService(uow)
+    return service.set_disabled(user_id, disabled=True)
 
 
 @router.post("/admin/usuarios/{user_id}/activar", response_model=UserPublic)
@@ -97,6 +93,5 @@ def activate_user(
     _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    with uow:
-        service = UsuarioService(uow)
-        return service.set_disabled(user_id, disabled=False)
+    service = UsuarioService(uow)
+    return service.set_disabled(user_id, disabled=False)
