@@ -1,3 +1,4 @@
+# need to get rid of this
 import os
 from sqlmodel import create_engine, SQLModel, Session
 from dotenv import load_dotenv
