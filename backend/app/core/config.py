@@ -22,7 +22,6 @@ class Settings(BaseSettings):
     def DATABASE_URL(self) -> str:
         """
         Construye la URL de conexión a PostgreSQL.
-        Para tests se sobreescribe con SQLite en memoria desde conftest.py.
         """
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
