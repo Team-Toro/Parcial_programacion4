@@ -49,7 +49,7 @@ async def get_current_user(
         raise credentials_exception
 
     # busca al service en vez de que uow exponga el usuario
-    user = UsuarioService(uow).get_by_username(username)
+    user = UsuarioService().get_by_username(uow, username)
 
     if user is None:
         raise credentials_exception

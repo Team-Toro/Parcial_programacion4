@@ -19,37 +19,37 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.uow.unit_of_work import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
-from app.usuarios.model import Usuario, UserCreate, UserPublic, Token
-from app.usuarios.service import UsuarioService
+from .model import Usuario
+from .schema import UsuarioCreate, UsuarioPublic, UsuarioToken
+from .service import UsuarioService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+usuario_service = UsuarioService()
 
 
 # ─── Registro ─────────────────────────────────────────────────────────────────
 
-@router.post("/register", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UsuarioPublic, status_code=status.HTTP_201_CREATED)
 def register(
-    user_in: UserCreate,
+    user_in: UsuarioCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    service = UsuarioService(uow)
-    return service.register(user_in)
+    return usuario_service.register(uow, user_in)
 
 
 # ─── Login (OAuth2 Password Flow) ────────────────────────────────────────────
 
-@router.post("/token", response_model=Token)
+@router.post("/token", response_model=UsuarioToken)
 def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    service = UsuarioService(uow)
-    return service.authenticate(form_data.username, form_data.password)
+    return usuario_service.authenticate(uow, form_data.username, form_data.password)
 
 
 # ─── Rutas protegidas ────────────────────────────────────────────────────────
 
-@router.get("/me", response_model=UserPublic)
+@router.get("/me", response_model=UsuarioPublic)
 def read_me(
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
@@ -68,30 +68,27 @@ def ruta_privada(
 
 # ─── Rutas de administración (RBAC) ──────────────────────────────────────────
 
-@router.get("/admin/usuarios", response_model=list[UserPublic])
+@router.get("/admin/usuarios", response_model=list[UsuarioPublic])
 def list_users(
     _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    service = UsuarioService(uow)
-    return service.list_all()
+    return usuario_service.list_all(uow)
 
 
-@router.post("/admin/usuarios/{user_id}/desactivar", response_model=UserPublic)
+@router.post("/admin/usuarios/{user_id}/desactivar", response_model=UsuarioPublic)
 def deactivate_user(
     user_id: int,
     _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    service = UsuarioService(uow)
-    return service.set_disabled(user_id, disabled=True)
+    return usuario_service.set_disabled(uow, user_id, disabled=True)
 
 
-@router.post("/admin/usuarios/{user_id}/activar", response_model=UserPublic)
+@router.post("/admin/usuarios/{user_id}/activar", response_model=UsuarioPublic)
 def activate_user(
     user_id: int,
     _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    service = UsuarioService(uow)
-    return service.set_disabled(user_id, disabled=False)
+    return usuario_service.set_disabled(uow, user_id, disabled=False)

@@ -17,30 +17,29 @@ from fastapi import HTTPException, status
 from app.core.config import settings
 from app.core.security import hash_password, verify_password, create_access_token
 from app.uow.unit_of_work import UnitOfWork
-from app.usuarios.model import Usuario, UserCreate, Token
-from app.usuarios.repository import UsuarioRepository
+from .model import Usuario
+from .repository import UsuarioRepository
+from .schema import UsuarioCreate, UsuarioToken
 
 
 class UsuarioService:
     """Lógica de negocio para autenticación y gestión de usuarios."""
 
-    def __init__(self, uow: UnitOfWork):
-        self.uow = uow
-        self.repo = UsuarioRepository(uow.session)
-
-    def get_by_username(self, username: str) -> Usuario | None:
+    def get_by_username(self, uow: UnitOfWork, username: str) -> Usuario | None:
         """Obtiene un usuario por username (sin lanzar HTTPException)."""
-        return self.repo.get_by_username(username)
+        repo = UsuarioRepository(uow.session)
+        return repo.get_by_username(username)
 
-    def register(self, user_in: UserCreate) -> Usuario:
+    def register(self, uow: UnitOfWork, user_in: UsuarioCreate) -> Usuario:
         """Registra un nuevo usuario. El rol siempre es 'user'."""
-        if self.repo.get_by_username(user_in.username):
+        repo = UsuarioRepository(uow.session)
+        if repo.get_by_username(user_in.username):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="El nombre de usuario ya está en uso",
             )
 
-        if self.repo.get_by_email(user_in.email):
+        if repo.get_by_email(user_in.email):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="El email ya está registrado",
@@ -53,11 +52,15 @@ class UsuarioService:
             hashed_password=hash_password(user_in.password),
             role="user",
         )
-        return self.repo.add(usuario)
+        repo.add(usuario)
+        repo.flush()
+        repo.refresh(usuario)
+        return usuario
 
-    def authenticate(self, username: str, password: str) -> Token:
+    def authenticate(self, uow: UnitOfWork, username: str, password: str) -> UsuarioToken:
         """Autentica con username + password y retorna un Token con JWT."""
-        user = self.repo.get_by_username(username)
+        repo = UsuarioRepository(uow.session)
+        user = repo.get_by_username(username)
 
         if not user or not verify_password(password, user.hashed_password):
             raise HTTPException(
@@ -75,23 +78,28 @@ class UsuarioService:
         access_token = create_access_token(
             data={"sub": user.username, "role": user.role}
         )
-        return Token(
+        return UsuarioToken(
             access_token=access_token,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
-    def list_all(self) -> list[Usuario]:
+    def list_all(self, uow: UnitOfWork) -> list[Usuario]:
         """Lista todos los usuarios."""
-        return self.repo.get_all()
+        repo = UsuarioRepository(uow.session)
+        return repo.get_all()
 
-    def set_disabled(self, user_id: int, disabled: bool) -> Usuario:
+    def set_disabled(self, uow: UnitOfWork, user_id: int, disabled: bool) -> Usuario:
         """Activa o desactiva la cuenta de un usuario."""
-        user = self.repo.get_by_id(user_id)
+        repo = UsuarioRepository(uow.session)
+        user = repo.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Usuario no encontrado",
             )
         user.disabled = disabled
-        return self.repo.update(user)
+        repo.add(user)
+        repo.flush()
+        repo.refresh(user)
+        return user

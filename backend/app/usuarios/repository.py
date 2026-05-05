@@ -1,31 +1,37 @@
-"""
-Repositorio de Usuario.
-
-Acceso a BD: queries sin lógica de negocio.
-Hereda de BaseRepository[Usuario] y agrega queries específicas.
-
-Capa: Repository
-Conoce a: Model (Usuario), Session
-NO conoce a: Service, Router
-"""
-
+from typing import List, Optional
 from sqlmodel import Session, select
 
-from app.core.base_repository import BaseRepository
-from app.usuarios.model import Usuario
+from .model import Usuario
 
 
-class UsuarioRepository(BaseRepository[Usuario]):
-
+class UsuarioRepository:
     def __init__(self, session: Session):
-        super().__init__(Usuario, session)
+        self.session = session
 
-    def get_by_username(self, username: str) -> Usuario | None:
+    def get_all(self) -> List[Usuario]:
+        return self.session.exec(select(Usuario)).all()
+
+    def get_by_id(self, usuario_id: int) -> Optional[Usuario]:
+        return self.session.get(Usuario, usuario_id)
+
+    def get_by_username(self, username: str) -> Optional[Usuario]:
         return self.session.exec(
             select(Usuario).where(Usuario.username == username)
         ).first()
 
-    def get_by_email(self, email: str) -> Usuario | None:
+    def get_by_email(self, email: str) -> Optional[Usuario]:
         return self.session.exec(
             select(Usuario).where(Usuario.email == email)
         ).first()
+
+    def add(self, obj) -> None:
+        self.session.add(obj)
+
+    def delete(self, obj) -> None:
+        self.session.delete(obj)
+
+    def flush(self) -> None:
+        self.session.flush()
+
+    def refresh(self, obj) -> None:
+        self.session.refresh(obj)
