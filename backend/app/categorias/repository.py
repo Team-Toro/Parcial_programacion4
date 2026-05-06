@@ -1,6 +1,7 @@
 from typing import List, Optional
-from sqlmodel import Session, select, col
+from sqlmodel import Session, select, col, func
 from .model import Categoria
+from ..productos.model import ProductoCategoria
 
 class CategoriaRepository:
     def __init__(self, session: Session):
@@ -86,15 +87,13 @@ class CategoriaRepository:
 
     def count_productos(self, categoria_id: int) -> int:
         """Cuenta los productos asociados a una categoría."""
-        from ..productos.model import ProductoCategoria
         return self.session.exec(
-            select(func.count(ProductoCategoria.id))
+            select(func.count(ProductoCategoria.producto_id))
             .where(ProductoCategoria.categoria_id == categoria_id)
         ).one()
 
     def get_productos_relaciones(self, categoria_id: int):
         """Obtiene las relaciones de productos con esta categoría."""
-        from ..productos.model import ProductoCategoria
         return self.session.exec(
             select(ProductoCategoria)
             .where(ProductoCategoria.categoria_id == categoria_id)
@@ -102,7 +101,6 @@ class CategoriaRepository:
 
     def count_all(self) -> int:
         """Cuenta el total de categorías activas."""
-        from sqlmodel import func
         return self.session.exec(
             select(func.count(Categoria.id))
             .where(col(Categoria.deleted_at).is_(None))

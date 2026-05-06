@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlmodel import Session, select
 from .model import Producto, ProductoCategoria, ProductoIngrediente
 from ..categorias.model import Categoria
+from ..categorias.repository import CategoriaRepository
 from ..ingredientes.model import Ingrediente
 
 
@@ -23,7 +24,6 @@ class ProductoRepository:
         
         if categoria_id is not None:
             if include_children:
-                from ..categorias.repository import CategoriaRepository
                 cat_repo = CategoriaRepository(self.session)
                 categoria_ids = cat_repo.get_all_children_ids(categoria_id)
             else:

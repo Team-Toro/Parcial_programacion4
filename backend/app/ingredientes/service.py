@@ -24,7 +24,11 @@ class IngredienteService:
         repo = IngredienteRepository(uow.session)
         if repo.get_by_nombre(data.nombre):
             raise HTTPException(status_code=409, detail="Ya existe un ingrediente con ese nombre")
-        ing = Ingrediente.model_validate(data)
+        ing = Ingrediente(
+            nombre=data.nombre,
+            descripcion=data.descripcion,
+            es_alergeno=data.es_alergeno,
+        )
         repo.save(ing)
         return ing
 
