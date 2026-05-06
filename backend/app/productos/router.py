@@ -21,8 +21,33 @@ def listar_productos(
     disponible: Annotated[Optional[bool], Query(description="Filtrar por disponibilidad")] = None,
     categoria_id: Annotated[Optional[int], Query(description="Filtrar por categoría (incluye subcategorías)")] = None,
     include_children: Annotated[bool, Query(description="Incluir subcategorías en filtro")] = True,
+    q: Annotated[Optional[str], Query(min_length=1, description="Búsqueda (case-insensitive) por nombre/descripcion")] = None,
+    precio_min: Annotated[Optional[float], Query(ge=0, description="Precio mínimo")] = None,
+    precio_max: Annotated[Optional[float], Query(ge=0, description="Precio máximo")] = None,
+    stock_min: Annotated[Optional[int], Query(ge=0, description="Stock mínimo")] = None,
+    stock_max: Annotated[Optional[int], Query(ge=0, description="Stock máximo")] = None,
+    in_stock: Annotated[Optional[bool], Query(description="Si true: stock > 0; si false: stock <= 0")] = None,
+    ingrediente_id: Annotated[Optional[int], Query(ge=1, description="Filtrar por ingrediente")] = None,
+    sort: Annotated[Optional[str], Query(pattern="^(nombre|precio_base|created_at|stock_cantidad)$", description="Campo de orden")] = None,
+    order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
 ):
-    return producto_service.get_all(uow, offset, limit, disponible, categoria_id, include_children)
+    return producto_service.get_all(
+        uow=uow,
+        offset=offset,
+        limit=limit,
+        disponible=disponible,
+        categoria_id=categoria_id,
+        include_children=include_children,
+        q=q,
+        precio_min=precio_min,
+        precio_max=precio_max,
+        stock_min=stock_min,
+        stock_max=stock_max,
+        in_stock=in_stock,
+        ingrediente_id=ingrediente_id,
+        sort=sort,
+        order=order,
+    )
 
 
 @router.get(

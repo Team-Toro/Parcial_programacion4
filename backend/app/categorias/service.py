@@ -9,9 +9,27 @@ from ..uow.unit_of_work import UnitOfWork
 MAX_CATEGORY_DEPTH = 2
 
 class CategoriaService:
-    def get_all(self, uow: UnitOfWork, offset: int = 0, limit: int = 20) -> List[Categoria]:
+    def get_all(
+        self,
+        uow: UnitOfWork,
+        offset: int = 0,
+        limit: int = 20,
+        q: str | None = None,
+        parent_id: int | None = None,
+        only_roots: bool = False,
+        sort: str | None = None,
+        order: str = "asc",
+    ) -> List[Categoria]:
         repo = CategoriaRepository(uow.session)
-        return repo.get_all(offset, limit)
+        return repo.get_all(
+            offset=offset,
+            limit=limit,
+            q=q,
+            parent_id=parent_id,
+            only_roots=only_roots,
+            sort=sort,
+            order=order,
+        )
 
     def get_by_id(self, uow: UnitOfWork, categoria_id: int) -> Categoria:
         repo = CategoriaRepository(uow.session)

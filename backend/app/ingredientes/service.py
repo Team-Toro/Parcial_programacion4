@@ -9,9 +9,25 @@ from ..uow.unit_of_work import UnitOfWork
 
 class IngredienteService:
 
-    def get_all(self, uow: UnitOfWork, offset: int = 0, limit: int = 20) -> List[Ingrediente]:
+    def get_all(
+        self,
+        uow: UnitOfWork,
+        offset: int = 0,
+        limit: int = 20,
+        q: str | None = None,
+        es_alergeno: bool | None = None,
+        sort: str | None = None,
+        order: str = "asc",
+    ) -> List[Ingrediente]:
         repo = IngredienteRepository(uow.session)
-        return repo.get_all(offset, limit)
+        return repo.get_all(
+            offset=offset,
+            limit=limit,
+            q=q,
+            es_alergeno=es_alergeno,
+            sort=sort,
+            order=order,
+        )
 
     def get_by_id(self, uow: UnitOfWork, ingrediente_id: int) -> Ingrediente:
         repo = IngredienteRepository(uow.session)
