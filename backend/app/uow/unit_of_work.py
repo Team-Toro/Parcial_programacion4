@@ -1,5 +1,5 @@
 from sqlmodel import Session
-from ..database import engine
+from app.core.database import engine
 
 
 class UnitOfWork:

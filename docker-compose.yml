@@ -10,11 +10,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d food_store"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 10
-      start_period: 10s
 
   api:
     build:
@@ -24,10 +23,7 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - ./backend/.env
       - ./backend/.env.docker
-    environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/food_store
     ports:
       - "8000:8000"
     volumes:
