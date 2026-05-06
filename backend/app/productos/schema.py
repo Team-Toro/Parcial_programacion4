@@ -12,7 +12,7 @@ class ProductoBase(SQLModel):
     descripcion: Optional[str] = None
     precio_base: Decimal
     imagenes_url: Optional[List[str]] = None
-    tiempo_prep_min: Optional[int] = None
+    stock_cantidad: int = 0
     disponible: bool = True
 
     @field_validator("precio_base")
@@ -32,8 +32,7 @@ class ProductoBase(SQLModel):
 
 class IngredienteEnProducto(SQLModel):
     ingrediente_id: int
-    es_removible: bool
-    es_opcional: bool = False
+    es_removible: bool = False
 
 
 class ProductoCreate(ProductoBase):
@@ -46,7 +45,7 @@ class ProductoUpdate(SQLModel):
     descripcion: Optional[str] = None
     precio_base: Optional[Decimal] = None
     imagenes_url: Optional[List[str]] = None
-    tiempo_prep_min: Optional[int] = None
+    stock_cantidad: Optional[int] = None
     disponible: Optional[bool] = None
     categoria_ids: Optional[List[int]] = None
     ingredientes: Optional[List[IngredienteEnProducto]] = None
@@ -60,7 +59,6 @@ class ProductoCategoriaRead(SQLModel):
 class IngredienteConDetalles(SQLModel):
     ingrediente: IngredienteRead
     es_removible: bool
-    es_opcional: bool
 
 
 class ProductoRead(ProductoBase):
@@ -80,7 +78,6 @@ class ProductoCategoriaPublic(SQLModel):
 class IngredienteConDetallesPublic(SQLModel):
     ingrediente: IngredientePublic
     es_removible: bool
-    es_opcional: bool
 
 
 class ProductoPublic(ProductoBase):

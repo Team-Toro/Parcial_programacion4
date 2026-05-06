@@ -7,7 +7,37 @@ interface ProductoFormProps {
   ingredientes: Ingrediente[];
 }
 
+const sortCategorias = (categorias: Categoria[]): Categoria[] => {
+  return [...categorias].sort((a, b) => {
+    const aGroup = a.parent_id ?? a.id;
+    const bGroup = b.parent_id ?? b.id;
+    
+    if (aGroup !== bGroup) {
+      return aGroup - bGroup;
+    }
+    
+    if (a.parent_id === null && b.parent_id !== null) return -1;
+    if (a.parent_id !== null && b.parent_id === null) return 1;
+    
+    return a.nombre.localeCompare(b.nombre);
+  });
+};
+
 export default function ProductoForm({ form, onChange, categorias, ingredientes }: ProductoFormProps) {
+  const getChildCount = (parentId: number) => 
+    categorias.filter(c => c.parent_id === parentId).length;
+
+  const renderCategoriasOptions = (): JSX.Element[] => {
+    return sortCategorias(categorias).map(cat => {
+      const level = cat.parent_id ? 1 : 0;
+      return (
+        <option key={cat.id} value={cat.id}>
+          {'  '.repeat(level) + (level > 0 ? '└ ' : '') + cat.nombre + (getChildCount(cat.id) > 0 ? ` (${getChildCount(cat.id)} sub)` : '')}
+        </option>
+      );
+    });
+  };
+
   const toggleCategoria = (id: number) => {
     const ids = form.categoria_ids.includes(id)
       ? form.categoria_ids.filter(x => x !== id)
@@ -22,7 +52,7 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
     } else {
       onChange({
         ...form,
-        ingredientes: [...form.ingredientes, { ingrediente_id: id, es_removible: true, es_opcional: false }],
+        ingredientes: [...form.ingredientes, { ingrediente_id: id, es_removible: true }],
       });
     }
   };
@@ -69,17 +99,17 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
           />
         </div>
         <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Tiempo prep. (min)</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Stock</label>
           <input
             type="number"
             min={0}
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-            value={form.tiempo_prep_min ?? ''}
+            value={form.stock_cantidad ?? 0}
             onChange={e => onChange({
               ...form,
-              tiempo_prep_min: e.target.value ? parseInt(e.target.value) : undefined,
+              stock_cantidad: parseInt(e.target.value) || 0,
             })}
-            placeholder="Ej: 15"
+            placeholder="Ej: 100"
           />
         </div>
       </div>
@@ -94,20 +124,37 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
       </label>
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">Categorías</label>
-        <div className="max-h-32 overflow-y-auto border border-slate-300 rounded-lg p-2 flex flex-col gap-1">
-          {categorias.length === 0 && <span className="text-slate-400 text-xs">Sin categorías disponibles</span>}
-          {categorias.map(cat => (
-            <label key={cat.id} className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.categoria_ids.includes(cat.id)}
-                onChange={() => toggleCategoria(cat.id)}
-                className="w-4 h-4 accent-orange-500"
-              />
-              {cat.nombre}
-            </label>
-          ))}
-        </div>
+        <select
+          multiple
+          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+          value={form.categoria_ids.map(String)}
+          onChange={e => {
+            const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
+            onChange({ ...form, categoria_ids: selected });
+          }}
+        >
+          <option value="" disabled>Seleccionar categorías...</option>
+          {renderCategoriasOptions()}
+        </select>
+        {form.categoria_ids.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {form.categoria_ids.map(catId => {
+              const cat = categorias.find(c => c.id === catId);
+              return cat ? (
+                <span key={cat.id} className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
+                  {cat.nombre}
+                  <button
+                    type="button"
+                    onClick={() => toggleCategoria(cat.id)}
+                    className="hover:text-orange-900"
+                  >
+                    ×
+                  </button>
+                </span>
+              ) : null;
+            })}
+          </div>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">Ingredientes</label>
@@ -128,7 +175,7 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
                   {ing.es_alergeno && <span className="text-xs text-red-500">⚠</span>}
                 </label>
                 {sel && (
-                  <div className="ml-6 mt-1 flex gap-4">
+                  <div className="ml-6 mt-1">
                     <label className="flex items-center gap-1 text-xs text-slate-600 cursor-pointer">
                       <input
                         type="checkbox"
@@ -137,15 +184,6 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
                         className="w-3 h-3 accent-orange-500"
                       />
                       Removible
-                    </label>
-                    <label className="flex items-center gap-1 text-xs text-slate-600 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={sel.es_opcional}
-                        onChange={e => updateIngProp(ing.id, 'es_opcional', e.target.checked)}
-                        className="w-3 h-3 accent-orange-500"
-                      />
-                      Opcional
                     </label>
                   </div>
                 )}

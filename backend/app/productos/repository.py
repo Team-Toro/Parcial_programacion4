@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlmodel import Session, select
 from .model import Producto, ProductoCategoria, ProductoIngrediente
 from ..categorias.model import Categoria
+from ..categorias.repository import CategoriaRepository
 from ..ingredientes.model import Ingrediente
 
 
@@ -9,10 +10,29 @@ class ProductoRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def get_all(self, offset: int, limit: int, disponible: Optional[bool] = None) -> List[Producto]:
+    def get_all(
+        self,
+        offset: int,
+        limit: int,
+        disponible: Optional[bool] = None,
+        categoria_id: Optional[int] = None,
+        include_children: bool = True,
+    ) -> List[Producto]:
         query = select(Producto).where(Producto.deleted_at == None)
         if disponible is not None:
             query = query.where(Producto.disponible == disponible)
+        
+        if categoria_id is not None:
+            if include_children:
+                cat_repo = CategoriaRepository(self.session)
+                categoria_ids = cat_repo.get_all_children_ids(categoria_id)
+            else:
+                categoria_ids = [categoria_id]
+            
+            query = query.join(ProductoCategoria).where(
+                ProductoCategoria.categoria_id.in_(categoria_ids)
+            )
+        
         return self.session.exec(query.offset(offset).limit(limit)).all()
 
     def get_by_id(self, producto_id: int) -> Optional[Producto]:

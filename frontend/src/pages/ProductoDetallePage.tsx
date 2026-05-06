@@ -22,26 +22,37 @@ export default function ProductoDetallePage() {
       <div className="bg-white rounded-2xl shadow p-6">
         <div className="flex justify-between items-start mb-4">
           <h1 className="text-2xl font-bold text-slate-800">{producto.nombre}</h1>
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
-              producto.disponible
-                ? 'bg-green-100 text-green-700'
-                : 'bg-red-100 text-red-600'
-            }`}
-          >
-            {producto.disponible ? 'Disponible' : 'No disponible'}
-          </span>
+          <div className="flex gap-2">
+            {producto.stock_cantidad === 0 && producto.disponible && (
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                Sin stock
+              </span>
+            )}
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                producto.disponible
+                  ? producto.stock_cantidad > 0 
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-slate-100 text-slate-500'
+                  : 'bg-red-100 text-red-600'
+              }`}
+            >
+              {producto.disponible 
+                ? producto.stock_cantidad > 0 
+                  ? 'Disponible' 
+                  : 'Agotado'
+                : 'Deshabilitado'}
+            </span>
+          </div>
         </div>
         <p className="text-slate-500 mb-4">{producto.descripcion ?? 'Sin descripción.'}</p>
         <div className="flex items-center gap-4 mb-6">
           <p className="text-2xl font-bold text-orange-500">
             ${Number(producto.precio_base).toFixed(2)}
           </p>
-          {producto.tiempo_prep_min != null && (
-            <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-              ⏱ {producto.tiempo_prep_min} min
-            </span>
-          )}
+          <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+            Stock: {producto.stock_cantidad}
+          </span>
         </div>
 
         <div className="mb-4">
@@ -89,11 +100,6 @@ export default function ProductoDetallePage() {
                     {pi.es_removible && (
                       <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
                         Removible
-                      </span>
-                    )}
-                    {pi.es_opcional && (
-                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                        Opcional
                       </span>
                     )}
                   </div>

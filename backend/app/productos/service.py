@@ -15,9 +15,11 @@ class ProductoService:
         offset: int = 0,
         limit: int = 20,
         disponible: Optional[bool] = None,
+        categoria_id: Optional[int] = None,
+        include_children: bool = True,
     ) -> List[Producto]:
         repo = ProductoRepository(uow.session)
-        return repo.get_all(offset, limit, disponible)
+        return repo.get_all(offset, limit, disponible, categoria_id, include_children)
 
     def get_by_id(self, uow: UnitOfWork, producto_id: int) -> Producto:
         repo = ProductoRepository(uow.session)
@@ -33,7 +35,7 @@ class ProductoService:
             descripcion=data.descripcion,
             precio_base=data.precio_base,
             imagenes_url=data.imagenes_url,
-            tiempo_prep_min=data.tiempo_prep_min,
+            stock_cantidad=data.stock_cantidad,
             disponible=data.disponible,
         )
         repo.add(producto)
@@ -51,7 +53,6 @@ class ProductoService:
                 producto_id=producto.id,
                 ingrediente_id=ing_data.ingrediente_id,
                 es_removible=ing_data.es_removible,
-                es_opcional=ing_data.es_opcional,
             ))
 
         repo.flush()
@@ -86,7 +87,6 @@ class ProductoService:
                     producto_id=producto_id,
                     ingrediente_id=ing_data.ingrediente_id,
                     es_removible=ing_data.es_removible,
-                    es_opcional=ing_data.es_opcional,
                 ))
 
         repo.add(producto)
