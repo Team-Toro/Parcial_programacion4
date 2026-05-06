@@ -89,6 +89,28 @@ class UsuarioService:
         repo = UsuarioRepository(uow.session)
         return repo.get_all()
 
+    def list(
+        self,
+        uow: UnitOfWork,
+        offset: int = 0,
+        limit: int = 20,
+        q: str | None = None,
+        role: str | None = None,
+        disabled: bool | None = None,
+        sort: str | None = None,
+        order: str = "asc",
+    ) -> list[Usuario]:
+        repo = UsuarioRepository(uow.session)
+        return repo.list(
+            offset=offset,
+            limit=limit,
+            q=q,
+            role=role,
+            disabled=disabled,
+            sort=sort,
+            order=order,
+        )
+
     def set_disabled(self, uow: UnitOfWork, user_id: int, disabled: bool) -> Usuario:
         """Activa o desactiva la cuenta de un usuario."""
         repo = UsuarioRepository(uow.session)

@@ -25,8 +25,22 @@ def listar_categorias(
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
     offset: Annotated[int, Query(ge=0, description="Registros a omitir")] = 0,
     limit: Annotated[int, Query(ge=1, le=100, description="Máximo de registros")] = 20,
+    q: Annotated[str | None, Query(min_length=1, description="Búsqueda (case-insensitive) por nombre/descripcion")] = None,
+    parent_id: Annotated[int | None, Query(ge=1, description="Filtrar por categoría padre (hijos directos)")] = None,
+    only_roots: Annotated[bool, Query(description="Solo categorías raíz (parent_id NULL)")] = False,
+    sort: Annotated[str | None, Query(pattern="^(nombre|created_at|parent_id)$", description="Campo de orden")] = None,
+    order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
 ):
-    return service.get_all(uow, offset, limit)
+    return service.get_all(
+        uow=uow,
+        offset=offset,
+        limit=limit,
+        q=q,
+        parent_id=parent_id,
+        only_roots=only_roots,
+        sort=sort,
+        order=order,
+    )
 
 
 @router.get(

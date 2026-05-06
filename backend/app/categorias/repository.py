@@ -1,4 +1,5 @@
 from typing import List, Optional
+from sqlalchemy import or_
 from sqlmodel import Session, select, col, func
 from .model import Categoria
 from ..productos.model import ProductoCategoria
@@ -7,19 +8,50 @@ class CategoriaRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def get_all(self, offset: int, limit: int) -> List[Categoria]:
-        """Obtiene todas las categorías activas con paginación."""
-        return self.session.exec(
-            select(Categoria)
-            .where(col(Categoria.deleted_at).is_(None))
-            .order_by(
+    def get_all(
+        self,
+        offset: int,
+        limit: int,
+        q: Optional[str] = None,
+        parent_id: Optional[int] = None,
+        only_roots: bool = False,
+        sort: Optional[str] = None,
+        order: str = "asc",
+    ) -> List[Categoria]:
+        """Obtiene categorías activas con paginación y filtros."""
+        query = select(Categoria).where(col(Categoria.deleted_at).is_(None))
+
+        q_norm = q.strip().lower() if q else None
+        if q_norm:
+            query = query.where(
+                or_(
+                    func.lower(col(Categoria.nombre)).contains(q_norm),
+                    func.lower(func.coalesce(col(Categoria.descripcion), "")).contains(q_norm),
+                )
+            )
+
+        if only_roots:
+            query = query.where(col(Categoria.parent_id).is_(None))
+        elif parent_id is not None:
+            query = query.where(col(Categoria.parent_id) == parent_id)
+
+        sort_map = {
+            "nombre": col(Categoria.nombre),
+            "created_at": col(Categoria.created_at),
+            "parent_id": col(Categoria.parent_id),
+        }
+        sort_col = sort_map.get(sort or "")
+        if sort_col is not None:
+            query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
+        else:
+            # Default: roots first, then by parent, then by name.
+            query = query.order_by(
                 col(Categoria.parent_id).is_(None).desc(),
                 col(Categoria.parent_id).asc(),
-                Categoria.nombre.asc()
+                col(Categoria.nombre).asc(),
             )
-            .offset(offset)
-            .limit(limit)
-        ).all()
+
+        return self.session.exec(query.offset(offset).limit(limit)).all()
 
     def get_by_id(self, categoria_id: int) -> Optional[Categoria]:
         """Obtiene una categoría por ID si no está eliminada."""

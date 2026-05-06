@@ -17,9 +17,33 @@ class ProductoService:
         disponible: Optional[bool] = None,
         categoria_id: Optional[int] = None,
         include_children: bool = True,
+        q: Optional[str] = None,
+        precio_min: Optional[float] = None,
+        precio_max: Optional[float] = None,
+        stock_min: Optional[int] = None,
+        stock_max: Optional[int] = None,
+        in_stock: Optional[bool] = None,
+        ingrediente_id: Optional[int] = None,
+        sort: Optional[str] = None,
+        order: str = "asc",
     ) -> List[Producto]:
         repo = ProductoRepository(uow.session)
-        return repo.get_all(offset, limit, disponible, categoria_id, include_children)
+        return repo.get_all(
+            offset=offset,
+            limit=limit,
+            disponible=disponible,
+            categoria_id=categoria_id,
+            include_children=include_children,
+            q=q,
+            precio_min=precio_min,
+            precio_max=precio_max,
+            stock_min=stock_min,
+            stock_max=stock_max,
+            in_stock=in_stock,
+            ingrediente_id=ingrediente_id,
+            sort=sort,
+            order=order,
+        )
 
     def get_by_id(self, uow: UnitOfWork, producto_id: int) -> Producto:
         repo = ProductoRepository(uow.session)

@@ -18,8 +18,20 @@ def listar_ingredientes(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    q: Annotated[str | None, Query(min_length=1, description="Búsqueda (case-insensitive) por nombre/descripcion")] = None,
+    es_alergeno: Annotated[bool | None, Query(description="Filtrar por alérgeno")] = None,
+    sort: Annotated[str | None, Query(pattern="^(nombre|created_at)$", description="Campo de orden")] = None,
+    order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
 ):
-    return ingrediente_service.get_all(uow, offset, limit)
+    return ingrediente_service.get_all(
+        uow=uow,
+        offset=offset,
+        limit=limit,
+        q=q,
+        es_alergeno=es_alergeno,
+        sort=sort,
+        order=order,
+    )
 
 
 @router.get(

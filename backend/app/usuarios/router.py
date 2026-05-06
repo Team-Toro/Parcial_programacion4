@@ -14,7 +14,7 @@ Regla de imports:
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.uow.unit_of_work import UnitOfWork, get_uow
@@ -72,8 +72,24 @@ def ruta_privada(
 def list_users(
     _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    q: Annotated[str | None, Query(min_length=1, description="Búsqueda (case-insensitive) por username/full_name/email")] = None,
+    role: Annotated[str | None, Query(pattern="^(user|admin)$", description="Filtrar por rol")] = None,
+    disabled: Annotated[bool | None, Query(description="Filtrar por estado de cuenta")] = None,
+    sort: Annotated[str | None, Query(pattern="^(id|username|email|role)$", description="Campo de orden")] = None,
+    order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
 ):
-    return usuario_service.list_all(uow)
+    return usuario_service.list(
+        uow=uow,
+        offset=offset,
+        limit=limit,
+        q=q,
+        role=role,
+        disabled=disabled,
+        sort=sort,
+        order=order,
+    )
 
 
 @router.post("/admin/usuarios/{user_id}/desactivar", response_model=UsuarioPublic)
