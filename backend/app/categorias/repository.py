@@ -107,6 +107,10 @@ class CategoriaRepository:
     def save(self, categoria: Categoria) -> Categoria:
         """Guarda una categoría (nueva o existente)."""
         self.session.add(categoria)
+        # flush envía el SQL a la DB dentro de la transacción actual, sin hacer commit.
+        # Necesario para que Postgres asigne el id autoincrement antes de que
+        # FastAPI serialice la respuesta con Pydantic.
+        self.session.flush()
         return categoria
 
     def count_subcategorias(self, categoria_id: int) -> int:

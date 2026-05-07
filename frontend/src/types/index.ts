@@ -33,6 +33,15 @@ export interface IngredienteCreate {
   es_alergeno: boolean;
 }
 
+export interface IngredienteListParams {
+  offset?: number;
+  limit?: number;
+  q?: string;
+  es_alergeno?: boolean;
+  sort?: 'nombre' | 'created_at';
+  order?: 'asc' | 'desc';
+}
+
 export interface IngredienteEnProducto {
   ingrediente_id: number;
   es_removible: boolean;
@@ -72,4 +81,31 @@ export interface ProductoCreate {
   disponible: boolean;
   categoria_ids: number[];
   ingredientes: IngredienteEnProducto[];
+}
+
+export interface Usuario {
+  id: number;
+  username: string;
+  full_name: string | null;
+  email: string | null;
+  role: 'user' | 'admin';
+  disabled: boolean;
+}
+
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface RegisterPayload {
+  username: string;
+  full_name?: string;
+  email?: string;
+  password: string;
 }

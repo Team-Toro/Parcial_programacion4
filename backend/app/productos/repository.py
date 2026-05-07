@@ -44,6 +44,9 @@ class ProductoRepository:
         if disponible is not None:
             query = query.where(Producto.disponible == disponible)
         
+        # Rastrea si algún JOIN fue agregado (para aplicar DISTINCT solo cuando haga falta)
+        needs_distinct = False
+
         if categoria_id is not None:
             if include_children:
                 cat_repo = CategoriaRepository(self.session)
@@ -55,12 +58,14 @@ class ProductoRepository:
                 ProductoCategoria,
                 col(ProductoCategoria.producto_id) == col(Producto.id),
             ).where(col(ProductoCategoria.categoria_id).in_(categoria_ids))
+            needs_distinct = True
 
         if ingrediente_id is not None:
             query = query.join(
                 ProductoIngrediente,
                 col(ProductoIngrediente.producto_id) == col(Producto.id),
             ).where(col(ProductoIngrediente.ingrediente_id) == ingrediente_id)
+            needs_distinct = True
 
         if precio_min is not None:
             query = query.where(col(Producto.precio_base) >= precio_min)
@@ -74,8 +79,10 @@ class ProductoRepository:
         if in_stock is not None:
             query = query.where(col(Producto.stock_cantidad) > 0 if in_stock else col(Producto.stock_cantidad) <= 0)
 
-        # Joins can duplicate rows; distinct keeps pagination sane.
-        query = query.distinct()
+        # DISTINCT solo cuando hay JOIN que puede generar filas duplicadas.
+        # No aplicarlo incondicionalmente: JSON no tiene operador de igualdad en Postgres.
+        if needs_distinct:
+            query = query.distinct()
 
         sort_map = {
             "nombre": col(Producto.nombre),
