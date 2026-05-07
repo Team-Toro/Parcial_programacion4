@@ -53,9 +53,6 @@ class CategoriaPublic(BaseModel):
     imagen_url: Optional[str] = None
     subcategorias: List["CategoriaPublic"] = Field(default_factory=list)
 
-    # La relación SQLAlchemy puede devolver None si el objeto es nuevo o la
-    # relación no está cargada. Normalizamos a lista vacía para no romper la
-    # serialización de Pydantic.
     @field_validator("subcategorias", mode="before")
     @classmethod
     def none_to_empty_list(cls, v: object) -> list:

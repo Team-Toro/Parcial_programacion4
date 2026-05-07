@@ -1,6 +1,13 @@
 import { API_URL } from '../config';
 import { getAuthToken, useAuthStore } from '../store/authStore';
 
+/**
+ * Wrapper de fetch con autenticación Bearer, manejo de 401 con redirect a login,
+ * y normalización de errores de FastAPI al formato `Error.message`.
+ * @param path ruta relativa al API_URL (ej. `/categorias`)
+ * @param options opciones de RequestInit más `skipAuth` para omitir el header de auth
+ * @returns respuesta tipada como `T`
+ */
 export async function apiFetch<T>(
   path: string,
   options?: RequestInit & { skipAuth?: boolean }
@@ -58,7 +65,11 @@ export async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
-// Construye un query string omitiendo valores vacíos/nulos/undefined
+/**
+ * Arma un query string desde un objeto, omitiendo entradas con valor `undefined`, `null` o `''`.
+ * @param params objeto clave-valor con los parámetros
+ * @returns string con formato `?key=value&...`, o `''` si no hay parámetros válidos
+ */
 export function buildQueryString(params: Record<string, unknown>): string {
   const entries = Object.entries(params).filter(
     ([, value]) => value !== undefined && value !== null && value !== ''
