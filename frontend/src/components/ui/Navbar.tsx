@@ -1,4 +1,7 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { LogOut } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 const links = [
   { to: '/categorias', label: 'Categorías' },
@@ -8,10 +11,22 @@ const links = [
 
 export default function Navbar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+
+  const handleLogout = () => {
+    logout();
+    queryClient.clear();
+    navigate('/login');
+  };
+
   return (
     <nav className="bg-slate-900 text-white px-8 py-4 flex items-center gap-8 shadow-lg">
       <span className="font-bold text-xl text-orange-400 tracking-tight">🍽 Food Store</span>
-      <div className="flex gap-4">
+
+      <div className="flex gap-4 flex-1">
         {links.map(l => (
           <Link
             key={l.to}
@@ -26,6 +41,21 @@ export default function Navbar() {
           </Link>
         ))}
       </div>
+
+      {user && (
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-300">
+            Hola, <span className="font-medium text-white">{user.full_name?.split(' ')[0] || user.username}</span>
+          </span>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-white hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar sesión
+          </button>
+        </div>
+      )}
     </nav>
   );
 }

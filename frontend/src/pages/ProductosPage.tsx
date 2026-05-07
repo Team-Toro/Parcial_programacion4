@@ -40,7 +40,7 @@ export default function ProductosPage() {
 
   const { data: ingredientes = [] } = useQuery({
     queryKey: ['ingredientes'],
-    queryFn: getIngredientes,
+    queryFn: () => getIngredientes(),
   });
 
   const createMutation = useMutation({

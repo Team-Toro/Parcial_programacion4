@@ -107,6 +107,7 @@ class CategoriaRepository:
     def save(self, categoria: Categoria) -> Categoria:
         """Guarda una categoría (nueva o existente)."""
         self.session.add(categoria)
+        self.session.flush()  # asigna id antes de serializar
         return categoria
 
     def count_subcategorias(self, categoria_id: int) -> int:
