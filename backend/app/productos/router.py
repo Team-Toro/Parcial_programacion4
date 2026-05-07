@@ -1,16 +1,18 @@
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, Query, Path, status
-from .schema import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPublic
+from .schema import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPublic, ProductoListResponse
 from .service import ProductoService
 from ..uow.unit_of_work import UnitOfWork, get_uow
+from ..core.deps import get_current_active_user
+from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/productos", tags=["Productos"])
 producto_service = ProductoService()
 
 
 @router.get(
-    "/",
-    response_model=List[ProductoPublic],
+    "",
+    response_model=ProductoListResponse,
     summary="Listar todos los productos",
     description="Obtiene todos los productos activos con paginación y filtros opcionales"
 )
@@ -31,7 +33,7 @@ def listar_productos(
     sort: Annotated[Optional[str], Query(pattern="^(nombre|precio_base|created_at|stock_cantidad)$", description="Campo de orden")] = None,
     order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
 ):
-    return producto_service.get_all(
+    items, total = producto_service.get_all_with_count(
         uow=uow,
         offset=offset,
         limit=limit,
@@ -48,6 +50,7 @@ def listar_productos(
         sort=sort,
         order=order,
     )
+    return ProductoListResponse(items=items, total=total)
 
 
 @router.get(
@@ -66,7 +69,7 @@ def obtener_producto(
 
 
 @router.post(
-    "/",
+    "",
     response_model=ProductoPublic,
     status_code=status.HTTP_201_CREATED,
     summary="Crear un nuevo producto",
@@ -78,6 +81,7 @@ def obtener_producto(
 def crear_producto(
     data: ProductoCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     return producto_service.create(uow, data)
 
@@ -95,6 +99,7 @@ def actualizar_producto(
     producto_id: Annotated[int, Path(ge=1)],
     data: ProductoUpdate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     return producto_service.update(uow, producto_id, data)
 
@@ -111,5 +116,23 @@ def actualizar_producto(
 def eliminar_producto(
     producto_id: Annotated[int, Path(ge=1)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     producto_service.delete(uow, producto_id)
+
+
+@router.post(
+    "/{producto_id}/reactivar",
+    response_model=ProductoPublic,
+    summary="Reactivar un producto eliminado",
+    description="Restaura un producto que fue marcado como eliminado",
+    responses={
+        404: {"description": "Producto no encontrado"}
+    }
+)
+def reactivar_producto(
+    producto_id: Annotated[int, Path(ge=1)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
+):
+    return producto_service.restore(uow, producto_id)

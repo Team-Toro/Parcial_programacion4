@@ -84,3 +84,8 @@ class ProductoPublic(ProductoBase):
     id: int
     categorias: List[ProductoCategoriaPublic] = []
     ingredientes: List[IngredienteConDetallesPublic] = []
+
+
+class ProductoListResponse(SQLModel):
+    items: List[ProductoPublic]
+    total: int

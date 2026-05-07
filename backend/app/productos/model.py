@@ -1,12 +1,8 @@
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, JSON
 from decimal import Decimal
-
-if TYPE_CHECKING:
-    from ..categorias.model import Categoria
-    from ..ingredientes.model import Ingrediente
 
 
 class ProductoCategoria(SQLModel, table=True):
@@ -42,3 +38,6 @@ class Producto(SQLModel, table=True):
     deleted_at: Optional[datetime] = Field(default=None)
     categorias: List["ProductoCategoria"] = Relationship(back_populates="producto")
     ingredientes: List["ProductoIngrediente"] = Relationship(back_populates="producto")
+
+
+

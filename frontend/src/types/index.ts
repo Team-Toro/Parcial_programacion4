@@ -109,3 +109,27 @@ export interface RegisterPayload {
   email?: string;
   password: string;
 }
+
+export interface CategoriaStats {
+  subcategorias_count: number;
+  productos_count: number;
+  nivel: number;
+}
+
+export interface ProductoListParams {
+  offset?: number;
+  limit?: number;
+  q?: string;
+  categoria_id?: number;
+  precio_min?: number;
+  precio_max?: number;
+  in_stock?: boolean;
+  disponible?: boolean;
+  sort?: string;
+  order?: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+}

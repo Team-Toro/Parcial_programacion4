@@ -13,10 +13,8 @@ class ProductoRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def get_all(
+    def _build_base_query(
         self,
-        offset: int,
-        limit: int,
         disponible: Optional[bool] = None,
         categoria_id: Optional[int] = None,
         include_children: bool = True,
@@ -27,9 +25,7 @@ class ProductoRepository:
         stock_max: Optional[int] = None,
         in_stock: Optional[bool] = None,
         ingrediente_id: Optional[int] = None,
-        sort: Optional[str] = None,
-        order: str = "asc",
-    ) -> List[Producto]:
+    ):
         query = select(Producto).where(col(Producto.deleted_at).is_(None))
 
         q_norm = q.strip().lower() if q else None
@@ -43,8 +39,7 @@ class ProductoRepository:
 
         if disponible is not None:
             query = query.where(Producto.disponible == disponible)
-        
-        # Rastrea si algún JOIN fue agregado (para aplicar DISTINCT solo cuando haga falta)
+
         needs_distinct = False
 
         if categoria_id is not None:
@@ -79,10 +74,69 @@ class ProductoRepository:
         if in_stock is not None:
             query = query.where(col(Producto.stock_cantidad) > 0 if in_stock else col(Producto.stock_cantidad) <= 0)
 
-        # DISTINCT solo cuando hay JOIN que puede generar filas duplicadas.
-        # No aplicarlo incondicionalmente: JSON no tiene operador de igualdad en Postgres.
         if needs_distinct:
             query = query.distinct()
+
+        return query
+
+    def count(
+        self,
+        disponible: Optional[bool] = None,
+        categoria_id: Optional[int] = None,
+        include_children: bool = True,
+        q: Optional[str] = None,
+        precio_min: Optional[float] = None,
+        precio_max: Optional[float] = None,
+        stock_min: Optional[int] = None,
+        stock_max: Optional[int] = None,
+        in_stock: Optional[bool] = None,
+        ingrediente_id: Optional[int] = None,
+    ) -> int:
+        query = self._build_base_query(
+            disponible=disponible,
+            categoria_id=categoria_id,
+            include_children=include_children,
+            q=q,
+            precio_min=precio_min,
+            precio_max=precio_max,
+            stock_min=stock_min,
+            stock_max=stock_max,
+            in_stock=in_stock,
+            ingrediente_id=ingrediente_id,
+        )
+        count_query = select(func.count()).select_from(query.subquery())
+        result = self.session.exec(count_query).one()
+        return result
+
+    def get_all(
+        self,
+        offset: int,
+        limit: int,
+        disponible: Optional[bool] = None,
+        categoria_id: Optional[int] = None,
+        include_children: bool = True,
+        q: Optional[str] = None,
+        precio_min: Optional[float] = None,
+        precio_max: Optional[float] = None,
+        stock_min: Optional[int] = None,
+        stock_max: Optional[int] = None,
+        in_stock: Optional[bool] = None,
+        ingrediente_id: Optional[int] = None,
+        sort: Optional[str] = None,
+        order: str = "asc",
+    ) -> List[Producto]:
+        query = self._build_base_query(
+            disponible=disponible,
+            categoria_id=categoria_id,
+            include_children=include_children,
+            q=q,
+            precio_min=precio_min,
+            precio_max=precio_max,
+            stock_min=stock_min,
+            stock_max=stock_max,
+            in_stock=in_stock,
+            ingrediente_id=ingrediente_id,
+        )
 
         sort_map = {
             "nombre": col(Producto.nombre),

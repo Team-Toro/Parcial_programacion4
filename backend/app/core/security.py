@@ -14,7 +14,6 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-# ─── Hashing (bcrypt) ─────────────────────────────────────────────────────────
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -28,7 +27,6 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-# ─── JWT ──────────────────────────────────────────────────────────────────────
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """
     Crea un JWT firmado con HS256.

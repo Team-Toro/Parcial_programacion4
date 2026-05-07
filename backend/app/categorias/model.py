@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
-    from ..productos.model import ProductoCategoria
+    from ..associations import ProductoCategoria
 
 
 class Categoria(SQLModel, table=True):
@@ -23,3 +23,6 @@ class Categoria(SQLModel, table=True):
             "foreign_keys": "[Categoria.parent_id]"
         }
     )
+
+
+

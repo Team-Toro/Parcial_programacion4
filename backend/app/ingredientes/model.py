@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
-    from ..productos.model import ProductoIngrediente
+    from ..associations import ProductoIngrediente
 
 
 class Ingrediente(SQLModel, table=True):
@@ -16,3 +16,6 @@ class Ingrediente(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     deleted_at: Optional[datetime] = Field(default=None)
     productos: List["ProductoIngrediente"] = Relationship(back_populates="ingrediente")
+
+
+

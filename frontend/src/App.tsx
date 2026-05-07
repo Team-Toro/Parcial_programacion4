@@ -9,6 +9,7 @@ import CategoriasPage from './pages/CategoriasPage';
 import IngredientesPage from './pages/IngredientesPage';
 import ProductosPage from './pages/ProductosPage';
 import ProductoDetallePage from './pages/ProductoDetallePage';
+import DashboardPage from './pages/DashboardPage';
 
 const queryClient = new QueryClient();
 
@@ -24,7 +25,8 @@ export default function App() {
           {/* Rutas protegidas — verifican auth y muestran navbar */}
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>
-              <Route path="/" element={<Navigate to="/ingredientes" replace />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/categorias" element={<CategoriasPage />} />
               <Route path="/ingredientes" element={<IngredientesPage />} />
               <Route path="/productos" element={<ProductosPage />} />
@@ -33,7 +35,7 @@ export default function App() {
           </Route>
 
           {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/ingredientes" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />

@@ -8,6 +8,8 @@ from .schema import (
 )
 from .service import CategoriaService
 from ..uow.unit_of_work import UnitOfWork, get_uow
+from ..core.deps import get_current_active_user
+from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/categorias", tags=["Categorías"])
 
@@ -15,7 +17,7 @@ def get_categoria_service() -> CategoriaService:
     return CategoriaService()
 
 @router.get(
-    "/",
+    "",
     response_model=List[CategoriaPublic],
     summary="Listar todas las categorías",
     description="Obtiene todas las categorías activas con paginación"
@@ -77,7 +79,7 @@ def obtener_stats(
 
 
 @router.post(
-    "/",
+    "",
     response_model=CategoriaPublic,
     status_code=status.HTTP_201_CREATED,
     summary="Crear una nueva categoría",
@@ -91,6 +93,7 @@ def crear_categoria(
     data: CategoriaCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     return service.create(uow, data)
 
@@ -110,6 +113,7 @@ def actualizar_categoria(
     data: CategoriaUpdate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     return service.update(uow, categoria_id, data)
 
@@ -127,5 +131,6 @@ def eliminar_categoria(
     categoria_id: Annotated[int, Path(ge=1, description="ID de la categoría")],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     service.delete(uow, categoria_id)

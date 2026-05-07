@@ -8,10 +8,15 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
 
 # Node
 node_modules/
 frontend/dist/
+frontend/.env
 
 # OS
 .DS_Store
@@ -20,6 +25,10 @@ Thumbs.db
 # Env
 .env.docker
 .env.local
+.env.example
 
 # Docs
 ARCHITECTURE.md
+
+# Docker
+docker-compose.override.yml

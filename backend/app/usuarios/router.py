@@ -27,8 +27,6 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 usuario_service = UsuarioService()
 
 
-# ─── Registro ─────────────────────────────────────────────────────────────────
-
 @router.post("/register", response_model=UsuarioPublic, status_code=status.HTTP_201_CREATED)
 def register(
     user_in: UsuarioCreate,
@@ -37,8 +35,6 @@ def register(
     return usuario_service.register(uow, user_in)
 
 
-# ─── Login (OAuth2 Password Flow) ────────────────────────────────────────────
-
 @router.post("/token", response_model=UsuarioToken)
 def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -46,8 +42,6 @@ def login(
 ):
     return usuario_service.authenticate(uow, form_data.username, form_data.password)
 
-
-# ─── Rutas protegidas ────────────────────────────────────────────────────────
 
 @router.get("/me", response_model=UsuarioPublic)
 def read_me(
@@ -65,8 +59,6 @@ def ruta_privada(
         "tu_rol": current_user.role,
     }
 
-
-# ─── Rutas de administración (RBAC) ──────────────────────────────────────────
 
 @router.get("/admin/usuarios", response_model=list[UsuarioPublic])
 def list_users(

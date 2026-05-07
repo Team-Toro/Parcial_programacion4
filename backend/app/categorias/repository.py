@@ -44,7 +44,6 @@ class CategoriaRepository:
         if sort_col is not None:
             query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
         else:
-            # Default: roots first, then by parent, then by name.
             query = query.order_by(
                 col(Categoria.parent_id).is_(None).desc(),
                 col(Categoria.parent_id).asc(),
@@ -107,9 +106,6 @@ class CategoriaRepository:
     def save(self, categoria: Categoria) -> Categoria:
         """Guarda una categoría (nueva o existente)."""
         self.session.add(categoria)
-        # flush envía el SQL a la DB dentro de la transacción actual, sin hacer commit.
-        # Necesario para que Postgres asigne el id autoincrement antes de que
-        # FastAPI serialice la respuesta con Pydantic.
         self.session.flush()
         return categoria
 

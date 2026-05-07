@@ -3,13 +3,15 @@ from fastapi import APIRouter, Depends, Query, Path, status
 from .schema import IngredienteCreate, IngredienteRead, IngredienteUpdate, IngredientePublic
 from .service import IngredienteService
 from ..uow.unit_of_work import UnitOfWork, get_uow
+from ..core.deps import get_current_active_user
+from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/ingredientes", tags=["Ingredientes"])
 ingrediente_service = IngredienteService()
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[IngredientePublic],
     summary="Listar todos los ingredientes",
     description="Obtiene todos los ingredientes activos con paginación"
@@ -50,7 +52,7 @@ def obtener_ingrediente(
 
 
 @router.post(
-    "/",
+    "",
     response_model=IngredientePublic,
     status_code=status.HTTP_201_CREATED,
     summary="Crear un nuevo ingrediente",
@@ -61,6 +63,7 @@ def obtener_ingrediente(
 def crear_ingrediente(
     data: IngredienteCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     return ingrediente_service.create(uow, data)
 
@@ -78,6 +81,7 @@ def actualizar_ingrediente(
     ingrediente_id: Annotated[int, Path(ge=1)],
     data: IngredienteUpdate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     return ingrediente_service.update(uow, ingrediente_id, data)
 
@@ -94,5 +98,6 @@ def actualizar_ingrediente(
 def eliminar_ingrediente(
     ingrediente_id: Annotated[int, Path(ge=1)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    _current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     ingrediente_service.delete(uow, ingrediente_id)

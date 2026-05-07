@@ -45,7 +45,7 @@ export default function CategoriasPage() {
 
   const { data: categorias = [], isLoading, isError } = useQuery({
     queryKey: ['categorias'],
-    queryFn: getCategorias,
+    queryFn: () => getCategorias(),
   });
 
   const { data: deleteStatsData } = useQuery({

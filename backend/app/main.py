@@ -5,6 +5,7 @@ from .categorias.router import router as categorias_router
 from .ingredientes.router import router as ingredientes_router
 from .productos.router import router as productos_router
 from .usuarios.router import router as usuarios_router
+from .admin.router import router as admin_router
 
 app = FastAPI(title="Food Store API", version="1.0.0")
 
@@ -12,7 +13,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -26,6 +27,7 @@ app.include_router(categorias_router)
 app.include_router(ingredientes_router)
 app.include_router(productos_router)
 app.include_router(usuarios_router)
+app.include_router(admin_router)
 
 
 @app.get("/")

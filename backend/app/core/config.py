@@ -6,6 +6,7 @@ con @computed_field para construir DATABASE_URL automáticamente.
 Los valores sensibles (SECRET_KEY, POSTGRES_PASSWORD) viven en .env.
 """
 
+import os
 from pydantic import computed_field
 from pydantic_settings import BaseSettings
 
@@ -23,22 +24,23 @@ class Settings(BaseSettings):
         """
         Construye la URL de conexión a PostgreSQL.
         """
+        use_sqlite = os.getenv("USE_SQLITE", "true").lower() == "true"
+        if use_sqlite:
+            return "sqlite:///./food_store.db"
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
-    # ─── JWT ──────────────────────────────────────────────────────────────────
-    SECRET_KEY: str  # Obligatorio — sin default. Mínimo 32 chars.
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
-        "extra": "ignore",  # ignora vars extra del .env (ej. DATABASE_URL literal)
+        "extra": "ignore",
     }
 
 
-# Instancia global — importar desde aquí en toda la app
 settings = Settings()

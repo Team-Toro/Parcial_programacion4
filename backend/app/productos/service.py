@@ -45,6 +45,55 @@ class ProductoService:
             order=order,
         )
 
+    def get_all_with_count(
+        self,
+        uow: UnitOfWork,
+        offset: int = 0,
+        limit: int = 20,
+        disponible: Optional[bool] = None,
+        categoria_id: Optional[int] = None,
+        include_children: bool = True,
+        q: Optional[str] = None,
+        precio_min: Optional[float] = None,
+        precio_max: Optional[float] = None,
+        stock_min: Optional[int] = None,
+        stock_max: Optional[int] = None,
+        in_stock: Optional[bool] = None,
+        ingrediente_id: Optional[int] = None,
+        sort: Optional[str] = None,
+        order: str = "asc",
+    ) -> tuple[list[Producto], int]:
+        repo = ProductoRepository(uow.session)
+        items = repo.get_all(
+            offset=offset,
+            limit=limit,
+            disponible=disponible,
+            categoria_id=categoria_id,
+            include_children=include_children,
+            q=q,
+            precio_min=precio_min,
+            precio_max=precio_max,
+            stock_min=stock_min,
+            stock_max=stock_max,
+            in_stock=in_stock,
+            ingrediente_id=ingrediente_id,
+            sort=sort,
+            order=order,
+        )
+        total = repo.count(
+            disponible=disponible,
+            categoria_id=categoria_id,
+            include_children=include_children,
+            q=q,
+            precio_min=precio_min,
+            precio_max=precio_max,
+            stock_min=stock_min,
+            stock_max=stock_max,
+            in_stock=in_stock,
+            ingrediente_id=ingrediente_id,
+        )
+        return items, total
+
     def get_by_id(self, uow: UnitOfWork, producto_id: int) -> Producto:
         repo = ProductoRepository(uow.session)
         p = repo.get_by_id(producto_id)
@@ -124,3 +173,15 @@ class ProductoService:
         producto.deleted_at = datetime.utcnow()
         repo.add(producto)
         repo.flush()
+
+    def restore(self, uow: UnitOfWork, producto_id: int) -> Producto:
+        repo = ProductoRepository(uow.session)
+        repo.session.flush()
+        p = repo.session.get(Producto, producto_id)
+        if not p or p.deleted_at is None:
+            raise HTTPException(status_code=404, detail=f"Producto {producto_id} no encontrado o no está eliminado")
+        p.deleted_at = None
+        repo.add(p)
+        repo.flush()
+        repo.refresh(p)
+        return p

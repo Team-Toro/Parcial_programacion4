@@ -1,6 +1,7 @@
 import { API_URL } from '../config';
 import { getAuthToken, useAuthStore } from '../store/authStore';
 
+/** Wrapper genérico de fetch con autenticación, manejo de errores y parseo JSON. */
 export async function apiFetch<T>(
   path: string,
   options?: RequestInit & { skipAuth?: boolean }
@@ -16,7 +17,6 @@ export async function apiFetch<T>(
     }
   }
 
-  // Solo agrega Content-Type JSON si hay body y no es un tipo que ya trae su propio Content-Type
   if (body != null && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
     if (!headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
@@ -31,7 +31,6 @@ export async function apiFetch<T>(
 
   if (response.status === 401) {
     useAuthStore.getState().logout();
-    // Evitar loop si ya estamos en una ruta pública de auth
     const { pathname } = window.location;
     if (!pathname.startsWith('/login') && !pathname.startsWith('/register')) {
       window.location.href = '/login';
@@ -39,7 +38,6 @@ export async function apiFetch<T>(
     throw new Error('No autorizado');
   }
 
-  // 204 No Content — el back no manda body
   if (response.status === 204) {
     return undefined as T;
   }
@@ -58,7 +56,7 @@ export async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
-// Construye un query string omitiendo valores vacíos/nulos/undefined
+/** Construye un query string omitiendo valores vacíos, nulos o undefined. */
 export function buildQueryString(params: Record<string, unknown>): string {
   const entries = Object.entries(params).filter(
     ([, value]) => value !== undefined && value !== null && value !== ''
