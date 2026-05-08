@@ -19,6 +19,7 @@ class CategoriaService:
         only_roots: bool = False,
         sort: str | None = None,
         order: str = "asc",
+        include_deleted: bool = False,
     ) -> List[Categoria]:
         repo = CategoriaRepository(uow.session)
         return repo.get_all(
@@ -29,11 +30,16 @@ class CategoriaService:
             only_roots=only_roots,
             sort=sort,
             order=order,
+            include_deleted=include_deleted,
         )
 
-    def get_by_id(self, uow: UnitOfWork, categoria_id: int) -> Categoria:
+    def get_by_id(self, uow: UnitOfWork, categoria_id: int, include_deleted: bool = False) -> Categoria:
         repo = CategoriaRepository(uow.session)
-        categoria = repo.get_by_id(categoria_id)
+        categoria = (
+            repo.get_by_id_including_deleted(categoria_id)
+            if include_deleted
+            else repo.get_by_id(categoria_id)
+        )
         if not categoria:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

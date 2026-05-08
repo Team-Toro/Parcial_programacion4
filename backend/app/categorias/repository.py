@@ -17,9 +17,12 @@ class CategoriaRepository:
         only_roots: bool = False,
         sort: Optional[str] = None,
         order: str = "asc",
+        include_deleted: bool = False,
     ) -> List[Categoria]:
         """Obtiene categorías activas con paginación y filtros."""
-        query = select(Categoria).where(col(Categoria.deleted_at).is_(None))
+        query = select(Categoria)
+        if not include_deleted:
+            query = query.where(col(Categoria.deleted_at).is_(None))
 
         q_norm = q.strip().lower() if q else None
         if q_norm:
@@ -58,6 +61,10 @@ class CategoriaRepository:
         cat = self.session.get(Categoria, categoria_id)
         return cat if (cat and cat.deleted_at is None) else None
 
+    def get_by_id_including_deleted(self, categoria_id: int) -> Optional[Categoria]:
+        """Obtiene una categoría por ID (incluye eliminadas)."""
+        return self.session.get(Categoria, categoria_id)
+
     def get_by_nombre(self, nombre: str, exclude_id: Optional[int] = None) -> Optional[Categoria]:
         """Busca una categoría por nombre exacto."""
         query = (
@@ -75,6 +82,12 @@ class CategoriaRepository:
             select(Categoria)
             .where(Categoria.parent_id == categoria_id)
             .where(col(Categoria.deleted_at).is_(None))
+        ).all()
+
+    def get_subcategorias_including_deleted(self, categoria_id: int) -> List[Categoria]:
+        """Obtiene las subcategorías directas (incluye eliminadas)."""
+        return self.session.exec(
+            select(Categoria).where(Categoria.parent_id == categoria_id)
         ).all()
 
     def get_categoria_tree(self, categoria_id: int) -> List[Categoria]:
