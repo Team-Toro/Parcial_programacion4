@@ -30,6 +30,7 @@ def listar_categorias(
     only_roots: Annotated[bool, Query(description="Solo categorías raíz (parent_id NULL)")] = False,
     sort: Annotated[str | None, Query(pattern="^(nombre|created_at|parent_id)$", description="Campo de orden")] = None,
     order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
+    include_deleted: Annotated[bool, Query(description="Incluir categorías eliminadas (solo admin)")] = False,
 ):
     return service.get_all(
         uow=uow,
@@ -40,6 +41,7 @@ def listar_categorias(
         only_roots=only_roots,
         sort=sort,
         order=order,
+        include_deleted=include_deleted,
     )
 
 
@@ -55,8 +57,13 @@ def obtener_categoria(
     categoria_id: Annotated[int, Path(ge=1, description="ID de la categoría")],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
+    include_deleted: Annotated[bool, Query(description="Incluir categorías eliminadas (solo admin)")] = False,
 ):
-    return service.get_by_id(uow, categoria_id)
+    return service.get_by_id(
+        uow,
+        categoria_id,
+        include_deleted=include_deleted,
+    )
 
 
 @router.get(

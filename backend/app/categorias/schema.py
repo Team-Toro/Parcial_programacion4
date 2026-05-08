@@ -51,6 +51,9 @@ class CategoriaPublic(BaseModel):
     descripcion: Optional[str] = None
     parent_id: Optional[int] = None
     imagen_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
     subcategorias: List["CategoriaPublic"] = Field(default_factory=list)
 
     @field_validator("subcategorias", mode="before")

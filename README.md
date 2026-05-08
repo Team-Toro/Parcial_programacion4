@@ -39,6 +39,7 @@ npm run dev
 cp backend/env.example backend/.env.docker
 cp frontend/.env.example frontend/.env.docker
 docker compose up --build
+docker compose exec api python -m app.db.seed
 ```
 
 ## Endpoints principales
