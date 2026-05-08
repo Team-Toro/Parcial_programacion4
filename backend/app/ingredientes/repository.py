@@ -18,8 +18,11 @@ class IngredienteRepository:
         es_alergeno: Optional[bool] = None,
         sort: Optional[str] = None,
         order: str = "asc",
+        include_deleted: bool = False,
     ) -> List[Ingrediente]:
-        query = select(Ingrediente).where(col(Ingrediente.deleted_at).is_(None))
+        query = select(Ingrediente)
+        if not include_deleted:
+            query = query.where(col(Ingrediente.deleted_at).is_(None))
 
         q_norm = q.strip().lower() if q else None
         if q_norm:
@@ -49,11 +52,14 @@ class IngredienteRepository:
         ing = self.session.get(Ingrediente, ingrediente_id)
         return ing if (ing and ing.deleted_at is None) else None
 
+    def get_any_by_id(self, ingrediente_id: int) -> Optional[Ingrediente]:
+        return self.session.get(Ingrediente, ingrediente_id)
+
     def get_by_nombre(self, nombre: str, exclude_id: Optional[int] = None) -> Optional[Ingrediente]:
         query = (
             select(Ingrediente)
             .where(Ingrediente.nombre == nombre)
-            .where(Ingrediente.deleted_at == None)
+            .where(col(Ingrediente.deleted_at).is_(None))
         )
         if exclude_id is not None:
             query = query.where(Ingrediente.id != exclude_id)

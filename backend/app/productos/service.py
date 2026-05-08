@@ -26,6 +26,7 @@ class ProductoService:
         ingrediente_id: Optional[int] = None,
         sort: Optional[str] = None,
         order: str = "asc",
+        include_deleted: bool = False,
     ) -> List[Producto]:
         repo = ProductoRepository(uow.session)
         return repo.get_all(
@@ -43,6 +44,7 @@ class ProductoService:
             ingrediente_id=ingrediente_id,
             sort=sort,
             order=order,
+            include_deleted=include_deleted,
         )
 
     def get_by_id(self, uow: UnitOfWork, producto_id: int) -> Producto:
@@ -77,6 +79,7 @@ class ProductoService:
                 producto_id=producto.id,
                 ingrediente_id=ing_data.ingrediente_id,
                 es_removible=ing_data.es_removible,
+                cantidad=ing_data.cantidad,
             ))
 
         repo.flush()
@@ -111,6 +114,7 @@ class ProductoService:
                     producto_id=producto_id,
                     ingrediente_id=ing_data.ingrediente_id,
                     es_removible=ing_data.es_removible,
+                    cantidad=ing_data.cantidad,
                 ))
 
         repo.add(producto)
@@ -124,3 +128,17 @@ class ProductoService:
         producto.deleted_at = datetime.utcnow()
         repo.add(producto)
         repo.flush()
+
+    def reactivate(self, uow: UnitOfWork, producto_id: int) -> Producto:
+        repo = ProductoRepository(uow.session)
+        producto = repo.get_any_by_id(producto_id)
+        if not producto:
+            raise HTTPException(status_code=404, detail=f"Producto {producto_id} no encontrado")
+        if producto.deleted_at is None:
+            raise HTTPException(status_code=400, detail="El producto no está dado de baja")
+        producto.deleted_at = None
+        producto.updated_at = datetime.utcnow()
+        repo.add(producto)
+        repo.flush()
+        repo.refresh(producto)
+        return producto

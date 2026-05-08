@@ -1,8 +1,8 @@
 from typing import Annotated, List
 from fastapi import APIRouter, Depends, Query, Path, status
 from .schema import (
-    CategoriaCreate, 
-    CategoriaUpdate, 
+    CategoriaCreate,
+    CategoriaUpdate,
     CategoriaPublic,
     CategoriaStats
 )
@@ -18,7 +18,7 @@ def get_categoria_service() -> CategoriaService:
     "/",
     response_model=List[CategoriaPublic],
     summary="Listar todas las categorías",
-    description="Obtiene todas las categorías activas con paginación"
+    description="Obtiene categorías con paginación. Con include_deleted=true devuelve también las dadas de baja."
 )
 def listar_categorias(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
@@ -30,6 +30,7 @@ def listar_categorias(
     only_roots: Annotated[bool, Query(description="Solo categorías raíz (parent_id NULL)")] = False,
     sort: Annotated[str | None, Query(pattern="^(nombre|created_at|parent_id)$", description="Campo de orden")] = None,
     order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
+    include_deleted: Annotated[bool, Query(description="Incluir categorías dadas de baja")] = False,
 ):
     return service.get_all(
         uow=uow,
@@ -40,6 +41,7 @@ def listar_categorias(
         only_roots=only_roots,
         sort=sort,
         order=order,
+        include_deleted=include_deleted,
     )
 
 
@@ -129,3 +131,20 @@ def eliminar_categoria(
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
 ):
     service.delete(uow, categoria_id)
+
+
+@router.post(
+    "/{categoria_id}/reactivar",
+    response_model=CategoriaPublic,
+    summary="Reactivar una categoría dada de baja",
+    responses={
+        404: {"description": "Categoría no encontrada"},
+        400: {"description": "La categoría no está dada de baja"}
+    }
+)
+def reactivar_categoria(
+    categoria_id: Annotated[int, Path(ge=1, description="ID de la categoría")],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    service: Annotated[CategoriaService, Depends(get_categoria_service)],
+):
+    return service.reactivate(uow, categoria_id)

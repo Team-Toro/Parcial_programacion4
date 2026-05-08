@@ -12,7 +12,7 @@ ingrediente_service = IngredienteService()
     "/",
     response_model=List[IngredientePublic],
     summary="Listar todos los ingredientes",
-    description="Obtiene todos los ingredientes activos con paginación"
+    description="Obtiene ingredientes con paginación. Con include_deleted=true devuelve también los dados de baja."
 )
 def listar_ingredientes(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
@@ -22,6 +22,7 @@ def listar_ingredientes(
     es_alergeno: Annotated[bool | None, Query(description="Filtrar por alérgeno")] = None,
     sort: Annotated[str | None, Query(pattern="^(nombre|created_at)$", description="Campo de orden")] = None,
     order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
+    include_deleted: Annotated[bool, Query(description="Incluir ingredientes dados de baja")] = False,
 ):
     return ingrediente_service.get_all(
         uow=uow,
@@ -31,6 +32,7 @@ def listar_ingredientes(
         es_alergeno=es_alergeno,
         sort=sort,
         order=order,
+        include_deleted=include_deleted,
     )
 
 
@@ -96,3 +98,19 @@ def eliminar_ingrediente(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     ingrediente_service.delete(uow, ingrediente_id)
+
+
+@router.post(
+    "/{ingrediente_id}/reactivar",
+    response_model=IngredientePublic,
+    summary="Reactivar un ingrediente dado de baja",
+    responses={
+        404: {"description": "Ingrediente no encontrado"},
+        400: {"description": "El ingrediente no está dado de baja"}
+    }
+)
+def reactivar_ingrediente(
+    ingrediente_id: Annotated[int, Path(ge=1)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    return ingrediente_service.reactivate(uow, ingrediente_id)

@@ -12,7 +12,7 @@ producto_service = ProductoService()
     "/",
     response_model=List[ProductoPublic],
     summary="Listar todos los productos",
-    description="Obtiene todos los productos activos con paginación y filtros opcionales"
+    description="Obtiene productos con paginación y filtros. Con include_deleted=true devuelve también los dados de baja."
 )
 def listar_productos(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
@@ -30,6 +30,7 @@ def listar_productos(
     ingrediente_id: Annotated[Optional[int], Query(ge=1, description="Filtrar por ingrediente")] = None,
     sort: Annotated[Optional[str], Query(pattern="^(nombre|precio_base|created_at|stock_cantidad)$", description="Campo de orden")] = None,
     order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
+    include_deleted: Annotated[bool, Query(description="Incluir productos dados de baja")] = False,
 ):
     return producto_service.get_all(
         uow=uow,
@@ -47,6 +48,7 @@ def listar_productos(
         ingrediente_id=ingrediente_id,
         sort=sort,
         order=order,
+        include_deleted=include_deleted,
     )
 
 
@@ -113,3 +115,19 @@ def eliminar_producto(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     producto_service.delete(uow, producto_id)
+
+
+@router.post(
+    "/{producto_id}/reactivar",
+    response_model=ProductoPublic,
+    summary="Reactivar un producto dado de baja",
+    responses={
+        404: {"description": "Producto no encontrado"},
+        400: {"description": "El producto no está dado de baja"}
+    }
+)
+def reactivar_producto(
+    producto_id: Annotated[int, Path(ge=1)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    return producto_service.reactivate(uow, producto_id)

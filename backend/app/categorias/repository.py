@@ -17,9 +17,12 @@ class CategoriaRepository:
         only_roots: bool = False,
         sort: Optional[str] = None,
         order: str = "asc",
+        include_deleted: bool = False,
     ) -> List[Categoria]:
-        """Obtiene categorías activas con paginación y filtros."""
-        query = select(Categoria).where(col(Categoria.deleted_at).is_(None))
+        """Obtiene categorías con paginación y filtros."""
+        query = select(Categoria)
+        if not include_deleted:
+            query = query.where(col(Categoria.deleted_at).is_(None))
 
         q_norm = q.strip().lower() if q else None
         if q_norm:
@@ -58,6 +61,10 @@ class CategoriaRepository:
         cat = self.session.get(Categoria, categoria_id)
         return cat if (cat and cat.deleted_at is None) else None
 
+    def get_any_by_id(self, categoria_id: int) -> Optional[Categoria]:
+        """Obtiene una categoría por ID sin importar si está eliminada."""
+        return self.session.get(Categoria, categoria_id)
+
     def get_by_nombre(self, nombre: str, exclude_id: Optional[int] = None) -> Optional[Categoria]:
         """Busca una categoría por nombre exacto."""
         query = (
@@ -82,7 +89,6 @@ class CategoriaRepository:
         categoria = self.get_by_id(categoria_id)
         if not categoria:
             return []
-        
         subcategorias = self.get_subcategorias(categoria_id)
         return [categoria] + subcategorias
 
