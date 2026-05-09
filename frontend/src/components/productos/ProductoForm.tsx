@@ -1,4 +1,5 @@
-import { Categoria, Ingrediente, ProductoCreate, IngredienteEnProducto } from '../../types';
+import { useState } from 'react';
+import type { Categoria, Ingrediente, ProductoCreate, IngredienteEnProducto } from '../../types';
 
 interface ProductoFormProps {
   form: ProductoCreate;
@@ -7,36 +8,14 @@ interface ProductoFormProps {
   ingredientes: Ingrediente[];
 }
 
-const sortCategorias = (categorias: Categoria[]): Categoria[] => {
-  return [...categorias].sort((a, b) => {
-    const aGroup = a.parent_id ?? a.id;
-    const bGroup = b.parent_id ?? b.id;
-    
-    if (aGroup !== bGroup) {
-      return aGroup - bGroup;
-    }
-    
-    if (a.parent_id === null && b.parent_id !== null) return -1;
-    if (a.parent_id !== null && b.parent_id === null) return 1;
-    
-    return a.nombre.localeCompare(b.nombre);
-  });
-};
-
 export default function ProductoForm({ form, onChange, categorias, ingredientes }: ProductoFormProps) {
-  const getChildCount = (parentId: number) => 
-    categorias.filter(c => c.parent_id === parentId).length;
+  const [categoriaSearch, setCategoriaSearch] = useState('');
 
-  const renderCategoriasOptions = (): JSX.Element[] => {
-    return sortCategorias(categorias).map(cat => {
-      const level = cat.parent_id ? 1 : 0;
-      return (
-        <option key={cat.id} value={cat.id}>
-          {'  '.repeat(level) + (level > 0 ? '└ ' : '') + cat.nombre + (getChildCount(cat.id) > 0 ? ` (${getChildCount(cat.id)} sub)` : '')}
-        </option>
-      );
-    });
-  };
+  // Raíces primero, hijos debajo de su padre
+  const categoriasOrdenadas = categorias.filter(c => !c.parent_id).flatMap(r => [
+    r,
+    ...categorias.filter(c => c.parent_id === r.id),
+  ]);
 
   const toggleCategoria = (id: number) => {
     const ids = form.categoria_ids.includes(id)
@@ -52,12 +31,12 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
     } else {
       onChange({
         ...form,
-        ingredientes: [...form.ingredientes, { ingrediente_id: id, es_removible: true }],
+        ingredientes: [...form.ingredientes, { ingrediente_id: id, es_removible: true, cantidad: 1 }],
       });
     }
   };
 
-  const updateIngProp = (id: number, prop: keyof IngredienteEnProducto, value: boolean) =>
+  const updateIngProp = (id: number, prop: keyof IngredienteEnProducto, value: boolean | number) =>
     onChange({
       ...form,
       ingredientes: form.ingredientes.map(pi =>
@@ -86,32 +65,16 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
           placeholder="Descripción opcional..."
         />
       </div>
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Precio base *</label>
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-            value={form.precio_base}
-            onChange={e => onChange({ ...form, precio_base: parseFloat(e.target.value) || 0 })}
-          />
-        </div>
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Stock</label>
-          <input
-            type="number"
-            min={0}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-            value={form.stock_cantidad ?? 0}
-            onChange={e => onChange({
-              ...form,
-              stock_cantidad: parseInt(e.target.value) || 0,
-            })}
-            placeholder="Ej: 100"
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Precio base *</label>
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+          value={form.precio_base}
+          onChange={e => onChange({ ...form, precio_base: parseFloat(e.target.value) || 0 })}
+        />
       </div>
       <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
         <input
@@ -122,60 +85,93 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
         />
         Disponible
       </label>
+
+      {/* Selector de categorías */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Categorías</label>
-        <select
-          multiple
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-          value={form.categoria_ids.map(String)}
-          onChange={e => {
-            const selected = Array.from(e.target.selectedOptions, opt => parseInt(opt.value));
-            onChange({ ...form, categoria_ids: selected });
-          }}
-        >
-          <option value="" disabled>Seleccionar categorías...</option>
-          {renderCategoriasOptions()}
-        </select>
-        {form.categoria_ids.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {form.categoria_ids.map(catId => {
-              const cat = categorias.find(c => c.id === catId);
-              return cat ? (
-                <span key={cat.id} className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
-                  {cat.nombre}
-                  <button
-                    type="button"
-                    onClick={() => toggleCategoria(cat.id)}
-                    className="hover:text-orange-900"
-                  >
-                    ×
-                  </button>
-                </span>
-              ) : null;
+        <label className="block text-sm font-medium text-slate-700 mb-2">
+          Categorías{form.categoria_ids.length > 0 && ` (${form.categoria_ids.length} seleccionada${form.categoria_ids.length !== 1 ? 's' : ''})`}
+        </label>
+        {/* Chips */}
+        <div className="flex flex-wrap gap-1 mb-2 min-h-[1.75rem]">
+          {form.categoria_ids.length === 0 ? (
+            <span className="text-slate-400 text-xs">Ninguna categoría seleccionada</span>
+          ) : form.categoria_ids.map(catId => {
+            const cat = categorias.find(c => c.id === catId);
+            return cat ? (
+              <span key={cat.id} className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                {cat.nombre}
+                <button
+                  type="button"
+                  onClick={() => toggleCategoria(cat.id)}
+                  className="hover:bg-orange-200 rounded-full p-0.5 leading-none"
+                >×</button>
+              </span>
+            ) : null;
+          })}
+        </div>
+        {/* Buscador */}
+        <input
+          type="text"
+          value={categoriaSearch}
+          onChange={e => setCategoriaSearch(e.target.value)}
+          placeholder="Buscar categoría..."
+          className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm mb-1 focus:outline-none focus:ring-2 focus:ring-orange-400"
+        />
+        {/* Lista con checkboxes */}
+        <div className="border border-slate-300 rounded-lg max-h-40 overflow-y-auto divide-y divide-slate-100">
+          {categoriasOrdenadas
+            .filter(c => !categoriaSearch || c.nombre.toLowerCase().includes(categoriaSearch.toLowerCase()))
+            .map(cat => {
+              const isSelected = form.categoria_ids.includes(cat.id);
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => toggleCategoria(cat.id)}
+                  className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-slate-50 text-sm ${isSelected ? 'bg-orange-50' : ''} ${cat.parent_id ? 'pl-6' : ''}`}
+                >
+                  <input type="checkbox" readOnly checked={isSelected} className="w-3.5 h-3.5 accent-orange-500 shrink-0" />
+                  {cat.parent_id && <span className="text-slate-400 text-xs">⤷</span>}
+                  <span className={isSelected ? 'font-medium text-orange-700' : 'text-slate-700'}>{cat.nombre}</span>
+                </div>
+              );
             })}
-          </div>
-        )}
+          {categorias.length === 0 && (
+            <p className="px-3 py-2 text-slate-400 text-xs">Sin categorías disponibles</p>
+          )}
+        </div>
       </div>
+
+      {/* Ingredientes */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Ingredientes</label>
-        <div className="max-h-48 overflow-y-auto border border-slate-300 rounded-lg p-2 flex flex-col gap-2">
-          {ingredientes.length === 0 && <span className="text-slate-400 text-xs">Sin ingredientes disponibles</span>}
+        <label className="block text-sm font-medium text-slate-700 mb-1">Ingredientes *</label>
+        <div className="max-h-48 overflow-y-auto border border-slate-300 rounded-lg divide-y divide-slate-100">
+          {ingredientes.length === 0 && (
+            <span className="block px-3 py-2 text-slate-400 text-xs">Sin ingredientes disponibles</span>
+          )}
           {ingredientes.map(ing => {
             const sel = form.ingredientes.find(pi => pi.ingrediente_id === ing.id);
             return (
               <div key={ing.id}>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!sel}
-                    onChange={() => toggleIngrediente(ing.id)}
-                    className="w-4 h-4 accent-orange-500"
-                  />
-                  {ing.nombre}
-                  {ing.es_alergeno && <span className="text-xs text-red-500">⚠</span>}
-                </label>
+                <div
+                  onClick={() => toggleIngrediente(ing.id)}
+                  className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-orange-50 text-sm ${sel ? 'bg-orange-50' : ''}`}
+                >
+                  <input type="checkbox" readOnly checked={!!sel} className="w-3.5 h-3.5 accent-orange-500 shrink-0" />
+                  <span className={sel ? 'font-medium text-orange-700' : 'text-slate-700'}>{ing.nombre}</span>
+                  {ing.es_alergeno && <span className="text-xs text-red-400">⚠</span>}
+                  <span className="ml-auto text-xs text-slate-400">{ing.stock_actual} {ing.unidad}</span>
+                </div>
                 {sel && (
-                  <div className="ml-6 mt-1">
+                  <div className="ml-6 px-3 pb-2 flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={sel.cantidad}
+                      onChange={e => updateIngProp(ing.id, 'cantidad', parseFloat(e.target.value) || 0)}
+                      className="w-20 border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400"
+                    />
+                    <span className="text-xs text-slate-400">{ing.unidad}</span>
                     <label className="flex items-center gap-1 text-xs text-slate-600 cursor-pointer">
                       <input
                         type="checkbox"

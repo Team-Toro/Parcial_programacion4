@@ -131,7 +131,7 @@ class ProductoService:
 
     def reactivate(self, uow: UnitOfWork, producto_id: int) -> Producto:
         repo = ProductoRepository(uow.session)
-        producto = repo.get_any_by_id(producto_id)
+        producto = repo.get_by_id_including_deleted(producto_id)
         if not producto:
             raise HTTPException(status_code=404, detail=f"Producto {producto_id} no encontrado")
         if producto.deleted_at is None:

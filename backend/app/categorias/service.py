@@ -208,7 +208,7 @@ class CategoriaService:
 
     def reactivate(self, uow: UnitOfWork, categoria_id: int) -> Categoria:
         repo = CategoriaRepository(uow.session)
-        categoria = repo.get_any_by_id(categoria_id)
+        categoria = repo.get_by_id_including_deleted(categoria_id)
         if not categoria:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

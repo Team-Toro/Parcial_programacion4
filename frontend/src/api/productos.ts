@@ -1,47 +1,32 @@
-import { Producto, ProductoCreate } from '../types';
-import { API_URL } from '../config';
+import type { Producto, ProductoCreate, ProductoListParams } from '../types';
+import { apiFetch, buildQueryString } from './client';
 
-const BASE = `${API_URL}/productos`;
-
-export const getProductos = async (): Promise<Producto[]> => {
-  const res = await fetch(BASE);
-  if (!res.ok) throw new Error('Error al obtener productos');
-  return res.json();
+export const getProductos = async (params?: ProductoListParams): Promise<Producto[]> => {
+  const { offset, limit, q, disponible, categoria_id, precio_min, precio_max,
+    stock_min, stock_max, in_stock, sort, order, include_deleted } = params ?? {};
+  return apiFetch<Producto[]>(
+    `/productos${buildQueryString({ offset, limit, q, disponible, categoria_id,
+      precio_min, precio_max, stock_min, stock_max, in_stock, sort, order, include_deleted })}`
+  );
 };
 
-export const getProductoById = async (id: number): Promise<Producto> => {
-  const res = await fetch(`${BASE}/${id}`);
-  if (!res.ok) throw new Error('Producto no encontrado');
-  return res.json();
-};
+export const getProductoById = async (id: number): Promise<Producto> =>
+  apiFetch<Producto>(`/productos/${id}`);
 
-export const createProducto = async (data: ProductoCreate): Promise<Producto> => {
-  const res = await fetch(BASE, {
+export const createProducto = async (data: ProductoCreate): Promise<Producto> =>
+  apiFetch<Producto>('/productos', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.detail || 'Error al crear producto');
-  }
-  return res.json();
-};
 
-export const updateProducto = async (id: number, data: Partial<ProductoCreate>): Promise<Producto> => {
-  const res = await fetch(`${BASE}/${id}`, {
+export const updateProducto = async (id: number, data: Partial<ProductoCreate>): Promise<Producto> =>
+  apiFetch<Producto>(`/productos/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.detail || 'Error al actualizar producto');
-  }
-  return res.json();
-};
 
-export const deleteProducto = async (id: number): Promise<void> => {
-  const res = await fetch(`${BASE}/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Error al eliminar producto');
-};
+export const deleteProducto = async (id: number): Promise<void> =>
+  apiFetch<void>(`/productos/${id}`, { method: 'DELETE' });
+
+export const reactivarProducto = async (id: number): Promise<Producto> =>
+  apiFetch<Producto>(`/productos/${id}/reactivar`, { method: 'POST' });

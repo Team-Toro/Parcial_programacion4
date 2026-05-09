@@ -10,9 +10,7 @@ if TYPE_CHECKING:
 class UnidadMedida(str, Enum):
     UNIDAD = "unidad"
     KG = "kg"
-    G = "g"
     LITRO = "litro"
-    ML = "ml"
 
 
 class Ingrediente(SQLModel, table=True):

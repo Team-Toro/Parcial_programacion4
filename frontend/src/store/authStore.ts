@@ -8,16 +8,18 @@ interface AuthState {
   setToken: (token: string | null) => void;
   setUser: (user: Usuario | null) => void;
   logout: () => void;
+  isAdmin: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       token: null,
       user: null,
       setToken: (token) => set({ token }),
       setUser: (user) => set({ user }),
       logout: () => set({ token: null, user: null }),
+      isAdmin: () => get().user?.role === 'admin',
     }),
     {
       name: 'auth-storage',

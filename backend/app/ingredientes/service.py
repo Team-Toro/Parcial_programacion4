@@ -73,7 +73,7 @@ class IngredienteService:
 
     def reactivate(self, uow: UnitOfWork, ingrediente_id: int) -> Ingrediente:
         repo = IngredienteRepository(uow.session)
-        ing = repo.get_any_by_id(ingrediente_id)
+        ing = repo.get_by_id_including_deleted(ingrediente_id)
         if not ing:
             raise HTTPException(status_code=404, detail=f"Ingrediente {ingrediente_id} no encontrado")
         if ing.deleted_at is None:
