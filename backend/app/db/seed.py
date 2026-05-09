@@ -6,22 +6,16 @@ Uso:
     python -m app.db.seed
 
 Requiere PostgreSQL corriendo con las variables de .env configuradas.
-
-Crea:
-  - admin / Admin1234!  (role=admin)
-  - juan / Juan1234!    (role=user)
-  - Ingredientes con unidad y stock realistas
-  - Categorías y productos con ingredientes
 """
 
 from sqlmodel import Session, select
+from decimal import Decimal
 from app.core.database import engine, create_all_tables
 from app.core.security import hash_password
 from app.usuarios.model import Usuario
-from app.ingredientes.model import Ingrediente, UnidadMedida
 from app.categorias.model import Categoria
+from app.ingredientes.model import Ingrediente, UnidadMedida
 from app.productos.model import Producto, ProductoCategoria, ProductoIngrediente
-from decimal import Decimal
 
 
 USUARIOS_INICIALES = [
@@ -41,66 +35,260 @@ USUARIOS_INICIALES = [
     },
 ]
 
-INGREDIENTES_INICIALES = [
-    {"nombre": "Harina",       "unidad": UnidadMedida.KG,    "stock_actual": 50.0,  "es_alergeno": True},
-    {"nombre": "Sal",          "unidad": UnidadMedida.KG,    "stock_actual": 5.0,   "es_alergeno": False},
-    {"nombre": "Azúcar",       "unidad": UnidadMedida.KG,    "stock_actual": 20.0,  "es_alergeno": False},
-    {"nombre": "Levadura",     "unidad": UnidadMedida.G,     "stock_actual": 500.0, "es_alergeno": False},
-    {"nombre": "Leche",        "unidad": UnidadMedida.LITRO, "stock_actual": 30.0,  "es_alergeno": True},
-    {"nombre": "Manteca",      "unidad": UnidadMedida.KG,    "stock_actual": 10.0,  "es_alergeno": True},
-    {"nombre": "Huevo",        "unidad": UnidadMedida.UNIDAD,"stock_actual": 200.0, "es_alergeno": True},
-    {"nombre": "Aceite",       "unidad": UnidadMedida.LITRO, "stock_actual": 15.0,  "es_alergeno": False},
-    {"nombre": "Queso",        "unidad": UnidadMedida.KG,    "stock_actual": 8.0,   "es_alergeno": True},
-    {"nombre": "Tomate",       "unidad": UnidadMedida.KG,    "stock_actual": 25.0,  "es_alergeno": False},
-]
-
 CATEGORIAS_INICIALES = [
-    {"nombre": "Panadería",    "descripcion": "Productos de panadería artesanal"},
-    {"nombre": "Pastelería",   "descripcion": "Tortas, facturas y postres"},
-    {"nombre": "Pizzas",       "descripcion": "Pizzas a la piedra"},
+    {
+        "nombre": "Bebidas",
+        "descripcion": "Bebidas frías y calientes",
+        "subcategorias": [
+            {"nombre": "Gaseosas", "descripcion": "Con gas y sin alcohol"},
+            {"nombre": "Jugos", "descripcion": "Jugos naturales"},
+        ],
+    },
+    {
+        "nombre": "Comidas",
+        "descripcion": "Platos principales",
+        "subcategorias": [
+            {"nombre": "Hamburguesas", "descripcion": "Clásicas y gourmet"},
+            {"nombre": "Pizzas", "descripcion": "Tradicionales y especiales"},
+        ],
+    },
+    {
+        "nombre": "Postres",
+        "descripcion": "Dulces y helados",
+        "subcategorias": [
+            {"nombre": "Helados", "descripcion": "Sabores clásicos"},
+            {"nombre": "Tortas", "descripcion": "Porciones individuales"},
+        ],
+    },
+    {"nombre": "Entradas",    "descripcion": "Para abrir el apetito"},
+    {"nombre": "Ensaladas",   "descripcion": "Opciones frescas"},
+    {"nombre": "Pastas",      "descripcion": "Caseras y rellenas"},
+    {"nombre": "Sándwiches",  "descripcion": "Rápidos y sabrosos"},
+    {"nombre": "Cafetería",   "descripcion": "Café y acompañamientos"},
+    {"nombre": "Vegano",      "descripcion": "Opciones sin productos animales"},
+    {"nombre": "Sin gluten",  "descripcion": "Opciones aptas celíacos"},
 ]
 
-# (nombre_producto, precio, categoria_nombre, [(ingrediente_nombre, cantidad, es_removible)])
+INGREDIENTES_INICIALES = [
+    {"nombre": "Harina",        "descripcion": "Harina de trigo 000",    "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 50.0},
+    {"nombre": "Leche",         "descripcion": "Leche entera",            "es_alergeno": True,  "unidad": UnidadMedida.LITRO,  "stock_actual": 30.0},
+    {"nombre": "Queso",         "descripcion": "Queso mozzarella",        "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 10.0},
+    {"nombre": "Tomate",        "descripcion": "Tomate fresco",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 25.0},
+    {"nombre": "Lechuga",       "descripcion": "Lechuga mantecosa",       "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 15.0},
+    {"nombre": "Cebolla",       "descripcion": "Cebolla morada",          "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 10.0},
+    {"nombre": "Pollo",         "descripcion": "Pechuga de pollo",        "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 20.0},
+    {"nombre": "Carne vacuna",  "descripcion": "Carne de res",            "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 25.0},
+    {"nombre": "Huevo",         "descripcion": "Huevo de gallina",        "es_alergeno": True,  "unidad": UnidadMedida.UNIDAD, "stock_actual": 200.0},
+    {"nombre": "Azúcar",        "descripcion": "Azúcar blanca",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 20.0},
+    {"nombre": "Chocolate",     "descripcion": "Cacao y azúcar",          "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 8.0},
+    {"nombre": "Pan",           "descripcion": "Pan artesanal",           "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 15.0},
+    {"nombre": "Sal",           "descripcion": "Sal fina",                "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 5.0},
+    {"nombre": "Pimienta",      "descripcion": "Pimienta negra",          "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 2.0},
+    {"nombre": "Aceite de oliva","descripcion": "Oliva extra virgen",     "es_alergeno": False, "unidad": UnidadMedida.LITRO,  "stock_actual": 10.0},
+    {"nombre": "Ajo",           "descripcion": "Ajo fresco",              "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 3.0},
+    {"nombre": "Perejil",       "descripcion": "Hierba fresca",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 2.0},
+    {"nombre": "Jamón",         "descripcion": "Jamón cocido",            "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 8.0},
+    {"nombre": "Bacon",         "descripcion": "Panceta ahumada",         "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 6.0},
+    {"nombre": "Champiñones",   "descripcion": "Frescos laminados",       "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 8.0},
+    {"nombre": "Pimiento",      "descripcion": "Pimiento rojo",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 10.0},
+    {"nombre": "Mayonesa",      "descripcion": "Salsa de huevo",          "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 5.0},
+    {"nombre": "Ketchup",       "descripcion": "Salsa de tomate",         "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 5.0},
+    {"nombre": "Mostaza",       "descripcion": "Salsa de mostaza",        "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 3.0},
+]
+
 PRODUCTOS_INICIALES = [
-    (
-        "Pan francés",
-        Decimal("150.00"),
-        "Panadería",
-        [
-            ("Harina",   0.3,  False),
-            ("Sal",      0.01, False),
-            ("Levadura", 5.0,  False),
+    {
+        "nombre": "Hamburguesa Clásica",
+        "descripcion": "Carne, queso y vegetales",
+        "precio_base": Decimal("3200.00"),
+        "stock_cantidad": 25,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1550547660-d9450f859349"],
+        "categorias": ["Comidas", "Hamburguesas"],
+        "ingredientes": [
+            {"nombre": "Carne vacuna", "es_removible": False, "cantidad": 0.15},
+            {"nombre": "Queso",        "es_removible": True,  "cantidad": 0.03},
+            {"nombre": "Lechuga",      "es_removible": True,  "cantidad": 0.02},
+            {"nombre": "Tomate",       "es_removible": True,  "cantidad": 0.03},
         ],
-    ),
-    (
-        "Medialunas",
-        Decimal("280.00"),
-        "Pastelería",
-        [
-            ("Harina",   0.25, False),
-            ("Manteca",  0.1,  False),
-            ("Azúcar",   0.05, False),
-            ("Huevo",    1.0,  False),
+    },
+    {
+        "nombre": "Pizza Muzzarella",
+        "descripcion": "Clásica con mozzarella",
+        "precio_base": Decimal("4200.00"),
+        "stock_cantidad": 15,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1548365328-9f547f3c07b6"],
+        "categorias": ["Comidas", "Pizzas"],
+        "ingredientes": [
+            {"nombre": "Harina", "es_removible": False, "cantidad": 0.4},
+            {"nombre": "Queso",  "es_removible": False, "cantidad": 0.25},
+            {"nombre": "Tomate", "es_removible": False, "cantidad": 0.15},
         ],
-    ),
-    (
-        "Pizza Mozzarella",
-        Decimal("850.00"),
-        "Pizzas",
-        [
-            ("Harina",   0.4,  False),
-            ("Queso",    0.2,  True),
-            ("Tomate",   0.15, True),
-            ("Aceite",   0.02, False),
-            ("Sal",      0.005,False),
+    },
+    {
+        "nombre": "Ensalada César",
+        "descripcion": "Lechuga, pollo y aderezo",
+        "precio_base": Decimal("2800.00"),
+        "stock_cantidad": 18,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1540420773420-3366772f4999"],
+        "categorias": ["Ensaladas"],
+        "ingredientes": [
+            {"nombre": "Lechuga", "es_removible": False, "cantidad": 0.1},
+            {"nombre": "Pollo",   "es_removible": True,  "cantidad": 0.15},
+            {"nombre": "Queso",   "es_removible": True,  "cantidad": 0.03},
         ],
-    ),
+    },
+    {
+        "nombre": "Limonada",
+        "descripcion": "Refrescante y natural",
+        "precio_base": Decimal("1400.00"),
+        "stock_cantidad": 40,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1497534446932-c925b458314e"],
+        "categorias": ["Bebidas", "Jugos"],
+        "ingredientes": [
+            {"nombre": "Azúcar", "es_removible": True, "cantidad": 0.02},
+        ],
+    },
+    {
+        "nombre": "Brownie",
+        "descripcion": "Chocolate intenso",
+        "precio_base": Decimal("2200.00"),
+        "stock_cantidad": 12,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1509042239860-f550ce710b93"],
+        "categorias": ["Postres", "Tortas"],
+        "ingredientes": [
+            {"nombre": "Chocolate", "es_removible": False, "cantidad": 0.08},
+            {"nombre": "Harina",    "es_removible": False, "cantidad": 0.1},
+            {"nombre": "Huevo",     "es_removible": False, "cantidad": 2.0},
+        ],
+    },
+    {
+        "nombre": "Sándwich de Pollo",
+        "descripcion": "Pollo, lechuga y mayonesa",
+        "precio_base": Decimal("2600.00"),
+        "stock_cantidad": 20,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1508736793122-f516e3ba5569"],
+        "categorias": ["Sándwiches"],
+        "ingredientes": [
+            {"nombre": "Pollo",    "es_removible": False, "cantidad": 0.15},
+            {"nombre": "Pan",      "es_removible": False, "cantidad": 0.12},
+            {"nombre": "Lechuga",  "es_removible": True,  "cantidad": 0.02},
+            {"nombre": "Mayonesa", "es_removible": True,  "cantidad": 0.02},
+        ],
+    },
+    {
+        "nombre": "Café Americano",
+        "descripcion": "Café negro clásico",
+        "precio_base": Decimal("1200.00"),
+        "stock_cantidad": 50,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1495474472287-4d71bcdd2085"],
+        "categorias": ["Cafetería"],
+        "ingredientes": [
+            {"nombre": "Azúcar", "es_removible": True, "cantidad": 0.01},
+        ],
+    },
+    {
+        "nombre": "Capuccino",
+        "descripcion": "Café con leche espumada",
+        "precio_base": Decimal("1800.00"),
+        "stock_cantidad": 35,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1509042239860-f550ce710b93"],
+        "categorias": ["Cafetería"],
+        "ingredientes": [
+            {"nombre": "Leche",  "es_removible": False, "cantidad": 0.15},
+            {"nombre": "Azúcar", "es_removible": True,  "cantidad": 0.01},
+        ],
+    },
+    {
+        "nombre": "Papas con Cheddar",
+        "descripcion": "Papas con salsa de queso",
+        "precio_base": Decimal("2400.00"),
+        "stock_cantidad": 22,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1504674900247-0877df9cc836"],
+        "categorias": ["Entradas"],
+        "ingredientes": [
+            {"nombre": "Queso", "es_removible": False, "cantidad": 0.05},
+            {"nombre": "Sal",   "es_removible": True,  "cantidad": 0.005},
+        ],
+    },
+    {
+        "nombre": "Ensalada Vegana",
+        "descripcion": "Vegetales frescos",
+        "precio_base": Decimal("2600.00"),
+        "stock_cantidad": 14,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1512621776951-a57141f2eefd"],
+        "categorias": ["Ensaladas", "Vegano"],
+        "ingredientes": [
+            {"nombre": "Lechuga",  "es_removible": False, "cantidad": 0.1},
+            {"nombre": "Tomate",   "es_removible": True,  "cantidad": 0.05},
+            {"nombre": "Cebolla",  "es_removible": True,  "cantidad": 0.03},
+            {"nombre": "Pimiento", "es_removible": True,  "cantidad": 0.04},
+        ],
+    },
+    {
+        "nombre": "Pizza Vegetariana",
+        "descripcion": "Con vegetales y mozzarella",
+        "precio_base": Decimal("4500.00"),
+        "stock_cantidad": 10,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1548365328-9f547f3c07b6"],
+        "categorias": ["Comidas", "Pizzas"],
+        "ingredientes": [
+            {"nombre": "Harina",      "es_removible": False, "cantidad": 0.4},
+            {"nombre": "Queso",       "es_removible": False, "cantidad": 0.25},
+            {"nombre": "Champiñones", "es_removible": True,  "cantidad": 0.08},
+            {"nombre": "Pimiento",    "es_removible": True,  "cantidad": 0.05},
+        ],
+    },
+    {
+        "nombre": "Hamburguesa BBQ",
+        "descripcion": "Carne con bacon y salsa",
+        "precio_base": Decimal("3600.00"),
+        "stock_cantidad": 16,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1550547660-d9450f859349"],
+        "categorias": ["Comidas", "Hamburguesas"],
+        "ingredientes": [
+            {"nombre": "Carne vacuna", "es_removible": False, "cantidad": 0.15},
+            {"nombre": "Bacon",        "es_removible": False, "cantidad": 0.05},
+            {"nombre": "Queso",        "es_removible": True,  "cantidad": 0.03},
+            {"nombre": "Cebolla",      "es_removible": True,  "cantidad": 0.03},
+            {"nombre": "Ketchup",      "es_removible": True,  "cantidad": 0.02},
+        ],
+    },
+    {
+        "nombre": "Pasta Alfredo",
+        "descripcion": "Salsa cremosa con queso",
+        "precio_base": Decimal("3800.00"),
+        "stock_cantidad": 13,
+        "disponible": True,
+        "imagenes_url": ["https://images.unsplash.com/photo-1473093295043-cdd812d0e601"],
+        "categorias": ["Pastas"],
+        "ingredientes": [
+            {"nombre": "Queso", "es_removible": False, "cantidad": 0.08},
+            {"nombre": "Leche", "es_removible": False, "cantidad": 0.15},
+            {"nombre": "Ajo",   "es_removible": True,  "cantidad": 0.01},
+        ],
+    },
 ]
 
 
 def run() -> None:
     print("=== Seed — Food Store (PostgreSQL) ===")
     create_all_tables()
+
+    cats_creadas = 0
+    ings_creados = 0
+    prods_creados = 0
 
     with Session(engine) as session:
         # Usuarios
@@ -112,94 +300,125 @@ def run() -> None:
             if existing:
                 print(f"  [=] Ya existe: {data['username']} ({data['role']})")
             else:
-                usuario = Usuario(
+                session.add(Usuario(
                     username        = data["username"],
                     full_name       = data["full_name"],
                     email           = data["email"],
                     hashed_password = hash_password(data["password"]),
                     role            = data["role"],
-                )
-                session.add(usuario)
-                print(f"  [+] Creado:    {data['username']} / {data['password']}  (role={data['role']})")
-
-        # Ingredientes
-        print("\n[Ingredientes]")
-        ing_map: dict[str, Ingrediente] = {}
-        for data in INGREDIENTES_INICIALES:
-            existing = session.exec(
-                select(Ingrediente).where(Ingrediente.nombre == data["nombre"])
-            ).first()
-            if existing:
-                ing_map[data["nombre"]] = existing
-                print(f"  [=] Ya existe: {data['nombre']}")
-            else:
-                ing = Ingrediente(
-                    nombre      = data["nombre"],
-                    unidad      = data["unidad"],
-                    stock_actual= data["stock_actual"],
-                    es_alergeno = data["es_alergeno"],
-                )
-                session.add(ing)
-                session.flush()
-                ing_map[data["nombre"]] = ing
-                print(f"  [+] Creado: {data['nombre']} ({data['stock_actual']} {data['unidad'].value})")
+                ))
+                print(f"  [+] Creado: {data['username']} / {data['password']}  (role={data['role']})")
+        session.commit()
 
         # Categorías
         print("\n[Categorías]")
-        cat_map: dict[str, Categoria] = {}
         for data in CATEGORIAS_INICIALES:
             existing = session.exec(
                 select(Categoria).where(Categoria.nombre == data["nombre"])
             ).first()
             if existing:
-                cat_map[data["nombre"]] = existing
                 print(f"  [=] Ya existe: {data['nombre']}")
-            else:
-                cat = Categoria(nombre=data["nombre"], descripcion=data["descripcion"])
-                session.add(cat)
-                session.flush()
-                cat_map[data["nombre"]] = cat
-                print(f"  [+] Creado: {data['nombre']}")
+                continue
+
+            cat = Categoria(nombre=data["nombre"], descripcion=data.get("descripcion"))
+            session.add(cat)
+            session.flush()
+            cats_creadas += 1
+            print(f"  [+] Creado: {data['nombre']}")
+
+            for sub in data.get("subcategorias", []):
+                existing_sub = session.exec(
+                    select(Categoria).where(Categoria.nombre == sub["nombre"])
+                ).first()
+                if not existing_sub:
+                    session.add(Categoria(
+                        nombre      = sub["nombre"],
+                        descripcion = sub.get("descripcion"),
+                        parent_id   = cat.id,
+                    ))
+                    cats_creadas += 1
+                    print(f"    [+] Subcategoría: {sub['nombre']}")
+        session.commit()
+
+        # Ingredientes
+        print("\n[Ingredientes]")
+        for data in INGREDIENTES_INICIALES:
+            existing = session.exec(
+                select(Ingrediente).where(Ingrediente.nombre == data["nombre"])
+            ).first()
+            if existing:
+                print(f"  [=] Ya existe: {data['nombre']}")
+                continue
+
+            session.add(Ingrediente(
+                nombre      = data["nombre"],
+                descripcion = data.get("descripcion"),
+                es_alergeno = data.get("es_alergeno", False),
+                unidad      = data["unidad"],
+                stock_actual= data["stock_actual"],
+            ))
+            ings_creados += 1
+            print(f"  [+] Creado: {data['nombre']} ({data['stock_actual']} {data['unidad'].value})")
+        session.commit()
+
+        # Mapas para lookup rápido
+        categorias_por_nombre = {
+            cat.nombre: cat
+            for cat in session.exec(select(Categoria)).all()
+        }
+        ingredientes_por_nombre = {
+            ing.nombre: ing
+            for ing in session.exec(select(Ingrediente)).all()
+        }
 
         # Productos
         print("\n[Productos]")
-        for nombre, precio, cat_nombre, ingredientes in PRODUCTOS_INICIALES:
+        for data in PRODUCTOS_INICIALES:
             existing = session.exec(
-                select(Producto).where(Producto.nombre == nombre)
+                select(Producto).where(Producto.nombre == data["nombre"])
             ).first()
             if existing:
-                print(f"  [=] Ya existe: {nombre}")
+                print(f"  [=] Ya existe: {data['nombre']}")
                 continue
 
             producto = Producto(
-                nombre      = nombre,
-                precio_base = precio,
-                disponible  = True,
+                nombre        = data["nombre"],
+                descripcion   = data.get("descripcion"),
+                precio_base   = data["precio_base"],
+                imagenes_url  = data.get("imagenes_url"),
+                stock_cantidad= data.get("stock_cantidad", 0),
+                disponible    = data.get("disponible", True),
             )
             session.add(producto)
             session.flush()
 
-            if cat_nombre in cat_map:
-                session.add(ProductoCategoria(
-                    producto_id  = producto.id,
-                    categoria_id = cat_map[cat_nombre].id,
-                ))
-
-            for ing_nombre, cantidad, es_removible in ingredientes:
-                if ing_nombre in ing_map:
-                    session.add(ProductoIngrediente(
-                        producto_id    = producto.id,
-                        ingrediente_id = ing_map[ing_nombre].id,
-                        cantidad       = cantidad,
-                        es_removible   = es_removible,
+            for cat_nombre in data.get("categorias", []):
+                cat = categorias_por_nombre.get(cat_nombre)
+                if cat:
+                    session.add(ProductoCategoria(
+                        producto_id  = producto.id,
+                        categoria_id = cat.id,
                     ))
 
-            print(f"  [+] Creado: {nombre} (${precio})")
+            for ing_data in data.get("ingredientes", []):
+                ing = ingredientes_por_nombre.get(ing_data["nombre"])
+                if ing:
+                    session.add(ProductoIngrediente(
+                        producto_id    = producto.id,
+                        ingrediente_id = ing.id,
+                        es_removible   = ing_data.get("es_removible", False),
+                        cantidad       = ing_data.get("cantidad", 1.0),
+                    ))
 
+            prods_creados += 1
+            print(f"  [+] Creado: {data['nombre']} (${data['precio_base']})")
         session.commit()
 
     print("\n=== Seed completado ===")
-    print("Usuarios:")
+    print(f"  Categorías creadas : {cats_creadas}")
+    print(f"  Ingredientes creados: {ings_creados}")
+    print(f"  Productos creados  : {prods_creados}")
+    print("\nUsuarios:")
     print("  admin / Admin1234!  → role=admin")
     print("  juan  / Juan1234!   → role=user")
     print()

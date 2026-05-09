@@ -105,7 +105,7 @@ class ProductoRepository:
         p = self.session.get(Producto, producto_id)
         return p if (p and p.deleted_at is None) else None
 
-    def get_any_by_id(self, producto_id: int) -> Optional[Producto]:
+    def get_by_id_including_deleted(self, producto_id: int) -> Optional[Producto]:
         return self.session.get(Producto, producto_id)
 
     def get_categoria(self, categoria_id: int) -> Optional[Categoria]:

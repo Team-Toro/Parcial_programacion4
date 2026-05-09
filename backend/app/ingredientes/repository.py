@@ -52,7 +52,7 @@ class IngredienteRepository:
         ing = self.session.get(Ingrediente, ingrediente_id)
         return ing if (ing and ing.deleted_at is None) else None
 
-    def get_any_by_id(self, ingrediente_id: int) -> Optional[Ingrediente]:
+    def get_by_id_including_deleted(self, ingrediente_id: int) -> Optional[Ingrediente]:
         return self.session.get(Ingrediente, ingrediente_id)
 
     def get_by_nombre(self, nombre: str, exclude_id: Optional[int] = None) -> Optional[Ingrediente]:
