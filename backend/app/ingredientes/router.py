@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query, Path, status
 from .schema import IngredienteCreate, IngredienteRead, IngredienteUpdate, IngredientePublic
 from .service import IngredienteService
 from ..uow.unit_of_work import UnitOfWork, get_uow
+from ..core.deps import require_role
 
 router = APIRouter(prefix="/ingredientes", tags=["Ingredientes"])
 ingrediente_service = IngredienteService()
@@ -11,6 +12,7 @@ ingrediente_service = IngredienteService()
 @router.get(
     "/",
     response_model=List[IngredientePublic],
+    dependencies=[Depends(require_role(["admin"]))],
     summary="Listar todos los ingredientes",
     description="Obtiene ingredientes con paginación. Con include_deleted=true devuelve también los dados de baja."
 )
@@ -39,6 +41,7 @@ def listar_ingredientes(
 @router.get(
     "/{ingrediente_id}",
     response_model=IngredientePublic,
+    dependencies=[Depends(require_role(["admin"]))],
     summary="Obtener un ingrediente por ID",
     responses={
         404: {"description": "Ingrediente no encontrado"}
@@ -55,6 +58,7 @@ def obtener_ingrediente(
     "/",
     response_model=IngredientePublic,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(["admin"]))],
     summary="Crear un nuevo ingrediente",
     responses={
         409: {"description": "Ya existe un ingrediente con ese nombre"}
@@ -70,6 +74,7 @@ def crear_ingrediente(
 @router.patch(
     "/{ingrediente_id}",
     response_model=IngredientePublic,
+    dependencies=[Depends(require_role(["admin"]))],
     summary="Actualizar parcialmente un ingrediente",
     responses={
         404: {"description": "Ingrediente no encontrado"},
@@ -87,6 +92,7 @@ def actualizar_ingrediente(
 @router.delete(
     "/{ingrediente_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role(["admin"]))],
     summary="Eliminar un ingrediente (soft delete)",
     description="Marca el ingrediente como eliminado",
     responses={
@@ -103,6 +109,7 @@ def eliminar_ingrediente(
 @router.post(
     "/{ingrediente_id}/reactivar",
     response_model=IngredientePublic,
+    dependencies=[Depends(require_role(["admin"]))],
     summary="Reactivar un ingrediente dado de baja",
     responses={
         404: {"description": "Ingrediente no encontrado"},

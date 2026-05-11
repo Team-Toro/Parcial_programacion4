@@ -395,30 +395,35 @@ export default function IngredientesPage() {
       </div>
 
       {/* Modal crear/editar */}
-      <Modal isOpen={isOpen} onClose={closeModal} title={editing ? 'Editar Ingrediente' : 'Nuevo Ingrediente'}>
-        <div className="flex flex-col gap-4">
-          {modalError && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{modalError}</p>}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
-            <input
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              value={form.nombre}
-              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-              placeholder="Ej: Harina"
-            />
+      <Modal isOpen={isOpen} onClose={closeModal} title={editing ? 'Editar Ingrediente' : 'Nuevo Ingrediente'} variant="large">
+        {modalError && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg mb-4">{modalError}</p>}
+        <div className="grid grid-cols-2 gap-6">
+          {/* Columna izquierda: nombre y descripción */}
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
+              <input
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={form.nombre}
+                onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+                placeholder="Ej: Harina"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+              <textarea
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={form.descripcion ?? ''}
+                onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
+                rows={5}
+                placeholder="Descripción opcional..."
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-            <textarea
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              value={form.descripcion ?? ''}
-              onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-              rows={3}
-              placeholder="Descripción opcional..."
-            />
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
+
+          {/* Columna derecha: unidad, stock y alérgeno */}
+          <div className="flex flex-col gap-4">
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label>
               <select
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
@@ -430,7 +435,7 @@ export default function IngredientesPage() {
                 <option value="litro">Litro</option>
               </select>
             </div>
-            <div className="flex-1">
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Stock actual</label>
               <input
                 type="number"
@@ -441,29 +446,30 @@ export default function IngredientesPage() {
                 onChange={e => setForm(f => ({ ...f, stock_actual: parseFloat(e.target.value) || 0 }))}
               />
             </div>
+            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer mt-1">
+              <input
+                type="checkbox"
+                checked={form.es_alergeno}
+                onChange={e => setForm(f => ({ ...f, es_alergeno: e.target.checked }))}
+                className="w-4 h-4 accent-orange-500"
+              />
+              Es alérgeno
+            </label>
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.es_alergeno}
-              onChange={e => setForm(f => ({ ...f, es_alergeno: e.target.checked }))}
-              className="w-4 h-4 accent-orange-500"
-            />
-            Es alérgeno
-          </label>
-          <div className="flex gap-3 justify-end pt-2">
-            <button onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">
-              Cancelar
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={createMutation.isPending || updateMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium disabled:opacity-50"
-            >
-              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
-              {editing ? 'Guardar cambios' : 'Crear'}
-            </button>
-          </div>
+        </div>
+
+        <div className="flex gap-3 justify-end pt-4 mt-4 border-t border-slate-100">
+          <button onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">
+            Cancelar
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={createMutation.isPending || updateMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium disabled:opacity-50"
+          >
+            {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
+            {editing ? 'Guardar cambios' : 'Crear'}
+          </button>
         </div>
       </Modal>
 

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronRight, ChevronDown, RefreshCw } from 'lucide-react';
+import { ChevronRight, ChevronDown, RefreshCw, Search } from 'lucide-react';
 import {
   getCategorias, getCategoriaStats, createCategoria,
   updateCategoria, deleteCategoria, reactivarCategoria,
@@ -144,6 +144,11 @@ export default function CategoriasPage() {
   const [toast, setToast] = useState<ToastState>(null);
   const [toastVisible, setToastVisible] = useState(false);
 
+  // Estado del dropdown custom de categoría padre
+  const [parentSearch, setParentSearch] = useState('');
+  const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
+  const parentDropdownRef = useRef<HTMLDivElement>(null);
+
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
     setToastVisible(false);
@@ -201,20 +206,63 @@ export default function CategoriasPage() {
     onError: (e: Error) => showToast('error', e.message),
   });
 
+  // Categorías elegibles para ser padre: excluir la que se está editando y las de nivel MAX_LEVEL,
+  // ordenadas jerárquicamente (raíz primero, sus hijos inmediatamente debajo)
+  const orderedCategorias = useMemo(() => {
+    const eligible = categoriasFlat
+      .filter(c => c.id !== editing?.id)
+      .filter(c => getCategoriaLevel(c, categoriasFlat) < MAX_LEVEL);
+    const roots = eligible.filter(c => !c.parent_id);
+    const result: Categoria[] = [];
+    for (const root of roots) {
+      result.push(root);
+      const children = eligible.filter(c => c.parent_id === root.id);
+      result.push(...children);
+    }
+    return result;
+  }, [categoriasFlat, editing]);
+
+  const filteredCategorias = orderedCategorias.filter(c =>
+    c.nombre.toLowerCase().includes(parentSearch.toLowerCase())
+  );
+
+  const selectedParentName = form.parent_id
+    ? (categoriasFlat.find(c => c.id === form.parent_id)?.nombre ?? 'Ninguna (categoría raíz)')
+    : 'Ninguna (categoría raíz)';
+
+  // Cierra el dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (parentDropdownRef.current && !parentDropdownRef.current.contains(e.target as Node)) {
+        setParentDropdownOpen(false);
+      }
+    };
+    if (parentDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [parentDropdownOpen]);
+
   const handleDeleteClick = (cat: Categoria) => {
     setDeleteConfirm(cat);
     getCategoriaStats(cat.id).then(setDeleteStats).catch(() => setDeleteStats({ subcategorias_count: 0, productos_count: 0, nivel: 0 }));
   };
 
-  const openCreate = () => { setEditing(null); setForm({ nombre: '', descripcion: '' }); setError(''); setIsOpen(true); };
+  const openCreate = () => {
+    setEditing(null); setForm({ nombre: '', descripcion: '' }); setError('');
+    setParentSearch(''); setParentDropdownOpen(false); setIsOpen(true);
+  };
 
   const openEdit = (cat: Categoria) => {
     setEditing(cat);
     setForm({ nombre: cat.nombre, descripcion: cat.descripcion ?? '', parent_id: cat.parent_id, imagen_url: cat.imagen_url });
-    setError(''); setIsOpen(true);
+    setError(''); setParentSearch(''); setParentDropdownOpen(false); setIsOpen(true);
   };
 
-  const closeModal = () => { setIsOpen(false); setEditing(null); setError(''); };
+  const closeModal = () => {
+    setIsOpen(false); setEditing(null); setError('');
+    setParentSearch(''); setParentDropdownOpen(false);
+  };
 
   const handleSubmit = () => {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
@@ -224,20 +272,6 @@ export default function CategoriasPage() {
       createMutation.mutate(form);
     }
   };
-
-  const renderCategoriasOptions = () =>
-    categoriasFlat
-      .filter(c => c.id !== editing?.id)
-      .filter(c => getCategoriaLevel(c, categoriasFlat) < MAX_LEVEL)
-      .sort((a, b) => a.nombre.localeCompare(b.nombre))
-      .map(cat => {
-        const level = getCategoriaLevel(cat, categoriasFlat);
-        return (
-          <option key={cat.id} value={cat.id}>
-            {'  '.repeat(level)}{level > 0 ? '└ ' : ''}{cat.nombre}
-          </option>
-        );
-      });
 
   const rootsVisibles = categorias.filter(c => includeDeleted || !c.deleted_at);
   const deletedCount = categorias.filter(c => c.deleted_at).length;
@@ -300,60 +334,138 @@ export default function CategoriasPage() {
       </div>
 
       {/* Modal crear/editar */}
-      <Modal isOpen={isOpen} onClose={closeModal} title={editing ? 'Editar Categoría' : 'Nueva Categoría'}>
-        <div className="flex flex-col gap-4">
-          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
-            <input
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              value={form.nombre}
-              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-              placeholder="Ej: Bebidas"
-            />
+      <Modal isOpen={isOpen} onClose={closeModal} title={editing ? 'Editar Categoría' : 'Nueva Categoría'} variant="large">
+        {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg mb-4">{error}</p>}
+        <div className="grid grid-cols-2 gap-6">
+          {/* Columna izquierda: nombre y descripción */}
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre *</label>
+              <input
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={form.nombre}
+                onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+                placeholder="Ej: Bebidas"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+              <textarea
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={form.descripcion ?? ''}
+                onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
+                rows={5}
+                placeholder="Descripción opcional..."
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-            <textarea
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              value={form.descripcion ?? ''}
-              onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-              rows={3}
-              placeholder="Descripción opcional..."
-            />
+
+          {/* Columna derecha: categoría padre e imagen */}
+          <div className="flex flex-col gap-4">
+            {/* Dropdown custom de categoría padre */}
+            <div className="relative" ref={parentDropdownRef}>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Categoría padre</label>
+
+              {/* Trigger */}
+              <div
+                onClick={() => setParentDropdownOpen(o => !o)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm cursor-pointer hover:border-orange-400 flex items-center justify-between bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              >
+                <span className={form.parent_id ? 'text-slate-800' : 'text-slate-400'}>
+                  {selectedParentName}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${parentDropdownOpen ? 'rotate-180' : ''}`} />
+              </div>
+
+              {/* Dropdown */}
+              {parentDropdownOpen && (
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-lg z-50 max-h-72 overflow-hidden flex flex-col">
+                  {/* Buscador */}
+                  <div className="p-2 border-b border-slate-200 shrink-0">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={parentSearch}
+                        onChange={e => setParentSearch(e.target.value)}
+                        placeholder="Buscar categoría..."
+                        className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:border-orange-400"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  {/* Lista */}
+                  <div className="overflow-y-auto flex-1">
+                    {/* Opción "Ninguna" siempre arriba */}
+                    <div
+                      onClick={() => {
+                        setForm(f => ({ ...f, parent_id: undefined }));
+                        setParentDropdownOpen(false);
+                        setParentSearch('');
+                      }}
+                      className={`px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 ${
+                        !form.parent_id ? 'bg-orange-50 text-orange-700 font-medium' : 'text-slate-500'
+                      }`}
+                    >
+                      Ninguna (categoría raíz)
+                    </div>
+
+                    {/* Categorías ordenadas jerárquicamente */}
+                    {filteredCategorias.map(cat => {
+                      const isSubcategoria = !!cat.parent_id;
+                      const isSelected = form.parent_id === cat.id;
+                      return (
+                        <div
+                          key={cat.id}
+                          onClick={() => {
+                            setForm(f => ({ ...f, parent_id: cat.id }));
+                            setParentDropdownOpen(false);
+                            setParentSearch('');
+                          }}
+                          className={`flex items-center py-2 text-sm cursor-pointer hover:bg-slate-50 ${
+                            isSubcategoria ? 'pl-8 text-slate-500' : 'pl-3 text-slate-800'
+                          } ${isSelected ? 'bg-orange-50 text-orange-700 font-medium' : ''}`}
+                        >
+                          {isSubcategoria && <span className="mr-1.5 text-slate-400">⤷</span>}
+                          {cat.nombre}
+                        </div>
+                      );
+                    })}
+
+                    {filteredCategorias.length === 0 && (
+                      <div className="px-3 py-4 text-sm text-slate-500 text-center">
+                        No se encontraron categorías
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">URL de imagen</label>
+              <input
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={form.imagen_url ?? ''}
+                onChange={e => setForm(f => ({ ...f, imagen_url: e.target.value || undefined }))}
+                placeholder="https://ejemplo.com/imagen.jpg"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Categoría padre</label>
-            <select
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              value={form.parent_id ?? ''}
-              onChange={e => setForm(f => ({ ...f, parent_id: e.target.value ? parseInt(e.target.value) : undefined }))}
-            >
-              <option value="">Ninguna (categoría raíz)</option>
-              {renderCategoriasOptions()}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">URL de imagen</label>
-            <input
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-              value={form.imagen_url ?? ''}
-              onChange={e => setForm(f => ({ ...f, imagen_url: e.target.value || undefined }))}
-              placeholder="https://ejemplo.com/imagen.jpg"
-            />
-          </div>
-          <div className="flex gap-3 justify-end pt-2">
-            <button onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">
-              Cancelar
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={createMutation.isPending || updateMutation.isPending}
-              className="px-4 py-2 text-sm rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium disabled:opacity-50"
-            >
-              {editing ? 'Guardar cambios' : 'Crear'}
-            </button>
-          </div>
+        </div>
+
+        <div className="flex gap-3 justify-end pt-4 mt-4 border-t border-slate-100">
+          <button onClick={closeModal} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">
+            Cancelar
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={createMutation.isPending || updateMutation.isPending}
+            className="px-4 py-2 text-sm rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium disabled:opacity-50"
+          >
+            {editing ? 'Guardar cambios' : 'Crear'}
+          </button>
         </div>
       </Modal>
 
