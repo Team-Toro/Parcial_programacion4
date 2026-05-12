@@ -36,5 +36,5 @@ export const getAuthToken = (): string | null => useAuthStore.getState().token;
 // Selectores con suscripción granular (evitan re-renders innecesarios)
 export const useUser = () => useAuthStore((s) => s.user);
 export const useToken = () => useAuthStore((s) => s.token);
-export const useIsAdmin = () => useAuthStore((s) => s.user?.role === 'admin');
+export const useIsAdmin = () => useAuthStore((s) => s.user?.roles?.includes('ADMIN'));
 export const useIsAuthenticated = () => useAuthStore((s) => !!s.token);
