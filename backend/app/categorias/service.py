@@ -205,3 +205,21 @@ class CategoriaService:
 
         categoria.deleted_at = now
         repo.save(categoria)
+
+    def reactivate(self, uow: UnitOfWork, categoria_id: int) -> Categoria:
+        repo = CategoriaRepository(uow.session)
+        categoria = repo.get_by_id_including_deleted(categoria_id)
+        if not categoria:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Categoría {categoria_id} no encontrada"
+            )
+        if categoria.deleted_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La categoría no está dada de baja"
+            )
+        categoria.deleted_at = None
+        categoria.updated_at = datetime.utcnow()
+        repo.save(categoria)
+        return categoria

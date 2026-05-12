@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
@@ -6,12 +7,20 @@ if TYPE_CHECKING:
     from ..productos.model import ProductoIngrediente
 
 
+class UnidadMedida(str, Enum):
+    UNIDAD = "unidad"
+    KG = "kg"
+    LITRO = "litro"
+
+
 class Ingrediente(SQLModel, table=True):
     __tablename__ = "ingredientes"
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field(max_length=100, unique=True, nullable=False)
     descripcion: Optional[str] = Field(default=None)
     es_alergeno: bool = Field(default=False)
+    unidad: UnidadMedida = Field(default=UnidadMedida.UNIDAD)
+    stock_actual: float = Field(default=0.0, nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     deleted_at: Optional[datetime] = Field(default=None)

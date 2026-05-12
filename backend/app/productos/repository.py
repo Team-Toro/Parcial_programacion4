@@ -29,8 +29,11 @@ class ProductoRepository:
         ingrediente_id: Optional[int] = None,
         sort: Optional[str] = None,
         order: str = "asc",
+        include_deleted: bool = False,
     ) -> List[Producto]:
-        query = select(Producto).where(col(Producto.deleted_at).is_(None))
+        query = select(Producto)
+        if not include_deleted:
+            query = query.where(col(Producto.deleted_at).is_(None))
 
         q_norm = q.strip().lower() if q else None
         if q_norm:
@@ -43,7 +46,7 @@ class ProductoRepository:
 
         if disponible is not None:
             query = query.where(Producto.disponible == disponible)
-        
+
         # Rastrea si algún JOIN fue agregado (para aplicar DISTINCT solo cuando haga falta)
         needs_distinct = False
 
@@ -101,6 +104,9 @@ class ProductoRepository:
     def get_by_id(self, producto_id: int) -> Optional[Producto]:
         p = self.session.get(Producto, producto_id)
         return p if (p and p.deleted_at is None) else None
+
+    def get_by_id_including_deleted(self, producto_id: int) -> Optional[Producto]:
+        return self.session.get(Producto, producto_id)
 
     def get_categoria(self, categoria_id: int) -> Optional[Categoria]:
         return self.session.get(Categoria, categoria_id)

@@ -1,8 +1,10 @@
 from typing import Annotated, List, Optional
-from fastapi import APIRouter, Depends, Query, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from .schema import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPublic
 from .service import ProductoService
 from ..uow.unit_of_work import UnitOfWork, get_uow
+from ..core.deps import get_current_active_user, require_role
+from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/productos", tags=["Productos"])
 producto_service = ProductoService()
@@ -12,10 +14,11 @@ producto_service = ProductoService()
     "/",
     response_model=List[ProductoPublic],
     summary="Listar todos los productos",
-    description="Obtiene todos los productos activos con paginación y filtros opcionales"
+    description="Obtiene productos con paginación y filtros. Con include_deleted=true devuelve también los dados de baja (solo admin)."
 )
 def listar_productos(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    current_user: Annotated[Usuario, Depends(get_current_active_user)],
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     disponible: Annotated[Optional[bool], Query(description="Filtrar por disponibilidad")] = None,
@@ -30,7 +33,13 @@ def listar_productos(
     ingrediente_id: Annotated[Optional[int], Query(ge=1, description="Filtrar por ingrediente")] = None,
     sort: Annotated[Optional[str], Query(pattern="^(nombre|precio_base|created_at|stock_cantidad)$", description="Campo de orden")] = None,
     order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
+    include_deleted: Annotated[bool, Query(description="Incluir productos dados de baja")] = False,
 ):
+    if include_deleted and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo administradores pueden ver productos dados de baja",
+        )
     return producto_service.get_all(
         uow=uow,
         offset=offset,
@@ -47,6 +56,7 @@ def listar_productos(
         ingrediente_id=ingrediente_id,
         sort=sort,
         order=order,
+        include_deleted=include_deleted,
     )
 
 
@@ -69,6 +79,7 @@ def obtener_producto(
     "/",
     response_model=ProductoPublic,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(["admin"]))],
     summary="Crear un nuevo producto",
     responses={
         404: {"description": "Categoría o ingrediente no encontrado"},
@@ -85,6 +96,7 @@ def crear_producto(
 @router.patch(
     "/{producto_id}",
     response_model=ProductoPublic,
+    dependencies=[Depends(require_role(["admin"]))],
     summary="Actualizar parcialmente un producto",
     responses={
         404: {"description": "Producto no encontrado"},
@@ -102,6 +114,7 @@ def actualizar_producto(
 @router.delete(
     "/{producto_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role(["admin"]))],
     summary="Eliminar un producto (soft delete)",
     description="Marca el producto como eliminado",
     responses={
@@ -113,3 +126,20 @@ def eliminar_producto(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     producto_service.delete(uow, producto_id)
+
+
+@router.post(
+    "/{producto_id}/reactivar",
+    response_model=ProductoPublic,
+    dependencies=[Depends(require_role(["admin"]))],
+    summary="Reactivar un producto dado de baja",
+    responses={
+        404: {"description": "Producto no encontrado"},
+        400: {"description": "El producto no está dado de baja"}
+    }
+)
+def reactivar_producto(
+    producto_id: Annotated[int, Path(ge=1)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    return producto_service.reactivate(uow, producto_id)

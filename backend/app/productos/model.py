@@ -24,6 +24,7 @@ class ProductoIngrediente(SQLModel, table=True):
     producto_id: Optional[int] = Field(default=None, foreign_key="productos.id", primary_key=True)
     ingrediente_id: Optional[int] = Field(default=None, foreign_key="ingredientes.id", primary_key=True)
     es_removible: bool = Field(default=False, nullable=False)
+    cantidad: float = Field(default=1.0, nullable=False)
     producto: Optional["Producto"] = Relationship(back_populates="ingredientes")
     ingrediente: Optional["Ingrediente"] = Relationship(back_populates="productos")
 

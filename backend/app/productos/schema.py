@@ -2,7 +2,7 @@ from typing import Optional, List
 from decimal import Decimal
 from datetime import datetime
 from sqlmodel import SQLModel
-from pydantic import field_validator
+from pydantic import field_validator, computed_field, ConfigDict
 from ..categorias.schema import CategoriaRead, CategoriaPublic
 from ..ingredientes.schema import IngredienteRead, IngredientePublic
 
@@ -33,6 +33,7 @@ class ProductoBase(SQLModel):
 class IngredienteEnProducto(SQLModel):
     ingrediente_id: int
     es_removible: bool = False
+    cantidad: float = 1.0
 
 
 class ProductoCreate(ProductoBase):
@@ -59,6 +60,7 @@ class ProductoCategoriaRead(SQLModel):
 class IngredienteConDetalles(SQLModel):
     ingrediente: IngredienteRead
     es_removible: bool
+    cantidad: float = 1.0
 
 
 class ProductoRead(ProductoBase):
@@ -78,9 +80,25 @@ class ProductoCategoriaPublic(SQLModel):
 class IngredienteConDetallesPublic(SQLModel):
     ingrediente: IngredientePublic
     es_removible: bool
+    cantidad: float = 1.0
 
 
 class ProductoPublic(ProductoBase):
     id: int
     categorias: List[ProductoCategoriaPublic] = []
     ingredientes: List[IngredienteConDetallesPublic] = []
+    deleted_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def stock_disponible(self) -> int:
+        if not self.ingredientes:
+            return self.stock_cantidad
+        posibles = []
+        for item in self.ingredientes:
+            if item.cantidad <= 0 or item.ingrediente.stock_actual <= 0:
+                return 0
+            posibles.append(int(item.ingrediente.stock_actual / item.cantidad))
+        return min(posibles) if posibles else 0

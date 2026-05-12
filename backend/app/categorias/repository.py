@@ -19,7 +19,7 @@ class CategoriaRepository:
         order: str = "asc",
         include_deleted: bool = False,
     ) -> List[Categoria]:
-        """Obtiene categorías activas con paginación y filtros."""
+        """Obtiene categorías con paginación y filtros."""
         query = select(Categoria)
         if not include_deleted:
             query = query.where(col(Categoria.deleted_at).is_(None))
@@ -95,7 +95,6 @@ class CategoriaRepository:
         categoria = self.get_by_id(categoria_id)
         if not categoria:
             return []
-        
         subcategorias = self.get_subcategorias(categoria_id)
         return [categoria] + subcategorias
 

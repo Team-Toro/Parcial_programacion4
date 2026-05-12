@@ -18,6 +18,7 @@ class IngredienteService:
         es_alergeno: bool | None = None,
         sort: str | None = None,
         order: str = "asc",
+        include_deleted: bool = False,
     ) -> List[Ingrediente]:
         repo = IngredienteRepository(uow.session)
         return repo.get_all(
@@ -27,6 +28,7 @@ class IngredienteService:
             es_alergeno=es_alergeno,
             sort=sort,
             order=order,
+            include_deleted=include_deleted,
         )
 
     def get_by_id(self, uow: UnitOfWork, ingrediente_id: int) -> Ingrediente:
@@ -44,6 +46,8 @@ class IngredienteService:
             nombre=data.nombre,
             descripcion=data.descripcion,
             es_alergeno=data.es_alergeno,
+            unidad=data.unidad,
+            stock_actual=data.stock_actual,
         )
         repo.save(ing)
         return ing
@@ -66,3 +70,15 @@ class IngredienteService:
         ing = self.get_by_id(uow, ingrediente_id)
         ing.deleted_at = datetime.utcnow()
         repo.save(ing)
+
+    def reactivate(self, uow: UnitOfWork, ingrediente_id: int) -> Ingrediente:
+        repo = IngredienteRepository(uow.session)
+        ing = repo.get_by_id_including_deleted(ingrediente_id)
+        if not ing:
+            raise HTTPException(status_code=404, detail=f"Ingrediente {ingrediente_id} no encontrado")
+        if ing.deleted_at is None:
+            raise HTTPException(status_code=400, detail="El ingrediente no está dado de baja")
+        ing.deleted_at = None
+        ing.updated_at = datetime.utcnow()
+        repo.save(ing)
+        return ing
