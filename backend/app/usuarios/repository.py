@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy import or_
 from sqlmodel import Session, col, func, select
 
-from .model import Usuario
+from .model import Usuario, UsuarioRol
 
 
 class UsuarioRepository:
@@ -27,24 +27,29 @@ class UsuarioRepository:
 
         q_norm = q.strip().lower() if q else None
         if q_norm:
+            full_name = func.concat(col(Usuario.first_name), " ", col(Usuario.last_name))
             query = query.where(
                 or_(
-                    func.lower(col(Usuario.username)).contains(q_norm),
-                    func.lower(func.coalesce(col(Usuario.full_name), "")).contains(q_norm),
                     func.lower(col(Usuario.email)).contains(q_norm),
+                    func.lower(col(Usuario.first_name)).contains(q_norm),
+                    func.lower(col(Usuario.last_name)).contains(q_norm),
+                    func.lower(full_name).contains(q_norm),
                 )
             )
 
         if role is not None:
-            query = query.where(col(Usuario.role) == role)
+            role_subquery = select(UsuarioRol.usuario_id).where(
+                UsuarioRol.role_id == role
+            )
+            query = query.where(col(Usuario.id).in_(role_subquery))
 
         if disabled is not None:
             query = query.where(col(Usuario.disabled) == disabled)
 
         sort_map = {
-            "username": col(Usuario.username),
             "email": col(Usuario.email),
-            "role": col(Usuario.role),
+            "first_name": col(Usuario.first_name),
+            "last_name": col(Usuario.last_name),
             "id": col(Usuario.id),
         }
         sort_col = sort_map.get(sort or "")
@@ -59,14 +64,30 @@ class UsuarioRepository:
         return self.session.get(Usuario, usuario_id)
 
     def get_by_username(self, username: str) -> Optional[Usuario]:
-        return self.session.exec(
-            select(Usuario).where(Usuario.username == username)
-        ).first()
+        return self.get_by_email(username)
 
     def get_by_email(self, email: str) -> Optional[Usuario]:
         return self.session.exec(
             select(Usuario).where(Usuario.email == email)
         ).first()
+
+    def get_roles_for_user(self, usuario_id: int) -> List[str]:
+        return self.session.exec(
+            select(UsuarioRol.role_id).where(UsuarioRol.usuario_id == usuario_id)
+        ).all()
+
+    def replace_roles_for_user(self, usuario_id: int, roles: List[str]) -> None:
+        for row in self.session.exec(
+            select(UsuarioRol).where(UsuarioRol.usuario_id == usuario_id)
+        ).all():
+            self.session.delete(row)
+        for role_id in roles:
+            self.session.add(UsuarioRol(
+                usuario_id=usuario_id,
+                role_id=role_id,
+                assigned_by=None,
+                expires_at=None,
+            ))
 
     def add(self, obj) -> None:
         self.session.add(obj)

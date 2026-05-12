@@ -12,26 +12,51 @@ from sqlmodel import Session, select
 from decimal import Decimal
 from app.core.database import engine, create_all_tables
 from app.core.security import hash_password
-from app.usuarios.model import Usuario
+from app.usuarios.model import Rol, Usuario, UsuarioRol
 from app.categorias.model import Categoria
 from app.ingredientes.model import Ingrediente, UnidadMedida
 from app.productos.model import Producto, ProductoCategoria, ProductoIngrediente
 
 
-USUARIOS_INICIALES = [
+ROLES_INICIALES = [
     {
-        "username":  "admin",
-        "full_name": "Administrador del Sistema",
-        "email":     "admin@example.com",
-        "password":  "Admin1234!",
-        "role":      "admin",
+        "codigo": "ADMIN",
+        "nombre": "Administrador",
+        "description": "Acceso total sin restricciones",
     },
     {
-        "username":  "juan",
-        "full_name": "Juan Pérez",
-        "email":     "juan@example.com",
-        "password":  "Juan1234!",
-        "role":      "user",
+        "codigo": "STOCK",
+        "nombre": "Stock",
+        "description": "Actualiza stock y disponible",
+    },
+    {
+        "codigo": "PEDIDOS",
+        "nombre": "Pedidos",
+        "description": "Avanza estados CONFIRMADO->ENTREGADO",
+    },
+    {
+        "codigo": "CLIENTE",
+        "nombre": "Cliente",
+        "description": "Opera solo sus propios datos",
+    },
+]
+
+USUARIOS_INICIALES = [
+    {
+        "first_name": "Administrador",
+        "last_name": "Del Sistema",
+        "email": "admin@example.com",
+        "celular": "1133334444",
+        "password": "Admin1234!",
+        "roles": ["ADMIN"],
+    },
+    {
+        "first_name": "Juan",
+        "last_name": "Perez",
+        "email": "juan@example.com",
+        "celular": "1144445555",
+        "password": "Juan1234!",
+        "roles": ["CLIENTE"],
     },
 ]
 
@@ -291,23 +316,67 @@ def run() -> None:
     prods_creados = 0
 
     with Session(engine) as session:
+        # Roles
+        print("\n[Roles]")
+        for data in ROLES_INICIALES:
+            existing = session.exec(
+                select(Rol).where(Rol.codigo == data["codigo"])
+            ).first()
+            if existing:
+                print(f"  [=] Ya existe: {data['codigo']}")
+            else:
+                session.add(Rol(
+                    codigo=data["codigo"],
+                    nombre=data["nombre"],
+                    description=data["description"],
+                ))
+                print(f"  [+] Creado: {data['codigo']}")
+        session.commit()
+
         # Usuarios
         print("\n[Usuarios]")
         for data in USUARIOS_INICIALES:
             existing = session.exec(
-                select(Usuario).where(Usuario.username == data["username"])
+                select(Usuario).where(Usuario.email == data["email"])
             ).first()
             if existing:
-                print(f"  [=] Ya existe: {data['username']} ({data['role']})")
+                print(f"  [=] Ya existe: {data['email']}")
             else:
                 session.add(Usuario(
-                    username        = data["username"],
-                    full_name       = data["full_name"],
+                    first_name      = data["first_name"],
+                    last_name       = data["last_name"],
                     email           = data["email"],
+                    celular         = data["celular"],
                     hashed_password = hash_password(data["password"]),
-                    role            = data["role"],
                 ))
-                print(f"  [+] Creado: {data['username']} / {data['password']}  (role={data['role']})")
+                print(f"  [+] Creado: {data['email']} / {data['password']}")
+        session.commit()
+
+        # Roles por usuario
+        print("\n[UsuarioRol]")
+        for data in USUARIOS_INICIALES:
+            user = session.exec(
+                select(Usuario).where(Usuario.email == data["email"])
+            ).first()
+            if not user:
+                continue
+            for role_code in data.get("roles", []):
+                existing_role = session.exec(
+                    select(UsuarioRol).where(
+                        (UsuarioRol.usuario_id == user.id)
+                        & (UsuarioRol.role_id == role_code)
+                    )
+                ).first()
+                if existing_role:
+                    print(f"  [=] Ya existe: {user.email} -> {role_code}")
+                    continue
+                session.add(UsuarioRol(
+                    usuario_id=user.id,
+                    role_id=role_code,
+                    assigned_by=None,
+                    expires_at=None,
+                ))
+                print(f"  [+] Asignado: {user.email} -> {role_code}")
         session.commit()
 
         # Categorías
@@ -419,8 +488,8 @@ def run() -> None:
     print(f"  Ingredientes creados: {ings_creados}")
     print(f"  Productos creados  : {prods_creados}")
     print("\nUsuarios:")
-    print("  admin / Admin1234!  → role=admin")
-    print("  juan  / Juan1234!   → role=user")
+    print("  admin@example.com / Admin1234!  → roles=[ADMIN]")
+    print("  juan@example.com  / Juan1234!   → roles=[CLIENTE]")
     print()
 
 

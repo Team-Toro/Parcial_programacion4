@@ -6,17 +6,20 @@ import { register, login, getMe } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 
 interface FieldErrors {
-  username?: string;
+  first_name?: string;
+  last_name?: string;
   password?: string;
   confirmPassword?: string;
   email?: string;
+  celular?: string;
 }
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [celular, setCelular] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -25,18 +28,22 @@ export default function RegisterPage() {
     mutationFn: register,
     onSuccess: async () => {
       // Login automático tras registro exitoso
-      const loginData = await login({ username, password });
+      const loginData = await login({ username: email, password });
       useAuthStore.getState().setToken(loginData.access_token);
       const user = await getMe();
       useAuthStore.getState().login(loginData.access_token, user);
-      navigate('/ingredientes');
+      const isAdmin = user.roles?.includes('ADMIN');
+      navigate(isAdmin ? '/admin/usuarios' : '/productos');
     },
   });
 
   const validate = (): boolean => {
     const errors: FieldErrors = {};
-    if (!username.trim()) {
-      errors.username = 'El usuario es obligatorio';
+    if (!firstName.trim()) {
+      errors.first_name = 'El nombre es obligatorio';
+    }
+    if (!lastName.trim()) {
+      errors.last_name = 'El apellido es obligatorio';
     }
     if (password.length < 8) {
       errors.password = 'La contraseña debe tener al menos 8 caracteres';
@@ -44,8 +51,13 @@ export default function RegisterPage() {
     if (password !== confirmPassword) {
       errors.confirmPassword = 'Las contraseñas no coinciden';
     }
-    if (email && !email.includes('@')) {
+    if (!email.trim()) {
+      errors.email = 'El email es obligatorio';
+    } else if (!email.includes('@')) {
       errors.email = 'Ingresá un email válido';
+    }
+    if (!celular.trim()) {
+      errors.celular = 'El celular es obligatorio';
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -55,9 +67,10 @@ export default function RegisterPage() {
     e.preventDefault();
     if (!validate()) return;
     mutation.mutate({
-      username,
-      full_name: fullName || undefined,
-      email: email || undefined,
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      celular,
       password,
     });
   };
@@ -81,44 +94,49 @@ export default function RegisterPage() {
             </p>
           )}
 
-          {/* Usuario */}
+          {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Usuario *
+              Nombre *
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 autoFocus
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Ej: juan123"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Ej: Juan"
                 className={`w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${
-                  fieldErrors.username ? 'border-red-400' : 'border-slate-300'
+                  fieldErrors.first_name ? 'border-red-400' : 'border-slate-300'
                 }`}
               />
             </div>
-            {fieldErrors.username && (
-              <p className="text-red-600 text-xs mt-1">{fieldErrors.username}</p>
+            {fieldErrors.first_name && (
+              <p className="text-red-600 text-xs mt-1">{fieldErrors.first_name}</p>
             )}
           </div>
 
-          {/* Nombre completo */}
+          {/* Apellido */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Nombre completo
+              Apellido *
             </label>
             <div className="relative">
               <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Ej: Juan García"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Ej: Garcia"
+                className={`w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${
+                  fieldErrors.last_name ? 'border-red-400' : 'border-slate-300'
+                }`}
               />
             </div>
+            {fieldErrors.last_name && (
+              <p className="text-red-600 text-xs mt-1">{fieldErrors.last_name}</p>
+            )}
           </div>
 
           {/* Email */}
@@ -140,6 +158,28 @@ export default function RegisterPage() {
             </div>
             {fieldErrors.email && (
               <p className="text-red-600 text-xs mt-1">{fieldErrors.email}</p>
+            )}
+          </div>
+
+          {/* Celular */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Celular
+            </label>
+            <div className="relative">
+              <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={celular}
+                onChange={(e) => setCelular(e.target.value)}
+                placeholder="Ej: 1133334444"
+                className={`w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${
+                  fieldErrors.celular ? 'border-red-400' : 'border-slate-300'
+                }`}
+              />
+            </div>
+            {fieldErrors.celular && (
+              <p className="text-red-600 text-xs mt-1">{fieldErrors.celular}</p>
             )}
           </div>
 

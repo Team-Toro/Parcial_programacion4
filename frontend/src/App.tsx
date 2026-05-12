@@ -10,6 +10,7 @@ import CategoriasPage from './pages/CategoriasPage';
 import IngredientesPage from './pages/IngredientesPage';
 import ProductosPage from './pages/ProductosPage';
 import ProductoDetallePage from './pages/ProductoDetallePage';
+import AdminUsuariosPage from './pages/AdminUsuariosPage';
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ export default function App() {
               {/* Solo admin */}
               <Route element={<AdminRoute />}>
                 <Route path="/ingredientes" element={<IngredientesPage />} />
+                <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
               </Route>
             </Route>
           </Route>

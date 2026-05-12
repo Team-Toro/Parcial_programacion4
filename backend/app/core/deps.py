@@ -44,12 +44,12 @@ async def get_current_user(
     if payload is None:
         raise credentials_exception
 
-    username: str | None = payload.get("sub")
-    if username is None:
+    email: str | None = payload.get("sub")
+    if email is None:
         raise credentials_exception
 
     # busca al service en vez de que uow exponga el usuario
-    user = UsuarioService().get_by_username(uow, username)
+    user = UsuarioService().get_by_username(uow, email)
 
     if user is None:
         raise credentials_exception
@@ -79,12 +79,15 @@ def require_role(allowed_roles: list[str]):
 
     async def role_checker(
         current_user: Annotated[Usuario, Depends(get_current_active_user)],
+        token: Annotated[str, Depends(oauth2_scheme)],
     ) -> Usuario:
-        if current_user.role not in allowed_roles:
+        payload = decode_access_token(token)
+        roles = payload.get("roles") if payload else None
+        if not roles or not any(role in allowed_roles for role in roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
-                    f"Permisos insuficientes. Tu rol es '{current_user.role}'. "
+                    "Permisos insuficientes. "
                     f"Se requiere uno de: {allowed_roles}"
                 ),
             )

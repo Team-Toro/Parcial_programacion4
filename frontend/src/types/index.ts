@@ -122,10 +122,11 @@ export interface ProductoListParams {
 
 export interface Usuario {
   id: number;
-  username: string;
-  full_name: string | null;
-  email: string | null;
-  role: 'user' | 'admin';
+  first_name: string;
+  last_name: string;
+  email: string;
+  celular: string;
+  roles: string[];
   disabled: boolean;
 }
 
@@ -141,8 +142,9 @@ export interface LoginResponse {
 }
 
 export interface RegisterPayload {
-  username: string;
-  full_name?: string;
-  email?: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  celular: string;
   password: string;
 }
