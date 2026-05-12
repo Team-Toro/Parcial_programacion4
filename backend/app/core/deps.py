@@ -74,7 +74,7 @@ def require_role(allowed_roles: list[str]):
     Factory de dependencias para control de acceso basado en roles (RBAC).
 
     Uso:
-        @router.get("/admin/...", dependencies=[Depends(require_role(["admin"]))])
+        @router.get("/admin/...", dependencies=[Depends(require_role(["ADMIN"]))])
     """
 
     async def role_checker(

@@ -101,7 +101,7 @@ def obtener_stats(
     "/",
     response_model=CategoriaPublic,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Crear una nueva categoría",
     responses={
         409: {"description": "Ya existe una categoría con ese nombre"},
@@ -120,7 +120,7 @@ def crear_categoria(
 @router.patch(
     "/{categoria_id}",
     response_model=CategoriaPublic,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Actualizar parcialmente una categoría",
     responses={
         404: {"description": "Categoría no encontrada"},
@@ -140,7 +140,7 @@ def actualizar_categoria(
 @router.delete(
     "/{categoria_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Eliminar una categoría (soft delete)",
     description="Marca la categoría y sus subcategorías como eliminadas",
     responses={
@@ -158,7 +158,7 @@ def eliminar_categoria(
 @router.post(
     "/{categoria_id}/reactivar",
     response_model=CategoriaPublic,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Reactivar una categoría dada de baja",
     responses={
         404: {"description": "Categoría no encontrada"},

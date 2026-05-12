@@ -79,7 +79,7 @@ def obtener_producto(
     "/",
     response_model=ProductoPublic,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Crear un nuevo producto",
     responses={
         404: {"description": "Categoría o ingrediente no encontrado"},
@@ -96,7 +96,7 @@ def crear_producto(
 @router.patch(
     "/{producto_id}",
     response_model=ProductoPublic,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Actualizar parcialmente un producto",
     responses={
         404: {"description": "Producto no encontrado"},
@@ -114,7 +114,7 @@ def actualizar_producto(
 @router.delete(
     "/{producto_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Eliminar un producto (soft delete)",
     description="Marca el producto como eliminado",
     responses={
@@ -131,7 +131,7 @@ def eliminar_producto(
 @router.post(
     "/{producto_id}/reactivar",
     response_model=ProductoPublic,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Reactivar un producto dado de baja",
     responses={
         404: {"description": "Producto no encontrado"},
