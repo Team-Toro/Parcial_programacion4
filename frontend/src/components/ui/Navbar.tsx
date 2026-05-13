@@ -19,8 +19,9 @@ export default function Navbar() {
 
   const links = [
     { to: '/categorias', label: 'Categorías', adminOnly: false },
-    { to: '/ingredientes', label: 'Ingredientes', adminOnly: true },
     { to: '/productos', label: 'Productos', adminOnly: false },
+    { to: '/ingredientes', label: 'Ingredientes', adminOnly: true },
+    { to: '/admin/usuarios', label: 'Admin', adminOnly: true },
   ];
 
   return (
@@ -48,7 +49,7 @@ export default function Navbar() {
       {user && (
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-300">
-            Hola, <span className="font-medium text-white">{user.full_name?.split(' ')[0] || user.username}</span>
+            Hola, <span className="font-medium text-white">{user.first_name || user.email}</span>
             {isAdmin && (
               <span className="ml-2 text-xs bg-orange-500 text-white px-1.5 py-0.5 rounded font-semibold">Admin</span>
             )}

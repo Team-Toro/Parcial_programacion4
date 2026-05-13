@@ -17,7 +17,8 @@ export default function LoginPage() {
       useAuthStore.getState().setToken(data.access_token);
       const user = await getMe();
       useAuthStore.getState().login(data.access_token, user);
-      navigate('/ingredientes');
+      const isAdmin = user.roles?.includes('ADMIN');
+      navigate(isAdmin ? '/admin/usuarios' : '/productos');
     },
   });
 
@@ -25,7 +26,7 @@ export default function LoginPage() {
     e.preventDefault();
     setValidationError('');
     if (!username.trim() || !password.trim()) {
-      setValidationError('Completá usuario y contraseña');
+      setValidationError('Completá email y contraseña');
       return;
     }
     mutation.mutate({ username, password });
@@ -54,7 +55,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Usuario
+              Email
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -64,7 +65,7 @@ export default function LoginPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Tu nombre de usuario"
+                placeholder="tu@email.com"
                 className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
             </div>

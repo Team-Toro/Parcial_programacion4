@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from .schema import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPublic
 from .service import ProductoService
 from ..uow.unit_of_work import UnitOfWork, get_uow
-from ..core.deps import get_current_active_user, require_role
+from ..core.deps import get_current_active_user, require_role, require_role_if_include_deleted
 from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/productos", tags=["Productos"])
@@ -19,6 +19,7 @@ producto_service = ProductoService()
 def listar_productos(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
+    _admin_if_deleted: Annotated[Usuario, Depends(require_role_if_include_deleted(["ADMIN"]))],
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     disponible: Annotated[Optional[bool], Query(description="Filtrar por disponibilidad")] = None,
@@ -35,11 +36,6 @@ def listar_productos(
     order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
     include_deleted: Annotated[bool, Query(description="Incluir productos dados de baja")] = False,
 ):
-    if include_deleted and current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo administradores pueden ver productos dados de baja",
-        )
     return producto_service.get_all(
         uow=uow,
         offset=offset,
@@ -79,7 +75,7 @@ def obtener_producto(
     "/",
     response_model=ProductoPublic,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Crear un nuevo producto",
     responses={
         404: {"description": "Categoría o ingrediente no encontrado"},
@@ -96,7 +92,7 @@ def crear_producto(
 @router.patch(
     "/{producto_id}",
     response_model=ProductoPublic,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Actualizar parcialmente un producto",
     responses={
         404: {"description": "Producto no encontrado"},
@@ -114,7 +110,7 @@ def actualizar_producto(
 @router.delete(
     "/{producto_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Eliminar un producto (soft delete)",
     description="Marca el producto como eliminado",
     responses={
@@ -131,7 +127,7 @@ def eliminar_producto(
 @router.post(
     "/{producto_id}/reactivar",
     response_model=ProductoPublic,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Reactivar un producto dado de baja",
     responses={
         404: {"description": "Producto no encontrado"},

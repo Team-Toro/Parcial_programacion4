@@ -20,7 +20,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.uow.unit_of_work import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
 from .model import Usuario
-from .schema import UsuarioCreate, UsuarioPublic, UsuarioToken
+from .schema import UsuarioCreate, UsuarioPublic, UsuarioRolesUpdate, UsuarioToken
 from .service import UsuarioService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -34,7 +34,8 @@ def register(
     user_in: UsuarioCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    return usuario_service.register(uow, user_in)
+    usuario = usuario_service.register(uow, user_in)
+    return usuario_service.to_public(uow, usuario)
 
 
 # ─── Login (OAuth2 Password Flow) ────────────────────────────────────────────
@@ -52,8 +53,9 @@ def login(
 @router.get("/me", response_model=UsuarioPublic)
 def read_me(
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    return current_user
+    return usuario_service.to_public(uow, current_user)
 
 
 @router.get("/privado")
@@ -61,8 +63,7 @@ def ruta_privada(
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     return {
-        "mensaje": f"¡Hola, {current_user.full_name}! Accediste a una ruta privada.",
-        "tu_rol": current_user.role,
+        "mensaje": f"¡Hola, {current_user.first_name} {current_user.last_name}! Accediste a una ruta privada.",
     }
 
 
@@ -70,17 +71,17 @@ def ruta_privada(
 
 @router.get("/admin/usuarios", response_model=list[UsuarioPublic])
 def list_users(
-    _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
+    _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
-    q: Annotated[str | None, Query(min_length=1, description="Búsqueda (case-insensitive) por username/full_name/email")] = None,
-    role: Annotated[str | None, Query(pattern="^(user|admin)$", description="Filtrar por rol")] = None,
+    q: Annotated[str | None, Query(min_length=1, description="Búsqueda (case-insensitive) por nombre/apellido/email")] = None,
+    role: Annotated[str | None, Query(pattern="^(ADMIN|CLIENTE|STOCK|PEDIDOS)$", description="Filtrar por rol")] = None,
     disabled: Annotated[bool | None, Query(description="Filtrar por estado de cuenta")] = None,
-    sort: Annotated[str | None, Query(pattern="^(id|username|email|role)$", description="Campo de orden")] = None,
+    sort: Annotated[str | None, Query(pattern="^(id|first_name|last_name|email)$", description="Campo de orden")] = None,
     order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
 ):
-    return usuario_service.list(
+    usuarios = usuario_service.list_users(
         uow=uow,
         offset=offset,
         limit=limit,
@@ -90,21 +91,36 @@ def list_users(
         sort=sort,
         order=order,
     )
+    return [usuario_service.to_public(uow, usuario) for usuario in usuarios]
 
 
 @router.post("/admin/usuarios/{user_id}/desactivar", response_model=UsuarioPublic)
 def deactivate_user(
     user_id: int,
-    _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
+    _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    return usuario_service.set_disabled(uow, user_id, disabled=True)
+    usuario = usuario_service.set_disabled(uow, user_id, disabled=True)
+    return usuario_service.to_public(uow, usuario)
 
 
 @router.post("/admin/usuarios/{user_id}/activar", response_model=UsuarioPublic)
 def activate_user(
     user_id: int,
-    _admin: Annotated[Usuario, Depends(require_role(["admin"]))],
+    _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    return usuario_service.set_disabled(uow, user_id, disabled=False)
+    usuario = usuario_service.set_disabled(uow, user_id, disabled=False)
+    usuario_service.ensure_default_role_on_activate(uow, usuario)
+    return usuario_service.to_public(uow, usuario)
+
+
+@router.put("/admin/usuarios/{user_id}/roles", response_model=UsuarioPublic)
+def update_roles(
+    user_id: int,
+    payload: UsuarioRolesUpdate,
+    _admin: Annotated[Usuario, Depends(require_role(["ADMIN"]))],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    usuario = usuario_service.set_roles(uow, user_id, payload.roles)
+    return usuario_service.to_public(uow, usuario)

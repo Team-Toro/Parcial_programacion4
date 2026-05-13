@@ -8,7 +8,7 @@ from .schema import (
 )
 from .service import CategoriaService
 from ..uow.unit_of_work import UnitOfWork, get_uow
-from ..core.deps import get_current_active_user, require_role
+from ..core.deps import get_current_active_user, require_role, require_role_if_include_deleted
 from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/categorias", tags=["Categorías"])
@@ -26,6 +26,7 @@ def listar_categorias(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
+    _admin_if_deleted: Annotated[Usuario, Depends(require_role_if_include_deleted(["ADMIN"]))],
     offset: Annotated[int, Query(ge=0, description="Registros a omitir")] = 0,
     limit: Annotated[int, Query(ge=1, le=100, description="Máximo de registros")] = 20,
     q: Annotated[str | None, Query(min_length=1, description="Búsqueda (case-insensitive) por nombre/descripcion")] = None,
@@ -35,11 +36,6 @@ def listar_categorias(
     order: Annotated[str, Query(pattern="^(asc|desc)$", description="Dirección de orden")] = "asc",
     include_deleted: Annotated[bool, Query(description="Incluir categorías eliminadas (solo admin)")] = False,
 ):
-    if include_deleted and current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo administradores pueden ver categorías eliminadas",
-        )
     return service.get_all(
         uow=uow,
         offset=offset,
@@ -66,13 +62,9 @@ def obtener_categoria(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
+    _admin_if_deleted: Annotated[Usuario, Depends(require_role_if_include_deleted(["ADMIN"]))],
     include_deleted: Annotated[bool, Query(description="Incluir categorías eliminadas (solo admin)")] = False,
 ):
-    if include_deleted and current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo administradores pueden ver categorías eliminadas",
-        )
     return service.get_by_id(
         uow,
         categoria_id,
@@ -101,7 +93,7 @@ def obtener_stats(
     "/",
     response_model=CategoriaPublic,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Crear una nueva categoría",
     responses={
         409: {"description": "Ya existe una categoría con ese nombre"},
@@ -120,7 +112,7 @@ def crear_categoria(
 @router.patch(
     "/{categoria_id}",
     response_model=CategoriaPublic,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Actualizar parcialmente una categoría",
     responses={
         404: {"description": "Categoría no encontrada"},
@@ -140,7 +132,7 @@ def actualizar_categoria(
 @router.delete(
     "/{categoria_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Eliminar una categoría (soft delete)",
     description="Marca la categoría y sus subcategorías como eliminadas",
     responses={
@@ -158,7 +150,7 @@ def eliminar_categoria(
 @router.post(
     "/{categoria_id}/reactivar",
     response_model=CategoriaPublic,
-    dependencies=[Depends(require_role(["admin"]))],
+    dependencies=[Depends(require_role(["ADMIN"]))],
     summary="Reactivar una categoría dada de baja",
     responses={
         404: {"description": "Categoría no encontrada"},
