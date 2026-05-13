@@ -18,7 +18,7 @@ Conoce a: UoW, Security, Model
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 
 from app.core.security import decode_access_token
@@ -81,6 +81,37 @@ def require_role(allowed_roles: list[str]):
         current_user: Annotated[Usuario, Depends(get_current_active_user)],
         token: Annotated[str, Depends(oauth2_scheme)],
     ) -> Usuario:
+        payload = decode_access_token(token)
+        roles = payload.get("roles") if payload else None
+        if not roles or not any(role in allowed_roles for role in roles):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Permisos insuficientes. "
+                    f"Se requiere uno de: {allowed_roles}"
+                ),
+            )
+        return current_user
+
+    return role_checker
+
+
+def require_role_if_include_deleted(allowed_roles: list[str]):
+    """
+    Requiere rol solo cuando include_deleted=true.
+
+    Uso:
+        @router.get("/", dependencies=[Depends(require_role_if_include_deleted(["ADMIN"]))])
+    """
+
+    async def role_checker(
+        current_user: Annotated[Usuario, Depends(get_current_active_user)],
+        token: Annotated[str, Depends(oauth2_scheme)],
+        include_deleted: Annotated[bool, Query()] = False,
+    ) -> Usuario:
+        if not include_deleted:
+            return current_user
+
         payload = decode_access_token(token)
         roles = payload.get("roles") if payload else None
         if not roles or not any(role in allowed_roles for role in roles):
