@@ -1,8 +1,18 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { LogOut } from 'lucide-react';
+import { LogOut, ShoppingCart } from 'lucide-react';
 import { logoutBackend } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
+import { useCarritoStore } from '../../store/carritoStore';
+
+const STAFF_ROLES = ['ADMIN', 'PEDIDOS'];
+
+interface NavLink {
+  to: string;
+  label: string;
+  adminOnly: boolean;
+  staffOnly: boolean;
+}
 
 export default function Navbar() {
   const { pathname } = useLocation();
@@ -12,6 +22,8 @@ export default function Navbar() {
   const logout = useAuthStore((s) => s.logout);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const isAdmin = useAuthStore((s) => s.isAdmin());
+  const isStaff = user?.roles?.some((r) => STAFF_ROLES.includes(r)) ?? false;
+  const totalCarrito = useCarritoStore((s) => s.totalItems());
 
   const handleLogout = async () => {
     if (refreshToken) {
@@ -22,12 +34,14 @@ export default function Navbar() {
     navigate('/login');
   };
 
-  const links = [
-    { to: '/categorias', label: 'Categorías', adminOnly: false },
-    { to: '/productos', label: 'Productos', adminOnly: false },
-    { to: '/mis-direcciones', label: 'Mis direcciones', adminOnly: false },
-    { to: '/ingredientes', label: 'Ingredientes', adminOnly: true },
-    { to: '/admin/usuarios', label: 'Admin', adminOnly: true },
+  const links: NavLink[] = [
+    { to: '/categorias', label: 'Categorías', adminOnly: false, staffOnly: false },
+    { to: '/productos', label: 'Productos', adminOnly: false, staffOnly: false },
+    { to: '/mis-direcciones', label: 'Mis direcciones', adminOnly: false, staffOnly: false },
+    { to: '/mis-pedidos', label: 'Mis pedidos', adminOnly: false, staffOnly: false },
+    { to: '/ingredientes', label: 'Ingredientes', adminOnly: true, staffOnly: false },
+    { to: '/admin/usuarios', label: 'Admin', adminOnly: true, staffOnly: false },
+    { to: '/admin/pedidos', label: 'Pedidos', adminOnly: false, staffOnly: true },
   ];
 
   return (
@@ -36,8 +50,8 @@ export default function Navbar() {
 
       <div className="flex gap-4 flex-1">
         {links
-          .filter(l => !l.adminOnly || isAdmin)
-          .map(l => (
+          .filter((l) => (!l.adminOnly || isAdmin) && (!l.staffOnly || isStaff))
+          .map((l) => (
             <Link
               key={l.to}
               to={l.to}
@@ -54,6 +68,20 @@ export default function Navbar() {
 
       {user && (
         <div className="flex items-center gap-3">
+          {/* Carrito badge */}
+          <Link
+            to="/carrito"
+            className="relative flex items-center text-slate-300 hover:text-white hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors"
+            title="Carrito"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            {totalCarrito > 0 && (
+              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center leading-none">
+                {totalCarrito > 99 ? '99+' : totalCarrito}
+              </span>
+            )}
+          </Link>
+
           <span className="text-sm text-slate-300">
             Hola, <span className="font-medium text-white">{user.first_name || user.email}</span>
             {isAdmin && (

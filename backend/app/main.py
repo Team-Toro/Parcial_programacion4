@@ -8,6 +8,7 @@ from .usuarios.router import router as usuarios_router
 from .direcciones.router import router as direcciones_router
 from .formas_pago.router import router as formas_pago_router
 from .estados_pedido.router import router as estados_pedido_router
+from .pedidos.router import router as pedidos_router
 
 app = FastAPI(title="Food Store API", version="1.0.0")
 
@@ -32,6 +33,7 @@ app.include_router(usuarios_router)
 app.include_router(direcciones_router)
 app.include_router(formas_pago_router)
 app.include_router(estados_pedido_router)
+app.include_router(pedidos_router)
 
 
 @app.get("/")

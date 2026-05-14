@@ -7,6 +7,22 @@ from .repository import ProductoRepository
 from ..uow.unit_of_work import UnitOfWork
 
 
+def calcular_stock_disponible(producto: Producto) -> int:
+    """Cuántas unidades del producto se pueden armar con el stock actual de sus ingredientes."""
+    if not producto.ingredientes:
+        return producto.stock_cantidad
+    posibles = []
+    for link in producto.ingredientes:
+        if link.ingrediente is None or link.ingrediente.deleted_at is not None:
+            return 0
+        if link.cantidad <= 0:
+            continue
+        if link.ingrediente.stock_actual <= 0:
+            return 0
+        posibles.append(int(link.ingrediente.stock_actual / link.cantidad))
+    return min(posibles) if posibles else 0
+
+
 class ProductoService:
 
     def get_all(

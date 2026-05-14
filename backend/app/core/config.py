@@ -6,6 +6,7 @@ con @computed_field para construir DATABASE_URL automáticamente.
 Los valores sensibles (SECRET_KEY, POSTGRES_PASSWORD) viven en .env.
 """
 
+from decimal import Decimal
 from pydantic import computed_field
 from pydantic_settings import BaseSettings
 
@@ -33,6 +34,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
+    COSTO_ENVIO_DEFAULT: Decimal = Decimal("50.00")
 
     model_config = {
         "env_file": ".env",

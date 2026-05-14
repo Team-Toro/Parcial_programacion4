@@ -1,0 +1,147 @@
+import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getPedido } from '../api/pedidos';
+
+const ESTADO_COLORS: Record<string, string> = {
+  PENDIENTE: 'bg-amber-100 text-amber-700',
+  CONFIRMADO: 'bg-blue-100 text-blue-700',
+  EN_PREP: 'bg-purple-100 text-purple-700',
+  EN_CAMINO: 'bg-indigo-100 text-indigo-700',
+  ENTREGADO: 'bg-green-100 text-green-700',
+  CANCELADO: 'bg-red-100 text-red-700',
+};
+
+function formatFecha(iso: string) {
+  return new Date(iso).toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export default function PedidoDetallePage() {
+  const { id } = useParams<{ id: string }>();
+
+  const { data: pedido, isLoading, isError } = useQuery({
+    queryKey: ['pedido', Number(id)],
+    queryFn: () => getPedido(Number(id)),
+    enabled: !!id,
+  });
+
+  if (isLoading) return <div className="p-8 text-slate-500">Cargando pedido...</div>;
+  if (isError || !pedido) return <div className="p-8 text-red-500">Pedido no encontrado.</div>;
+
+  const estadoColor = ESTADO_COLORS[pedido.estado_codigo] ?? 'bg-slate-100 text-slate-700';
+
+  return (
+    <div className="px-4 sm:px-6 lg:px-12 py-8 max-w-3xl mx-auto">
+      <Link to="/mis-pedidos" className="text-orange-500 hover:underline text-sm inline-block mb-4">
+        &larr; Mis pedidos
+      </Link>
+
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">Pedido #{pedido.id}</h1>
+        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${estadoColor}`}>
+          {pedido.estado_codigo}
+        </span>
+      </div>
+
+      {/* Info general */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-5">
+        <h2 className="font-semibold text-slate-700 mb-3">Información del pedido</h2>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="text-slate-500">Fecha:</span>
+            <p className="font-medium text-slate-800">{formatFecha(pedido.created_at)}</p>
+          </div>
+          <div>
+            <span className="text-slate-500">Forma de pago:</span>
+            <p className="font-medium text-slate-800">{pedido.forma_pago_codigo}</p>
+          </div>
+          {pedido.direccion_id && (
+            <div>
+              <span className="text-slate-500">Dirección ID:</span>
+              <p className="font-medium text-slate-800">{pedido.direccion_id}</p>
+            </div>
+          )}
+          {pedido.notas && (
+            <div className="col-span-2">
+              <span className="text-slate-500">Notas:</span>
+              <p className="font-medium text-slate-800">{pedido.notas}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Detalles */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-5">
+        <h2 className="font-semibold text-slate-700 px-5 py-4 border-b border-slate-100">
+          Productos
+        </h2>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-100">
+              <th className="text-left px-5 py-2.5 text-slate-600 font-medium">Producto</th>
+              <th className="text-center px-4 py-2.5 text-slate-600 font-medium">Cant.</th>
+              <th className="text-right px-4 py-2.5 text-slate-600 font-medium">Precio</th>
+              <th className="text-right px-5 py-2.5 text-slate-600 font-medium">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {(pedido.detalles ?? []).map((d) => (
+              <tr key={d.producto_id}>
+                <td className="px-5 py-3">
+                  <p className="font-medium text-slate-800">{d.nombre_snapshot}</p>
+                  {Array.isArray(d.personalizacion) && d.personalizacion.length > 0 && (
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Sin ingredientes: {d.personalizacion.map(String).join(', ')}
+                    </p>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-center text-slate-600">{d.cantidad}</td>
+                <td className="px-4 py-3 text-right text-slate-600">
+                  ${Number(d.precio_snapshot).toFixed(2)}
+                </td>
+                <td className="px-5 py-3 text-right font-medium text-slate-800">
+                  ${Number(d.subtotal_snap).toFixed(2)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Resumen monetario */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <h2 className="font-semibold text-slate-700 mb-3">Resumen</h2>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between text-slate-600">
+            <span>Subtotal</span>
+            <span>${Number(pedido.subtotal).toFixed(2)}</span>
+          </div>
+          {Number(pedido.descuento) > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span>Descuento</span>
+              <span>-${Number(pedido.descuento).toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-slate-600">
+            <span>Costo de envío</span>
+            <span>
+              {Number(pedido.costo_envio) === 0
+                ? 'Gratis'
+                : `$${Number(pedido.costo_envio).toFixed(2)}`}
+            </span>
+          </div>
+          <div className="flex justify-between font-bold text-slate-800 text-base pt-2 border-t border-slate-100">
+            <span>Total</span>
+            <span>${Number(pedido.total).toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

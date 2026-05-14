@@ -1,3 +1,52 @@
+export interface DetallePedido {
+  producto_id: number;
+  cantidad: number;
+  nombre_snapshot: string;
+  precio_snapshot: string;
+  subtotal_snap: string;
+  personalizacion: number[] | null;
+  created_at: string;
+}
+
+export interface Pedido {
+  id: number;
+  usuario_id: number;
+  direccion_id: number | null;
+  estado_codigo: string;
+  forma_pago_codigo: string;
+  subtotal: string;
+  descuento: string;
+  costo_envio: string;
+  total: string;
+  notas: string | null;
+  detalles: DetallePedido[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ItemCarrito {
+  producto_id: number;
+  nombre: string;
+  precio: number;
+  cantidad: number;
+  imagen_url?: string;
+  personalizacion: number[];
+  ingredientes_removibles: { id: number; nombre: string }[];
+}
+
+export interface ItemPedidoRequest {
+  producto_id: number;
+  cantidad: number;
+  personalizacion?: number[];
+}
+
+export interface PedidoCreate {
+  direccion_id?: number;
+  forma_pago_codigo: string;
+  notas?: string;
+  items: ItemPedidoRequest[];
+}
+
 export interface Categoria {
   id: number;
   nombre: string;

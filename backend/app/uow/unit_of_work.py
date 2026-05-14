@@ -4,6 +4,7 @@ from app.usuarios.refresh_token_repository import RefreshTokenRepository
 from app.direcciones.repository import DireccionRepository
 from app.formas_pago.repository import FormaPagoRepository
 from app.estados_pedido.repository import EstadoPedidoRepository
+from app.pedidos.repository import PedidoRepository
 
 
 class UnitOfWork:
@@ -13,6 +14,7 @@ class UnitOfWork:
         self.direcciones: DireccionRepository = DireccionRepository(self.session)
         self.formas_pago: FormaPagoRepository = FormaPagoRepository(self.session)
         self.estados_pedido: EstadoPedidoRepository = EstadoPedidoRepository(self.session)
+        self.pedidos: PedidoRepository = PedidoRepository(self.session)
 
     def __enter__(self):
         return self
