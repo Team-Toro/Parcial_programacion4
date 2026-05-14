@@ -27,8 +27,14 @@ class UsuarioToken(SQLModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+    refresh_token: str
 
 
 class UsuarioRolesUpdate(SQLModel):
     """Actualización de roles de usuario (admin)."""
     roles: list[str] | None = None
+
+
+class RefreshTokenRequest(SQLModel):
+    """Body para los endpoints /auth/refresh y /auth/logout."""
+    refresh_token: str

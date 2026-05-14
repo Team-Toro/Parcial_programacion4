@@ -1,8 +1,44 @@
 import { API_URL } from '../config';
 import { getAuthToken, useAuthStore } from '../store/authStore';
+import type { LoginResponse } from '../types';
+
+// ─── Refresh Token Interceptor ────────────────────────────────────────────────
+// Estas variables son de módulo (compartidas por todas las llamadas concurrentes)
+// para garantizar que solo se haga UN refresh aunque lleguen múltiples 401 juntos.
+
+let isRefreshing = false;
+let refreshQueue: Array<(token: string) => void> = [];
+
+function processQueue(newToken: string): void {
+  refreshQueue.forEach((cb) => cb(newToken));
+  refreshQueue = [];
+}
+
+function clearQueueAndLogout(): void {
+  refreshQueue = [];
+  useAuthStore.getState().logout();
+  const { pathname } = window.location;
+  if (!pathname.startsWith('/login') && !pathname.startsWith('/register')) {
+    window.location.href = '/login';
+  }
+}
+
+async function doRefresh(refreshToken: string): Promise<string> {
+  const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  if (!res.ok) throw new Error('Refresh failed');
+  const data = await res.json() as LoginResponse;
+  useAuthStore.getState().login(data.access_token, data.refresh_token, useAuthStore.getState().user!);
+  return data.access_token;
+}
+
+// ─── apiFetch ─────────────────────────────────────────────────────────────────
 
 /**
- * Wrapper de fetch con autenticación Bearer, manejo de 401 con redirect a login,
+ * Wrapper de fetch con autenticación Bearer, interceptor de 401 con refresh token,
  * y normalización de errores de FastAPI al formato `Error.message`.
  * @param path ruta relativa al API_URL (ej. `/categorias`)
  * @param options opciones de RequestInit más `skipAuth` para omitir el header de auth
@@ -37,13 +73,72 @@ export async function apiFetch<T>(
   });
 
   if (response.status === 401) {
-    useAuthStore.getState().logout();
-    // Evitar loop si ya estamos en una ruta pública de auth
-    const { pathname } = window.location;
-    if (!pathname.startsWith('/login') && !pathname.startsWith('/register')) {
-      window.location.href = '/login';
+    // Endpoints de auth nunca pasan por el flujo de refresh — propagan el error original
+    const isAuthEndpoint =
+      path.includes('/auth/token') ||
+      path.includes('/auth/refresh') ||
+      path.includes('/auth/logout');
+
+    if (isAuthEndpoint) {
+      let message: string;
+      try {
+        const data = await response.json() as { detail?: string };
+        message = data.detail ?? `${response.status} ${response.statusText}`;
+      } catch {
+        message = `${response.status} ${response.statusText}`;
+      }
+      throw new Error(message);
     }
-    throw new Error('No autorizado');
+
+    const { refreshToken } = useAuthStore.getState();
+
+    if (!refreshToken) {
+      // Sin sesión activa — limpiar store sin redirigir si ya estamos en login/register
+      clearQueueAndLogout();
+      throw new Error('No autorizado');
+    }
+
+    // Si ya hay un refresh en vuelo, encolar este request hasta que termine
+    if (isRefreshing) {
+      return new Promise<T>((resolve, reject) => {
+        refreshQueue.push((newToken: string) => {
+          const retryHeaders = new Headers(incomingHeaders);
+          retryHeaders.set('Authorization', `Bearer ${newToken}`);
+          if (body != null && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
+            if (!retryHeaders.has('Content-Type')) retryHeaders.set('Content-Type', 'application/json');
+          }
+          fetch(`${API_URL}${path}`, { ...restOptions, body, headers: retryHeaders })
+            .then((r) => r.ok ? r.json() as Promise<T> : Promise.reject(new Error(`${r.status}`)))
+            .then(resolve)
+            .catch(reject);
+        });
+      });
+    }
+
+    isRefreshing = true;
+    try {
+      const newToken = await doRefresh(refreshToken);
+      isRefreshing = false;
+      processQueue(newToken);
+
+      // Reintentar el request original con el token nuevo
+      const retryHeaders = new Headers(incomingHeaders);
+      retryHeaders.set('Authorization', `Bearer ${newToken}`);
+      if (body != null && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
+        if (!retryHeaders.has('Content-Type')) retryHeaders.set('Content-Type', 'application/json');
+      }
+      const retryResponse = await fetch(`${API_URL}${path}`, { ...restOptions, body, headers: retryHeaders });
+      if (retryResponse.status === 204) return undefined as T;
+      if (!retryResponse.ok) {
+        const data = await retryResponse.json().catch(() => ({})) as { detail?: string };
+        throw new Error(data.detail ?? `${retryResponse.status}`);
+      }
+      return retryResponse.json() as Promise<T>;
+    } catch {
+      isRefreshing = false;
+      clearQueueAndLogout();
+      throw new Error('No autorizado');
+    }
   }
 
   // 204 No Content — el back no manda body

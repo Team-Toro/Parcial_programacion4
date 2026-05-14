@@ -1,10 +1,12 @@
 from sqlmodel import Session
 from app.core.database import engine
+from app.usuarios.refresh_token_repository import RefreshTokenRepository
 
 
 class UnitOfWork:
     def __init__(self):
         self.session: Session = Session(engine)
+        self.refresh_tokens: RefreshTokenRepository = RefreshTokenRepository(self.session)
 
     def __enter__(self):
         return self

@@ -20,7 +20,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.uow.unit_of_work import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
 from .model import Usuario
-from .schema import UsuarioCreate, UsuarioPublic, UsuarioRolesUpdate, UsuarioToken
+from .schema import RefreshTokenRequest, UsuarioCreate, UsuarioPublic, UsuarioRolesUpdate, UsuarioToken
 from .service import UsuarioService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -124,3 +124,22 @@ def update_roles(
 ):
     usuario = usuario_service.set_roles(uow, user_id, payload.roles)
     return usuario_service.to_public(uow, usuario)
+
+
+# ─── Refresh Token ────────────────────────────────────────────────────────────
+
+@router.post("/refresh", response_model=UsuarioToken)
+def refresh_token(
+    body: RefreshTokenRequest,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    return usuario_service.refresh(uow, body.refresh_token)
+
+
+@router.post("/logout")
+def logout(
+    body: RefreshTokenRequest,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    usuario_service.logout(uow, body.refresh_token)
+    return {"status": "ok"}

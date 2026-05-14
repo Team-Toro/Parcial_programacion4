@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { LogOut } from 'lucide-react';
+import { logoutBackend } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 
 export default function Navbar() {
@@ -9,9 +10,13 @@ export default function Navbar() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const refreshToken = useAuthStore((s) => s.refreshToken);
   const isAdmin = useAuthStore((s) => s.isAdmin());
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (refreshToken) {
+      await logoutBackend(refreshToken);
+    }
     logout();
     queryClient.clear();
     navigate('/login');
