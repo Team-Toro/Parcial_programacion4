@@ -30,8 +30,8 @@ export default function PedidoDetallePage() {
     enabled: !!id,
   });
 
-  if (isLoading) return <div className="p-8 text-slate-500">Cargando pedido...</div>;
-  if (isError || !pedido) return <div className="p-8 text-red-500">Pedido no encontrado.</div>;
+  if (isLoading || !pedido) return <div className="p-8 text-slate-500">Cargando pedido...</div>;
+  if (isError) return <div className="p-8 text-red-500">Pedido no encontrado.</div>;
 
   const estadoColor = ESTADO_COLORS[pedido.estado_codigo] ?? 'bg-slate-100 text-slate-700';
 

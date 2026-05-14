@@ -36,16 +36,6 @@ export default function CheckoutPage() {
     }
   }, [direcciones, direccionId]);
 
-  // Redirect if cart is empty
-  if (items.length === 0) {
-    return <Navigate to="/carrito" replace />;
-  }
-
-  const esEfectivo = formaPago === 'EFECTIVO';
-  const costoEnvio = esEfectivo ? 0 : COSTO_ENVIO;
-  const sub = subtotal();
-  const total = sub + costoEnvio;
-
   const mutation = useMutation({
     mutationFn: createPedido,
     onSuccess: (pedido) => {
@@ -56,6 +46,16 @@ export default function CheckoutPage() {
       setErrorMsg(err.message);
     },
   });
+
+  // Only redirect when cart is empty and there is no active/completed checkout
+  if (items.length === 0 && !mutation.isPending && !mutation.isSuccess) {
+    return <Navigate to="/carrito" replace />;
+  }
+
+  const esEfectivo = formaPago === 'EFECTIVO';
+  const costoEnvio = esEfectivo ? 0 : COSTO_ENVIO;
+  const sub = subtotal();
+  const total = sub + costoEnvio;
 
   const handleConfirmar = () => {
     setErrorMsg(null);
