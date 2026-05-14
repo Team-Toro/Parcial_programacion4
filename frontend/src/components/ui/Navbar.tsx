@@ -25,6 +25,7 @@ export default function Navbar() {
   const links = [
     { to: '/categorias', label: 'Categorías', adminOnly: false },
     { to: '/productos', label: 'Productos', adminOnly: false },
+    { to: '/mis-direcciones', label: 'Mis direcciones', adminOnly: false },
     { to: '/ingredientes', label: 'Ingredientes', adminOnly: true },
     { to: '/admin/usuarios', label: 'Admin', adminOnly: true },
   ];

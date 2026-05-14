@@ -5,6 +5,7 @@ from .categorias.router import router as categorias_router
 from .ingredientes.router import router as ingredientes_router
 from .productos.router import router as productos_router
 from .usuarios.router import router as usuarios_router
+from .direcciones.router import router as direcciones_router
 
 app = FastAPI(title="Food Store API", version="1.0.0")
 
@@ -26,6 +27,7 @@ app.include_router(categorias_router)
 app.include_router(ingredientes_router)
 app.include_router(productos_router)
 app.include_router(usuarios_router)
+app.include_router(direcciones_router)
 
 
 @app.get("/")

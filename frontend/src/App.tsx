@@ -11,6 +11,7 @@ import IngredientesPage from './pages/IngredientesPage';
 import ProductosPage from './pages/ProductosPage';
 import ProductoDetallePage from './pages/ProductoDetallePage';
 import AdminUsuariosPage from './pages/AdminUsuariosPage';
+import MisDireccionesPage from './pages/MisDireccionesPage';
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ export default function App() {
               <Route path="/categorias" element={<CategoriasPage />} />
               <Route path="/productos" element={<ProductosPage />} />
               <Route path="/productos/:id" element={<ProductoDetallePage />} />
+              <Route path="/mis-direcciones" element={<MisDireccionesPage />} />
 
               {/* Solo admin */}
               <Route element={<AdminRoute />}>
