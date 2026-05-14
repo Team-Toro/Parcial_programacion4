@@ -16,7 +16,24 @@ from app.usuarios.model import Rol, Usuario, UsuarioRol
 from app.categorias.model import Categoria
 from app.ingredientes.model import Ingrediente, UnidadMedida
 from app.productos.model import Producto, ProductoCategoria, ProductoIngrediente
+from app.formas_pago.model import FormaPago
+from app.estados_pedido.model import EstadoPedido
 
+
+FORMAS_PAGO_INICIALES = [
+    {"codigo": "MERCADOPAGO",   "descripcion": "Mercado Pago Checkout API",      "habilitado": True},
+    {"codigo": "EFECTIVO",      "descripcion": "Pago en local al retirar",        "habilitado": True},
+    {"codigo": "TRANSFERENCIA", "descripcion": "Transferencia bancaria",          "habilitado": True},
+]
+
+ESTADOS_PEDIDO_INICIALES = [
+    {"codigo": "PENDIENTE",  "descripcion": "Recién creado, esperando confirmación", "orden": 1, "es_terminal": False},
+    {"codigo": "CONFIRMADO", "descripcion": "Pago confirmado",                        "orden": 2, "es_terminal": False},
+    {"codigo": "EN_PREP",    "descripcion": "En preparación",                         "orden": 3, "es_terminal": False},
+    {"codigo": "EN_CAMINO",  "descripcion": "Saliendo a entregarse",                  "orden": 4, "es_terminal": False},
+    {"codigo": "ENTREGADO",  "descripcion": "Entregado al cliente",                   "orden": 5, "es_terminal": True},
+    {"codigo": "CANCELADO",  "descripcion": "Cancelado",                              "orden": 5, "es_terminal": True},
+]
 
 ROLES_INICIALES = [
     {
@@ -329,6 +346,41 @@ def run() -> None:
                     codigo=data["codigo"],
                     nombre=data["nombre"],
                     description=data["description"],
+                ))
+                print(f"  [+] Creado: {data['codigo']}")
+        session.commit()
+
+        # Formas de Pago
+        print("\n[Formas de Pago]")
+        for data in FORMAS_PAGO_INICIALES:
+            existing = session.exec(
+                select(FormaPago).where(FormaPago.codigo == data["codigo"])
+            ).first()
+            if existing:
+                print(f"  [=] Ya existe: {data['codigo']}")
+            else:
+                session.add(FormaPago(
+                    codigo=data["codigo"],
+                    descripcion=data["descripcion"],
+                    habilitado=data["habilitado"],
+                ))
+                print(f"  [+] Creado: {data['codigo']}")
+        session.commit()
+
+        # Estados de Pedido
+        print("\n[Estados de Pedido]")
+        for data in ESTADOS_PEDIDO_INICIALES:
+            existing = session.exec(
+                select(EstadoPedido).where(EstadoPedido.codigo == data["codigo"])
+            ).first()
+            if existing:
+                print(f"  [=] Ya existe: {data['codigo']}")
+            else:
+                session.add(EstadoPedido(
+                    codigo=data["codigo"],
+                    descripcion=data["descripcion"],
+                    orden=data["orden"],
+                    es_terminal=data["es_terminal"],
                 ))
                 print(f"  [+] Creado: {data['codigo']}")
         session.commit()

@@ -130,6 +130,19 @@ export interface Usuario {
   disabled: boolean;
 }
 
+export interface FormaPago {
+  codigo: string;
+  descripcion: string;
+  habilitado: boolean;
+}
+
+export interface EstadoPedido {
+  codigo: string;
+  descripcion: string;
+  orden: number;
+  es_terminal: boolean;
+}
+
 export interface Direccion {
   id: number;
   usuario_id: number;
