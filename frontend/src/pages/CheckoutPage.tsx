@@ -40,7 +40,15 @@ export default function CheckoutPage() {
     mutationFn: createPedido,
     onSuccess: (pedido) => {
       vaciarCarrito();
-      setTimeout(() => navigate(`/mis-pedidos/${pedido.id}`), 1500);
+      setTimeout(() => {
+        if (pedido.forma_pago_codigo === 'MERCADOPAGO' && pedido.external_reference) {
+          navigate(`/pago-mock/${pedido.external_reference}`, {
+            state: { pedido_id: pedido.id, monto: pedido.total },
+          });
+        } else {
+          navigate(`/mis-pedidos/${pedido.id}`);
+        }
+      }, 1500);
     },
     onError: (err: Error) => {
       setErrorMsg(err.message);

@@ -1,9 +1,27 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPedido, cancelarPedido } from '../api/pedidos';
+import { getPagoByPedido } from '../api/pagos';
 import TimelinePedido from '../components/pedidos/TimelinePedido';
 import ModalMotivo from '../components/pedidos/ModalMotivo';
+
+const PAGO_STATUS_COLORS: Record<string, string> = {
+  approved:   'bg-green-100 text-green-700',
+  pending:    'bg-amber-100 text-amber-700',
+  rejected:   'bg-red-100 text-red-700',
+  cancelled:  'bg-slate-100 text-slate-600',
+  in_process: 'bg-blue-100 text-blue-700',
+};
+
+const PAGO_STATUS_LABELS: Record<string, string> = {
+  approved:   'Pago aprobado',
+  pending:    'Esperando pago',
+  rejected:   'Pago rechazado',
+  cancelled:  'Pago cancelado',
+  in_process: 'Pago en proceso',
+};
 
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: 'bg-amber-100 text-amber-700',
@@ -27,12 +45,20 @@ function formatFecha(iso: string) {
 export default function PedidoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [modalCancelar, setModalCancelar] = useState(false);
 
   const { data: pedido, isLoading, isError } = useQuery({
     queryKey: ['pedido', Number(id)],
     queryFn: () => getPedido(Number(id)),
     enabled: !!id,
+  });
+
+  const { data: pago } = useQuery({
+    queryKey: ['pago-pedido', Number(id)],
+    queryFn: () => getPagoByPedido(Number(id)),
+    enabled: !!id && pedido?.forma_pago_codigo === 'MERCADOPAGO',
+    retry: false,
   });
 
   const mutCancelar = useMutation({
@@ -156,6 +182,42 @@ export default function PedidoDetallePage() {
           </div>
         </div>
       </div>
+
+      {/* Estado del pago (solo para MERCADOPAGO) */}
+      {pago && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-5">
+          <h2 className="font-semibold text-slate-700 mb-3">Estado del pago</h2>
+          <div className="flex items-center justify-between">
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                PAGO_STATUS_COLORS[pago.mp_status] ?? 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {PAGO_STATUS_LABELS[pago.mp_status] ?? pago.mp_status}
+            </span>
+            <span className="text-slate-500 text-sm">
+              ${Number(pago.transaction_amount).toFixed(2)}
+            </span>
+          </div>
+          {(pago.mp_status === 'pending' || pago.mp_status === 'rejected') &&
+            pedido.estado_codigo === 'PENDIENTE' &&
+            pago.external_reference && (
+              <div className="mt-3">
+                <button
+                  onClick={() =>
+                    navigate(`/pago-mock/${pago.external_reference}`, {
+                      state: { pedido_id: pedido.id, monto: pedido.total },
+                    })
+                  }
+                  className="flex items-center gap-2 text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  <RefreshCw size={14} />
+                  Reintentar pago
+                </button>
+              </div>
+            )}
+        </div>
+      )}
 
       {/* Historial de estados */}
       {pedido.historial && pedido.historial.length > 0 && (

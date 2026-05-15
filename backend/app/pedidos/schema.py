@@ -65,5 +65,6 @@ class PedidoPublic(BaseModel):
     historial: List[HistorialEstadoPedidoPublic] = []
     created_at: datetime
     updated_at: datetime
+    external_reference: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

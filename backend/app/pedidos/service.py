@@ -130,7 +130,17 @@ class PedidoService:
 
         # 8. Recargar con detalles e historial
         uow.session.expire(pedido)
-        return uow.pedidos.get_by_id(pedido.id)
+        pedido = uow.pedidos.get_by_id(pedido.id)
+
+        # 9. Si la forma de pago es MERCADOPAGO, crear el Pago asociado
+        if data.forma_pago_codigo == "MERCADOPAGO":
+            from ..pagos.service import PagoService
+            pago = PagoService().crear_pago_para_pedido(uow, pedido)
+            pedido._external_reference = pago.external_reference  # type: ignore[attr-defined]
+        else:
+            pedido._external_reference = None  # type: ignore[attr-defined]
+
+        return pedido
 
     def list_user_pedidos(self, uow: UnitOfWork, usuario_id: int,
                           offset: int = 0, limit: int = 20) -> List[Pedido]:
@@ -211,6 +221,31 @@ class PedidoService:
         uow.pedidos.flush()
         uow.session.refresh(pedido)
         return pedido
+
+    def cambiar_estado_por_sistema(self, uow: UnitOfWork, pedido_id: int,
+                                   nuevo_estado: str, motivo: str) -> None:
+        pedido = uow.pedidos.get_by_id(pedido_id)
+        if not pedido:
+            return  # silently ignore if not found
+
+        transiciones = TRANSICIONES_VALIDAS.get(pedido.estado_codigo, [])
+        if nuevo_estado not in transiciones:
+            return  # silently ignore invalid transition (no crash en webhook)
+
+        estado_anterior = pedido.estado_codigo
+        pedido.estado_codigo = nuevo_estado
+        pedido.updated_at = datetime.utcnow()
+        uow.pedidos.add(pedido)
+
+        historial = HistorialEstadoPedido(
+            pedido_id=pedido.id,
+            estado_desde=estado_anterior,
+            estado_hacia=nuevo_estado,
+            usuario_id=None,  # sistema
+            motivo=motivo,
+        )
+        uow.pedidos.add_historial(historial)
+        uow.pedidos.flush()
 
     def get_historial(self, uow: UnitOfWork, pedido_id: int,
                       current_user, token: str):

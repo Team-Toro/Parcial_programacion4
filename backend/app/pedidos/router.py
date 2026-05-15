@@ -35,7 +35,13 @@ def crear_pedido(
     service: Annotated[PedidoService, Depends(get_service)],
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
-    return service.create(uow, current_user.id, data)
+    pedido = service.create(uow, current_user.id, data)
+    response = PedidoPublic.model_validate(pedido)
+    # Propagar external_reference del pago si fue creado por el service
+    ext_ref = getattr(pedido, "_external_reference", None)
+    if ext_ref is not None:
+        response.external_reference = ext_ref
+    return response
 
 
 @router.get(

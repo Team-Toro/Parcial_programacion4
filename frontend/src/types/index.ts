@@ -37,6 +37,19 @@ export interface Pedido {
   historial?: HistorialEstadoPedido[];
   created_at: string;
   updated_at: string;
+  external_reference?: string | null;
+}
+
+export interface Pago {
+  id: number;
+  pedido_id: number;
+  mp_payment_id: number | null;
+  mp_status: string;
+  external_reference: string;
+  transaction_amount: string;
+  payment_method_id: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ItemCarrito {
