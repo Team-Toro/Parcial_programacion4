@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getPedido } from '../api/pedidos';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getPedido, cancelarPedido } from '../api/pedidos';
+import TimelinePedido from '../components/pedidos/TimelinePedido';
+import ModalMotivo from '../components/pedidos/ModalMotivo';
 
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: 'bg-amber-100 text-amber-700',
@@ -23,11 +26,22 @@ function formatFecha(iso: string) {
 
 export default function PedidoDetallePage() {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
+  const [modalCancelar, setModalCancelar] = useState(false);
 
   const { data: pedido, isLoading, isError } = useQuery({
     queryKey: ['pedido', Number(id)],
     queryFn: () => getPedido(Number(id)),
     enabled: !!id,
+  });
+
+  const mutCancelar = useMutation({
+    mutationFn: (motivo: string) => cancelarPedido(Number(id), motivo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pedido', Number(id)] });
+      queryClient.invalidateQueries({ queryKey: ['mis-pedidos'] });
+      setModalCancelar(false);
+    },
   });
 
   if (isLoading || !pedido) return <div className="p-8 text-slate-500">Cargando pedido...</div>;
@@ -115,7 +129,7 @@ export default function PedidoDetallePage() {
       </div>
 
       {/* Resumen monetario */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-5">
         <h2 className="font-semibold text-slate-700 mb-3">Resumen</h2>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-slate-600">
@@ -142,6 +156,33 @@ export default function PedidoDetallePage() {
           </div>
         </div>
       </div>
+
+      {/* Historial de estados */}
+      {pedido.historial && pedido.historial.length > 0 && (
+        <TimelinePedido historial={pedido.historial} />
+      )}
+
+      {/* Cancelar pedido */}
+      {pedido.estado_codigo === 'PENDIENTE' && (
+        <div className="mt-4">
+          <button
+            onClick={() => setModalCancelar(true)}
+            className="px-4 py-2 text-sm rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium"
+          >
+            Cancelar pedido
+          </button>
+        </div>
+      )}
+
+      <ModalMotivo
+        isOpen={modalCancelar}
+        onClose={() => setModalCancelar(false)}
+        onConfirm={(motivo) => mutCancelar.mutate(motivo)}
+        title="Cancelar pedido"
+        description="¿Por qué querés cancelar este pedido? El motivo es obligatorio."
+        confirmLabel="Cancelar pedido"
+        isLoading={mutCancelar.isPending}
+      />
     </div>
   );
 }

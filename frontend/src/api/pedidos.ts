@@ -1,4 +1,4 @@
-import type { Pedido, PedidoCreate } from '../types';
+import type { Pedido, PedidoCreate, CambioEstadoRequest, HistorialEstadoPedido } from '../types';
 import { apiFetch, buildQueryString } from './client';
 
 export const createPedido = (data: PedidoCreate): Promise<Pedido> =>
@@ -20,3 +20,18 @@ export const getAllPedidos = (params?: {
 
 export const getPedido = (id: number): Promise<Pedido> =>
   apiFetch<Pedido>(`/pedidos/${id}`);
+
+export const avanzarEstadoPedido = (id: number, data: CambioEstadoRequest): Promise<Pedido> =>
+  apiFetch<Pedido>(`/pedidos/${id}/avanzar`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const cancelarPedido = (id: number, motivo: string): Promise<Pedido> =>
+  apiFetch<Pedido>(`/pedidos/${id}/cancelar`, {
+    method: 'POST',
+    body: JSON.stringify({ motivo }),
+  });
+
+export const getHistorialPedido = (id: number): Promise<HistorialEstadoPedido[]> =>
+  apiFetch<HistorialEstadoPedido[]>(`/pedidos/${id}/historial`);

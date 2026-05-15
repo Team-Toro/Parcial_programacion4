@@ -3,14 +3,24 @@ from datetime import datetime
 from decimal import Decimal
 from fastapi import HTTPException, status
 from sqlmodel import select
-from .model import Pedido, DetallePedido
+from .model import Pedido, DetallePedido, HistorialEstadoPedido
 from .schema import PedidoCreate
 from ..uow.unit_of_work import UnitOfWork
 from ..productos.model import Producto, ProductoIngrediente
 from ..productos.service import calcular_stock_disponible
 from ..core.config import settings
+from ..core.security import decode_access_token
 
 ROLES_PEDIDOS = {"ADMIN", "PEDIDOS"}
+
+TRANSICIONES_VALIDAS: dict[str, list[str]] = {
+    "PENDIENTE":  ["CONFIRMADO", "CANCELADO"],
+    "CONFIRMADO": ["EN_PREP",    "CANCELADO"],
+    "EN_PREP":    ["EN_CAMINO",  "CANCELADO"],
+    "EN_CAMINO":  ["ENTREGADO"],
+    "ENTREGADO":  [],
+    "CANCELADO":  [],
+}
 
 
 class PedidoService:
@@ -107,7 +117,18 @@ class PedidoService:
             uow.pedidos.add_detalle(DetallePedido(pedido_id=pedido.id, **snap))
         uow.pedidos.flush()
 
-        # 7. Recargar con detalles
+        # 7. Registrar primer historial
+        primer_historial = HistorialEstadoPedido(
+            pedido_id=pedido.id,
+            estado_desde=None,
+            estado_hacia="PENDIENTE",
+            usuario_id=usuario_id,
+            motivo=None,
+        )
+        uow.pedidos.add_historial(primer_historial)
+        uow.pedidos.flush()
+
+        # 8. Recargar con detalles e historial
         uow.session.expire(pedido)
         return uow.pedidos.get_by_id(pedido.id)
 
@@ -132,3 +153,78 @@ class PedidoService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail=f"Pedido {pedido_id} no encontrado")
         return pedido
+
+    def cambiar_estado(self, uow: UnitOfWork, pedido_id: int, nuevo_estado: str,
+                       current_user, token: str, motivo: str | None = None) -> Pedido:
+        pedido = uow.pedidos.get_by_id(pedido_id)
+        if not pedido:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="Pedido no encontrado")
+
+        payload = decode_access_token(token)
+        roles = payload.get("roles", []) if payload else []
+        es_admin_o_pedidos = "ADMIN" in roles or "PEDIDOS" in roles
+
+        # Validar permisos
+        if nuevo_estado == "CANCELADO":
+            puede = es_admin_o_pedidos or (
+                pedido.estado_codigo == "PENDIENTE" and current_user.id == pedido.usuario_id
+            )
+            if not puede:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                    detail="No tenés permiso para cancelar este pedido")
+        else:
+            if not es_admin_o_pedidos:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                    detail="Solo ADMIN o PEDIDOS pueden avanzar el estado")
+
+        # Validar FSM
+        transiciones = TRANSICIONES_VALIDAS.get(pedido.estado_codigo, [])
+        if nuevo_estado not in transiciones:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Transición inválida: {pedido.estado_codigo} → {nuevo_estado}. "
+                    f"Transiciones válidas: {transiciones}"
+                ),
+            )
+
+        # Validar motivo si cancela
+        if nuevo_estado == "CANCELADO" and not motivo:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="El motivo es obligatorio al cancelar")
+
+        # Ejecutar cambio
+        estado_anterior = pedido.estado_codigo
+        pedido.estado_codigo = nuevo_estado
+        pedido.updated_at = datetime.utcnow()
+        uow.pedidos.add(pedido)
+
+        historial = HistorialEstadoPedido(
+            pedido_id=pedido.id,
+            estado_desde=estado_anterior,
+            estado_hacia=nuevo_estado,
+            usuario_id=current_user.id,
+            motivo=motivo,
+        )
+        uow.pedidos.add_historial(historial)
+        uow.pedidos.flush()
+        uow.session.refresh(pedido)
+        return pedido
+
+    def get_historial(self, uow: UnitOfWork, pedido_id: int,
+                      current_user, token: str):
+        pedido = uow.pedidos.get_by_id(pedido_id)
+        if not pedido:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="Pedido no encontrado")
+
+        payload = decode_access_token(token)
+        roles = payload.get("roles", []) if payload else []
+        es_admin_o_pedidos = "ADMIN" in roles or "PEDIDOS" in roles
+
+        if not es_admin_o_pedidos and pedido.usuario_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="No tenés acceso a este pedido")
+
+        return uow.pedidos.get_historial_for_pedido(pedido_id)

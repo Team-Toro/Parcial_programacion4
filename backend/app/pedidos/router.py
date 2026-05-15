@@ -1,7 +1,13 @@
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, Path, Query, status
 from fastapi.security import OAuth2PasswordBearer
-from .schema import PedidoCreate, PedidoPublic
+from .schema import (
+    PedidoCreate,
+    PedidoPublic,
+    CambioEstadoRequest,
+    CancelarPedidoRequest,
+    HistorialEstadoPedidoPublic,
+)
 from .service import PedidoService
 from ..uow.unit_of_work import UnitOfWork, get_uow
 from ..core.deps import get_current_active_user, require_role
@@ -62,6 +68,53 @@ def listar_todos_pedidos(
     estado_codigo: Annotated[Optional[str], Query(max_length=20)] = None,
 ):
     return service.list_all_pedidos(uow, offset, limit, usuario_id, estado_codigo)
+
+
+@router.post(
+    "/{pedido_id}/avanzar",
+    response_model=PedidoPublic,
+    summary="Avanzar el estado de un pedido (admin/pedidos)",
+)
+def avanzar_estado(
+    pedido_id: Annotated[int, Path(ge=1)],
+    payload: CambioEstadoRequest,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    service: Annotated[PedidoService, Depends(get_service)],
+    current_user: Annotated[Usuario, Depends(get_current_active_user)],
+    token: Annotated[str, Depends(oauth2_scheme_pedidos)],
+):
+    return service.cambiar_estado(uow, pedido_id, payload.nuevo_estado, current_user, token, payload.motivo)
+
+
+@router.post(
+    "/{pedido_id}/cancelar",
+    response_model=PedidoPublic,
+    summary="Cancelar un pedido",
+)
+def cancelar_pedido(
+    pedido_id: Annotated[int, Path(ge=1)],
+    payload: CancelarPedidoRequest,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    service: Annotated[PedidoService, Depends(get_service)],
+    current_user: Annotated[Usuario, Depends(get_current_active_user)],
+    token: Annotated[str, Depends(oauth2_scheme_pedidos)],
+):
+    return service.cambiar_estado(uow, pedido_id, "CANCELADO", current_user, token, payload.motivo)
+
+
+@router.get(
+    "/{pedido_id}/historial",
+    response_model=List[HistorialEstadoPedidoPublic],
+    summary="Obtener historial de estados de un pedido",
+)
+def get_historial(
+    pedido_id: Annotated[int, Path(ge=1)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    service: Annotated[PedidoService, Depends(get_service)],
+    current_user: Annotated[Usuario, Depends(get_current_active_user)],
+    token: Annotated[str, Depends(oauth2_scheme_pedidos)],
+):
+    return service.get_historial(uow, pedido_id, current_user, token)
 
 
 @router.get(

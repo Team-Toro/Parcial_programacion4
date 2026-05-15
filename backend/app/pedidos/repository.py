@@ -1,6 +1,6 @@
 from typing import List, Optional
 from sqlmodel import Session, select, col
-from .model import Pedido, DetallePedido
+from .model import Pedido, DetallePedido, HistorialEstadoPedido
 
 
 class PedidoRepository:
@@ -42,7 +42,8 @@ class PedidoRepository:
             .where(col(Pedido.deleted_at).is_(None))
         ).first()
         if pedido:
-            _ = pedido.detalles  # lazy load
+            _ = pedido.detalles   # lazy load
+            _ = pedido.historial  # lazy load
         return pedido
 
     def add(self, pedido: Pedido) -> None:
@@ -50,6 +51,16 @@ class PedidoRepository:
 
     def add_detalle(self, detalle: DetallePedido) -> None:
         self.session.add(detalle)
+
+    def add_historial(self, historial: HistorialEstadoPedido) -> None:
+        self.session.add(historial)
+
+    def get_historial_for_pedido(self, pedido_id: int) -> List[HistorialEstadoPedido]:
+        return list(self.session.exec(
+            select(HistorialEstadoPedido)
+            .where(HistorialEstadoPedido.pedido_id == pedido_id)
+            .order_by(col(HistorialEstadoPedido.created_at))
+        ).all())
 
     def flush(self) -> None:
         self.session.flush()

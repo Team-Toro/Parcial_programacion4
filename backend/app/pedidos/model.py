@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import Column, ForeignKey, Integer, JSON, Numeric
+from sqlalchemy import Column, ForeignKey, Integer, JSON, Numeric, String
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -26,6 +26,10 @@ class Pedido(SQLModel, table=True):
     deleted_at: Optional[datetime] = Field(default=None)
 
     detalles: List["DetallePedido"] = Relationship(back_populates="pedido")
+    historial: List["HistorialEstadoPedido"] = Relationship(
+        back_populates="pedido",
+        sa_relationship_kwargs={"order_by": "HistorialEstadoPedido.created_at"},
+    )
 
 
 class DetallePedido(SQLModel, table=True):
@@ -47,3 +51,27 @@ class DetallePedido(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
     pedido: Optional["Pedido"] = Relationship(back_populates="detalles")
+
+
+class HistorialEstadoPedido(SQLModel, table=True):
+    __tablename__ = "historial_estados_pedido"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    pedido_id: int = Field(
+        sa_column=Column(Integer, ForeignKey("pedidos.id", ondelete="CASCADE"), nullable=False)
+    )
+    estado_desde: Optional[str] = Field(
+        default=None,
+        sa_column=Column(String(20), ForeignKey("estados_pedido.codigo"), nullable=True),
+    )
+    estado_hacia: str = Field(
+        sa_column=Column(String(20), ForeignKey("estados_pedido.codigo"), nullable=False)
+    )
+    usuario_id: Optional[int] = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("usuarios.id"), nullable=True),
+    )
+    motivo: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+    pedido: Optional["Pedido"] = Relationship(back_populates="historial")

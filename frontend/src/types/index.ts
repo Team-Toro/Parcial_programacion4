@@ -8,6 +8,20 @@ export interface DetallePedido {
   created_at: string;
 }
 
+export interface HistorialEstadoPedido {
+  id: number;
+  estado_desde: string | null;
+  estado_hacia: string;
+  usuario_id: number | null;
+  motivo: string | null;
+  created_at: string;
+}
+
+export interface CambioEstadoRequest {
+  nuevo_estado: string;
+  motivo?: string;
+}
+
 export interface Pedido {
   id: number;
   usuario_id: number;
@@ -20,6 +34,7 @@ export interface Pedido {
   total: string;
   notas: string | null;
   detalles: DetallePedido[];
+  historial?: HistorialEstadoPedido[];
   created_at: string;
   updated_at: string;
 }

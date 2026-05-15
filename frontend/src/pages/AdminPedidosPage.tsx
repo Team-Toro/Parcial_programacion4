@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getAllPedidos } from '../api/pedidos';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getAllPedidos, avanzarEstadoPedido, cancelarPedido } from '../api/pedidos';
 import { useAuthStore } from '../store/authStore';
+import ModalMotivo from '../components/pedidos/ModalMotivo';
 
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: 'bg-amber-100 text-amber-700',
@@ -14,6 +15,17 @@ const ESTADO_COLORS: Record<string, string> = {
 };
 
 const ESTADOS = ['', 'PENDIENTE', 'CONFIRMADO', 'EN_PREP', 'EN_CAMINO', 'ENTREGADO', 'CANCELADO'];
+
+const TRANSICIONES: Record<string, string[]> = {
+  PENDIENTE:  ['CONFIRMADO', 'CANCELADO'],
+  CONFIRMADO: ['EN_PREP',    'CANCELADO'],
+  EN_PREP:    ['EN_CAMINO',  'CANCELADO'],
+  EN_CAMINO:  ['ENTREGADO'],
+  ENTREGADO:  [],
+  CANCELADO:  [],
+};
+
+const TERMINALES = new Set(['ENTREGADO', 'CANCELADO']);
 
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', {
@@ -35,6 +47,9 @@ export default function AdminPedidosPage() {
   const [usuarioIdInput, setUsuarioIdInput] = useState('');
   const [estadoCodigo, setEstadoCodigo] = useState('');
   const [offset, setOffset] = useState(0);
+  const [pedidoACancelar, setPedidoACancelar] = useState<number | null>(null);
+
+  const queryClient = useQueryClient();
 
   if (!isStaff) return <Navigate to="/productos" replace />;
 
@@ -49,6 +64,23 @@ export default function AdminPedidosPage() {
         offset,
         limit: PAGE_SIZE,
       }),
+  });
+
+  const mutAvanzar = useMutation({
+    mutationFn: ({ id, estado }: { id: number; estado: string }) =>
+      avanzarEstadoPedido(id, { nuevo_estado: estado }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-pedidos'] });
+    },
+  });
+
+  const mutCancelarAdmin = useMutation({
+    mutationFn: ({ id, motivo }: { id: number; motivo: string }) =>
+      cancelarPedido(id, motivo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-pedidos'] });
+      setPedidoACancelar(null);
+    },
   });
 
   const handleFiltrar = () => {
@@ -112,36 +144,69 @@ export default function AdminPedidosPage() {
                   <th className="text-left px-4 py-3 text-slate-600 font-semibold">Forma de pago</th>
                   <th className="text-left px-4 py-3 text-slate-600 font-semibold">Estado</th>
                   <th className="text-right px-4 py-3 text-slate-600 font-semibold">Total</th>
+                  <th className="text-left px-4 py-3 text-slate-600 font-semibold">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {pedidos.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/mis-pedidos/${p.id}`}
-                        className="text-orange-500 hover:underline font-medium"
-                      >
-                        #{p.id}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{p.usuario_id}</td>
-                    <td className="px-4 py-3 text-slate-600">{formatFecha(p.created_at)}</td>
-                    <td className="px-4 py-3 text-slate-600">{p.forma_pago_codigo}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          ESTADO_COLORS[p.estado_codigo] ?? 'bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        {p.estado_codigo}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                      ${Number(p.total).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
+                {pedidos.map((p) => {
+                  const transiciones = TRANSICIONES[p.estado_codigo] ?? [];
+                  const esTerminal = TERMINALES.has(p.estado_codigo);
+                  const siguienteEstado = transiciones.find((t) => t !== 'CANCELADO') ?? null;
+                  const puedeAvanzar = !esTerminal && siguienteEstado !== null;
+                  const puedeCancelar = !esTerminal && transiciones.includes('CANCELADO');
+
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <Link
+                          to={`/mis-pedidos/${p.id}`}
+                          className="text-orange-500 hover:underline font-medium"
+                        >
+                          #{p.id}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{p.usuario_id}</td>
+                      <td className="px-4 py-3 text-slate-600">{formatFecha(p.created_at)}</td>
+                      <td className="px-4 py-3 text-slate-600">{p.forma_pago_codigo}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            ESTADO_COLORS[p.estado_codigo] ?? 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {p.estado_codigo}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                        ${Number(p.total).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          {puedeAvanzar && (
+                            <button
+                              onClick={() =>
+                                mutAvanzar.mutate({ id: p.id, estado: siguienteEstado! })
+                              }
+                              disabled={mutAvanzar.isPending}
+                              className="px-2.5 py-1 text-xs rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium disabled:opacity-50 whitespace-nowrap"
+                            >
+                              {siguienteEstado}
+                            </button>
+                          )}
+                          {puedeCancelar && (
+                            <button
+                              onClick={() => setPedidoACancelar(p.id)}
+                              disabled={mutCancelarAdmin.isPending}
+                              className="px-2.5 py-1 text-xs rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium disabled:opacity-50"
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -165,6 +230,20 @@ export default function AdminPedidosPage() {
           </div>
         </>
       )}
+
+      <ModalMotivo
+        isOpen={pedidoACancelar !== null}
+        onClose={() => setPedidoACancelar(null)}
+        onConfirm={(motivo) => {
+          if (pedidoACancelar !== null) {
+            mutCancelarAdmin.mutate({ id: pedidoACancelar, motivo });
+          }
+        }}
+        title="Cancelar pedido"
+        description="Ingresá el motivo de la cancelación. El motivo es obligatorio."
+        confirmLabel="Cancelar pedido"
+        isLoading={mutCancelarAdmin.isPending}
+      />
     </div>
   );
 }
