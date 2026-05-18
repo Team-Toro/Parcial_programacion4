@@ -8,6 +8,7 @@ Uso:
 Requiere PostgreSQL corriendo con las variables de .env configuradas.
 """
 
+import uuid
 from sqlmodel import Session, select
 from decimal import Decimal
 from app.core.database import engine, create_all_tables
@@ -18,6 +19,9 @@ from app.ingredientes.model import Ingrediente, UnidadMedida
 from app.productos.model import Producto, ProductoCategoria, ProductoIngrediente
 from app.formas_pago.model import FormaPago
 from app.estados_pedido.model import EstadoPedido
+from app.direcciones.model import DireccionEntrega
+from app.pedidos.model import Pedido, DetallePedido, HistorialEstadoPedido
+from app.pagos.model import Pago
 
 
 FORMAS_PAGO_INICIALES = [
@@ -534,6 +538,169 @@ def run() -> None:
             prods_creados += 1
             print(f"  [+] Creado: {data['nombre']} (${data['precio_base']})")
         session.commit()
+
+        # --- Seed de muestra: direcciones + pedidos + pagos de Juan ---
+        juan = session.exec(select(Usuario).where(Usuario.email == "juan@example.com")).first()
+        if not juan:
+            print("\n[!] juan@example.com no encontrado, saltando seed de direcciones/pedidos")
+        else:
+            # Direcciones
+            print("\n[Direcciones de Juan]")
+            dirs_existentes = session.exec(
+                select(DireccionEntrega).where(DireccionEntrega.usuario_id == juan.id)
+            ).all()
+            if dirs_existentes:
+                print(f"  [=] Ya existen {len(dirs_existentes)} direcciones para juan")
+            else:
+                casa = DireccionEntrega(
+                    usuario_id=juan.id, alias="Casa",
+                    linea1="Av. San Martín 1234", ciudad="Mendoza", provincia="Mendoza",
+                    es_principal=True,
+                )
+                session.add(casa)
+                session.add(DireccionEntrega(
+                    usuario_id=juan.id, alias="Trabajo",
+                    linea1="Belgrano 567", ciudad="Godoy Cruz", provincia="Mendoza",
+                    es_principal=False,
+                ))
+                session.flush()
+                print("  [+] Creadas: Casa (principal), Trabajo")
+            session.commit()
+
+            # Pedidos de muestra
+            print("\n[Pedidos de Juan]")
+            pedidos_existentes = session.exec(
+                select(Pedido).where(Pedido.usuario_id == juan.id)
+            ).all()
+            if pedidos_existentes:
+                print(f"  [=] Ya existen {len(pedidos_existentes)} pedidos para juan")
+            else:
+                hamburguesa = session.exec(
+                    select(Producto).where(Producto.nombre == "Hamburguesa Clásica")
+                ).first()
+                limonada = session.exec(
+                    select(Producto).where(Producto.nombre == "Limonada")
+                ).first()
+                dir_casa = session.exec(
+                    select(DireccionEntrega)
+                    .where(DireccionEntrega.usuario_id == juan.id)
+                    .where(DireccionEntrega.es_principal == True)  # noqa: E712
+                ).first()
+
+                if not hamburguesa or not limonada or not dir_casa:
+                    print("  [!] Productos o dirección no encontrados, saltando seed de pedidos")
+                else:
+                    dir_id = dir_casa.id
+                    costo_envio = Decimal("500.00")
+
+                    # Pedido 1: EFECTIVO → ENTREGADO
+                    p1 = Pedido(
+                        usuario_id=juan.id, direccion_id=None,
+                        estado_codigo="ENTREGADO", forma_pago_codigo="EFECTIVO",
+                        subtotal=hamburguesa.precio_base, descuento=Decimal("0.00"),
+                        costo_envio=Decimal("0.00"), total=hamburguesa.precio_base,
+                    )
+                    session.add(p1)
+                    session.flush()
+                    session.add(DetallePedido(
+                        pedido_id=p1.id, producto_id=hamburguesa.id, cantidad=1,
+                        nombre_snapshot=hamburguesa.nombre,
+                        precio_snapshot=hamburguesa.precio_base,
+                        subtotal_snap=hamburguesa.precio_base,
+                    ))
+                    for desde, hacia in [
+                        (None, "PENDIENTE"), ("PENDIENTE", "CONFIRMADO"),
+                        ("CONFIRMADO", "EN_PREP"), ("EN_PREP", "EN_CAMINO"),
+                        ("EN_CAMINO", "ENTREGADO"),
+                    ]:
+                        session.add(HistorialEstadoPedido(
+                            pedido_id=p1.id, estado_desde=desde, estado_hacia=hacia,
+                            usuario_id=juan.id if hacia == "PENDIENTE" else None,
+                        ))
+                    print("  [+] Pedido 1: EFECTIVO → ENTREGADO")
+
+                    # Pedido 2: MERCADOPAGO → CONFIRMADO
+                    sub2 = hamburguesa.precio_base + limonada.precio_base
+                    p2 = Pedido(
+                        usuario_id=juan.id, direccion_id=dir_id,
+                        estado_codigo="CONFIRMADO", forma_pago_codigo="MERCADOPAGO",
+                        subtotal=sub2, descuento=Decimal("0.00"),
+                        costo_envio=costo_envio, total=sub2 + costo_envio,
+                    )
+                    session.add(p2)
+                    session.flush()
+                    for prod, qty in [(hamburguesa, 1), (limonada, 1)]:
+                        session.add(DetallePedido(
+                            pedido_id=p2.id, producto_id=prod.id, cantidad=qty,
+                            nombre_snapshot=prod.nombre, precio_snapshot=prod.precio_base,
+                            subtotal_snap=prod.precio_base * qty,
+                        ))
+                    for desde, hacia in [(None, "PENDIENTE"), ("PENDIENTE", "CONFIRMADO")]:
+                        session.add(HistorialEstadoPedido(
+                            pedido_id=p2.id, estado_desde=desde, estado_hacia=hacia,
+                            usuario_id=juan.id if hacia == "PENDIENTE" else None,
+                        ))
+                    session.add(Pago(
+                        pedido_id=p2.id, mp_status="approved", mp_payment_id=123456,
+                        external_reference=str(uuid.uuid4()), idempotency_key=str(uuid.uuid4()),
+                        transaction_amount=p2.total, payment_method_id="credit_card",
+                    ))
+                    print("  [+] Pedido 2: MERCADOPAGO → CONFIRMADO (pago approved)")
+
+                    # Pedido 3: TRANSFERENCIA → PENDIENTE
+                    sub3 = limonada.precio_base * 2
+                    p3 = Pedido(
+                        usuario_id=juan.id, direccion_id=dir_id,
+                        estado_codigo="PENDIENTE", forma_pago_codigo="TRANSFERENCIA",
+                        subtotal=sub3, descuento=Decimal("0.00"),
+                        costo_envio=costo_envio, total=sub3 + costo_envio,
+                    )
+                    session.add(p3)
+                    session.flush()
+                    session.add(DetallePedido(
+                        pedido_id=p3.id, producto_id=limonada.id, cantidad=2,
+                        nombre_snapshot=limonada.nombre, precio_snapshot=limonada.precio_base,
+                        subtotal_snap=sub3,
+                    ))
+                    session.add(HistorialEstadoPedido(
+                        pedido_id=p3.id, estado_desde=None, estado_hacia="PENDIENTE",
+                        usuario_id=juan.id,
+                    ))
+                    print("  [+] Pedido 3: TRANSFERENCIA → PENDIENTE")
+
+                    # Pedido 4: MERCADOPAGO → CANCELADO
+                    sub4 = hamburguesa.precio_base
+                    p4 = Pedido(
+                        usuario_id=juan.id, direccion_id=dir_id,
+                        estado_codigo="CANCELADO", forma_pago_codigo="MERCADOPAGO",
+                        subtotal=sub4, descuento=Decimal("0.00"),
+                        costo_envio=costo_envio, total=sub4 + costo_envio,
+                    )
+                    session.add(p4)
+                    session.flush()
+                    session.add(DetallePedido(
+                        pedido_id=p4.id, producto_id=hamburguesa.id, cantidad=1,
+                        nombre_snapshot=hamburguesa.nombre,
+                        precio_snapshot=hamburguesa.precio_base,
+                        subtotal_snap=sub4,
+                    ))
+                    for desde, hacia, motivo in [
+                        (None, "PENDIENTE", None),
+                        ("PENDIENTE", "CANCELADO", "El cliente canceló el pedido"),
+                    ]:
+                        session.add(HistorialEstadoPedido(
+                            pedido_id=p4.id, estado_desde=desde, estado_hacia=hacia,
+                            usuario_id=juan.id, motivo=motivo,
+                        ))
+                    session.add(Pago(
+                        pedido_id=p4.id, mp_status="cancelled",
+                        external_reference=str(uuid.uuid4()), idempotency_key=str(uuid.uuid4()),
+                        transaction_amount=p4.total,
+                    ))
+                    print("  [+] Pedido 4: MERCADOPAGO → CANCELADO")
+
+                    session.flush()
+            session.commit()
 
     print("\n=== Seed completado ===")
     print(f"  Categorías creadas : {cats_creadas}")

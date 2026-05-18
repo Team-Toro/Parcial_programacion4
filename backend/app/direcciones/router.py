@@ -1,9 +1,9 @@
-from typing import Annotated, List
-from fastapi import APIRouter, Depends, Path, status
+from typing import Annotated, List, Optional
+from fastapi import APIRouter, Depends, Path, Query, status
 from .schema import DireccionCreate, DireccionUpdate, DireccionPublic
 from .service import DireccionService
 from ..uow.unit_of_work import UnitOfWork, get_uow
-from ..core.deps import get_current_active_user
+from ..core.deps import get_current_active_user, require_role
 from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/direcciones", tags=["Direcciones"])
@@ -85,6 +85,22 @@ def eliminar_direccion(
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     service.soft_delete(uow, direccion_id, current_user.id)
+
+
+@router.get(
+    "/admin/all",
+    response_model=List[DireccionPublic],
+    summary="Listar todas las direcciones del sistema (admin)",
+    dependencies=[Depends(require_role(["ADMIN"]))],
+)
+def list_all_direcciones(
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    service: Annotated[DireccionService, Depends(get_direccion_service)],
+    usuario_id: Annotated[Optional[int], Query(ge=1)] = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+):
+    return service.list_all(uow, offset, limit, usuario_id)
 
 
 @router.post(

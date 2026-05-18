@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from fastapi import HTTPException, status
 from .model import DireccionEntrega
@@ -68,6 +68,10 @@ class DireccionService:
         uow.direcciones.add(direccion)
         uow.direcciones.flush()
         return direccion
+
+    def list_all(self, uow: UnitOfWork, offset: int, limit: int,
+                usuario_id: Optional[int] = None) -> List[DireccionEntrega]:
+        return uow.direcciones.list_all(offset, limit, usuario_id)
 
     def soft_delete(self, uow: UnitOfWork, direccion_id: int, usuario_id: int) -> None:
         direccion = self.get_user_address(uow, direccion_id, usuario_id)

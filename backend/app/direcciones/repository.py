@@ -47,6 +47,14 @@ class DireccionRepository:
         )
         self.session.execute(stmt)
 
+    def list_all(self, offset: int, limit: int, usuario_id: Optional[int] = None) -> List[DireccionEntrega]:
+        query = select(DireccionEntrega).where(col(DireccionEntrega.deleted_at).is_(None))
+        if usuario_id is not None:
+            query = query.where(DireccionEntrega.usuario_id == usuario_id)
+        return self.session.exec(
+            query.order_by(col(DireccionEntrega.created_at).desc()).offset(offset).limit(limit)
+        ).all()
+
     def soft_delete(self, direccion: DireccionEntrega) -> None:
         now = datetime.utcnow()
         direccion.deleted_at = now

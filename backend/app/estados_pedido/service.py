@@ -3,6 +3,15 @@ from fastapi import HTTPException, status
 from .model import EstadoPedido
 from ..uow.unit_of_work import UnitOfWork
 
+TRANSICIONES_VALIDAS: dict[str, list[str]] = {
+    "PENDIENTE":  ["CONFIRMADO", "CANCELADO"],
+    "CONFIRMADO": ["EN_PREP",    "CANCELADO"],
+    "EN_PREP":    ["EN_CAMINO",  "CANCELADO"],
+    "EN_CAMINO":  ["ENTREGADO"],
+    "ENTREGADO":  [],
+    "CANCELADO":  [],
+}
+
 
 class EstadoPedidoService:
 
@@ -17,3 +26,15 @@ class EstadoPedidoService:
                 detail=f"Estado de pedido '{codigo}' no encontrado",
             )
         return estado
+
+    @staticmethod
+    def es_transicion_valida(desde: str, hacia: str) -> bool:
+        return hacia in TRANSICIONES_VALIDAS.get(desde, [])
+
+    @staticmethod
+    def es_terminal(estado: str) -> bool:
+        return TRANSICIONES_VALIDAS.get(estado) == []
+
+    @staticmethod
+    def get_transiciones_validas(desde: str) -> list[str]:
+        return TRANSICIONES_VALIDAS.get(desde, [])

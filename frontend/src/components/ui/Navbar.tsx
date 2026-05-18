@@ -12,6 +12,7 @@ interface NavLink {
   label: string;
   adminOnly: boolean;
   staffOnly: boolean;
+  hideForAdmin?: boolean;
 }
 
 export default function Navbar() {
@@ -37,10 +38,10 @@ export default function Navbar() {
   const links: NavLink[] = [
     { to: '/categorias', label: 'Categorías', adminOnly: false, staffOnly: false },
     { to: '/productos', label: 'Productos', adminOnly: false, staffOnly: false },
-    { to: '/mis-direcciones', label: 'Mis direcciones', adminOnly: false, staffOnly: false },
-    { to: '/mis-pedidos', label: 'Mis pedidos', adminOnly: false, staffOnly: false },
+    { to: '/mis-direcciones', label: 'Mis direcciones', adminOnly: false, staffOnly: false, hideForAdmin: true },
+    { to: '/mis-pedidos', label: 'Mis pedidos', adminOnly: false, staffOnly: false, hideForAdmin: true },
     { to: '/ingredientes', label: 'Ingredientes', adminOnly: true, staffOnly: false },
-    { to: '/admin/usuarios', label: 'Admin', adminOnly: true, staffOnly: false },
+    { to: '/admin/usuarios', label: 'Usuarios', adminOnly: true, staffOnly: false },
     { to: '/admin/pedidos', label: 'Pedidos', adminOnly: false, staffOnly: true },
   ];
 
@@ -50,7 +51,7 @@ export default function Navbar() {
 
       <div className="flex gap-4 flex-1">
         {links
-          .filter((l) => (!l.adminOnly || isAdmin) && (!l.staffOnly || isStaff))
+          .filter((l) => (!l.adminOnly || isAdmin) && (!l.staffOnly || isStaff) && (!l.hideForAdmin || !isAdmin))
           .map((l) => (
             <Link
               key={l.to}
@@ -68,19 +69,21 @@ export default function Navbar() {
 
       {user && (
         <div className="flex items-center gap-3">
-          {/* Carrito badge */}
-          <Link
-            to="/carrito"
-            className="relative flex items-center text-slate-300 hover:text-white hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors"
-            title="Carrito"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            {totalCarrito > 0 && (
-              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center leading-none">
-                {totalCarrito > 99 ? '99+' : totalCarrito}
-              </span>
-            )}
-          </Link>
+          {/* Carrito badge — oculto para ADMIN */}
+          {!isAdmin && (
+            <Link
+              to="/carrito"
+              className="relative flex items-center text-slate-300 hover:text-white hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors"
+              title="Carrito"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {totalCarrito > 0 && (
+                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center leading-none">
+                  {totalCarrito > 99 ? '99+' : totalCarrito}
+                </span>
+              )}
+            </Link>
+          )}
 
           <span className="text-sm text-slate-300">
             Hola, <span className="font-medium text-white">{user.first_name || user.email}</span>

@@ -2,25 +2,16 @@ from typing import List
 from datetime import datetime
 from decimal import Decimal
 from fastapi import HTTPException, status
-from sqlmodel import select
 from .model import Pedido, DetallePedido, HistorialEstadoPedido
 from .schema import PedidoCreate
 from ..uow.unit_of_work import UnitOfWork
-from ..productos.model import Producto, ProductoIngrediente
+from ..productos.model import Producto
 from ..productos.service import calcular_stock_disponible
+from ..estados_pedido.service import EstadoPedidoService
 from ..core.config import settings
 from ..core.security import decode_access_token
 
 ROLES_PEDIDOS = {"ADMIN", "PEDIDOS"}
-
-TRANSICIONES_VALIDAS: dict[str, list[str]] = {
-    "PENDIENTE":  ["CONFIRMADO", "CANCELADO"],
-    "CONFIRMADO": ["EN_PREP",    "CANCELADO"],
-    "EN_PREP":    ["EN_CAMINO",  "CANCELADO"],
-    "EN_CAMINO":  ["ENTREGADO"],
-    "ENTREGADO":  [],
-    "CANCELADO":  [],
-}
 
 
 class PedidoService:
@@ -51,7 +42,7 @@ class PedidoService:
         # 3. Validar items y construir snapshots
         item_snapshots = []
         for item in data.items:
-            producto = uow.session.get(Producto, item.producto_id)
+            producto = uow.productos.get_by_id_including_deleted(item.producto_id)
             if not producto:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                     detail=f"Producto {item.producto_id} no existe")
@@ -66,11 +57,7 @@ class PedidoService:
                 )
 
             if item.personalizacion:
-                pi_removibles = uow.session.exec(
-                    select(ProductoIngrediente)
-                    .where(ProductoIngrediente.producto_id == item.producto_id)
-                    .where(ProductoIngrediente.es_removible == True)  # noqa: E712
-                ).all()
+                pi_removibles = uow.productos.get_ingredientes_removibles(item.producto_id)
                 removible_ids = {pi.ingrediente_id for pi in pi_removibles}
                 for ing_id in item.personalizacion:
                     if ing_id not in removible_ids:
@@ -189,13 +176,12 @@ class PedidoService:
                                     detail="Solo ADMIN o PEDIDOS pueden avanzar el estado")
 
         # Validar FSM
-        transiciones = TRANSICIONES_VALIDAS.get(pedido.estado_codigo, [])
-        if nuevo_estado not in transiciones:
+        if not EstadoPedidoService.es_transicion_valida(pedido.estado_codigo, nuevo_estado):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
                     f"Transición inválida: {pedido.estado_codigo} → {nuevo_estado}. "
-                    f"Transiciones válidas: {transiciones}"
+                    f"Transiciones válidas: {EstadoPedidoService.get_transiciones_validas(pedido.estado_codigo)}"
                 ),
             )
 
@@ -228,8 +214,7 @@ class PedidoService:
         if not pedido:
             return  # silently ignore if not found
 
-        transiciones = TRANSICIONES_VALIDAS.get(pedido.estado_codigo, [])
-        if nuevo_estado not in transiciones:
+        if not EstadoPedidoService.es_transicion_valida(pedido.estado_codigo, nuevo_estado):
             return  # silently ignore invalid transition (no crash en webhook)
 
         estado_anterior = pedido.estado_codigo

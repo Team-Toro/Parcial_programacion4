@@ -1,5 +1,5 @@
 from typing import Annotated, List, Optional
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from .schema import (
     PedidoCreate,
@@ -53,9 +53,17 @@ def listar_mis_pedidos(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[PedidoService, Depends(get_service)],
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
+    token: Annotated[str, Depends(oauth2_scheme_pedidos)],
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ):
+    payload = decode_access_token(token)
+    roles = payload.get("roles", []) if payload else []
+    if "ADMIN" in roles or "PEDIDOS" in roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Este endpoint es solo para clientes. Usá GET /pedidos/ para ver todos los pedidos",
+        )
     return service.list_user_pedidos(uow, current_user.id, offset, limit)
 
 

@@ -25,7 +25,8 @@ from app.core.security import (
     hash_token,
 )
 from app.uow.unit_of_work import UnitOfWork
-from .model import Usuario, UsuarioRol, RefreshToken
+from .model import Usuario, UsuarioRol
+from app.refresh_tokens.model import RefreshToken
 from .repository import UsuarioRepository
 from .schema import UsuarioCreate, UsuarioPublic, UsuarioToken
 
