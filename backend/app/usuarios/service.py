@@ -32,6 +32,15 @@ class UsuarioService:
         repo = UsuarioRepository(uow.session)
         return repo.get_by_username(username)
 
+    def get_roles(self, uow: UnitOfWork, user_id: int) -> list[str]:
+        """Return the list of role codes assigned to the user.
+
+        Minimal implementation that delegates to the repository to avoid
+        changing the models. Returns a list of role ids (strings).
+        """
+        repo = UsuarioRepository(uow.session)
+        return repo.get_roles_for_user(user_id)
+
     def register(self, uow: UnitOfWork, user_in: UsuarioCreate) -> Usuario:
         """Registra un nuevo usuario. El rol siempre es 'user'."""
         repo = UsuarioRepository(uow.session)
