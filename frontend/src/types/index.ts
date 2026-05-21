@@ -1,3 +1,80 @@
+export interface DetallePedido {
+  producto_id: number;
+  cantidad: number;
+  nombre_snapshot: string;
+  precio_snapshot: string;
+  subtotal_snap: string;
+  personalizacion: number[] | null;
+  created_at: string;
+}
+
+export interface HistorialEstadoPedido {
+  id: number;
+  estado_desde: string | null;
+  estado_hacia: string;
+  usuario_id: number | null;
+  motivo: string | null;
+  created_at: string;
+}
+
+export interface CambioEstadoRequest {
+  nuevo_estado: string;
+  motivo?: string;
+}
+
+export interface Pedido {
+  id: number;
+  usuario_id: number;
+  direccion_id: number | null;
+  estado_codigo: string;
+  forma_pago_codigo: string;
+  subtotal: string;
+  descuento: string;
+  costo_envio: string;
+  total: string;
+  notas: string | null;
+  detalles: DetallePedido[];
+  historial?: HistorialEstadoPedido[];
+  created_at: string;
+  updated_at: string;
+  external_reference?: string | null;
+}
+
+export interface Pago {
+  id: number;
+  pedido_id: number;
+  mp_payment_id: number | null;
+  mp_status: string;
+  external_reference: string;
+  transaction_amount: string;
+  payment_method_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ItemCarrito {
+  producto_id: number;
+  nombre: string;
+  precio: number;
+  cantidad: number;
+  imagen_url?: string;
+  personalizacion: number[];
+  ingredientes_removibles: { id: number; nombre: string }[];
+}
+
+export interface ItemPedidoRequest {
+  producto_id: number;
+  cantidad: number;
+  personalizacion?: number[];
+}
+
+export interface PedidoCreate {
+  direccion_id?: number;
+  forma_pago_codigo: string;
+  notas?: string;
+  items: ItemPedidoRequest[];
+}
+
 export interface Categoria {
   id: number;
   nombre: string;
@@ -130,6 +207,50 @@ export interface Usuario {
   disabled: boolean;
 }
 
+export interface FormaPago {
+  codigo: string;
+  descripcion: string;
+  habilitado: boolean;
+}
+
+export interface EstadoPedido {
+  codigo: string;
+  descripcion: string;
+  orden: number;
+  es_terminal: boolean;
+}
+
+export interface Direccion {
+  id: number;
+  usuario_id: number;
+  alias: string | null;
+  linea1: string;
+  linea2: string | null;
+  ciudad: string;
+  provincia: string | null;
+  codigo_postal: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  es_principal: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface DireccionCreate {
+  alias?: string;
+  linea1: string;
+  linea2?: string;
+  ciudad: string;
+  provincia?: string;
+  codigo_postal?: string;
+  latitud?: number;
+  longitud?: number;
+  es_principal?: boolean;
+}
+
+export type DireccionUpdate = Partial<DireccionCreate>;
+
 export interface LoginCredentials {
   username: string;
   password: string;
@@ -139,6 +260,7 @@ export interface LoginResponse {
   access_token: string;
   token_type: string;
   expires_in: number;
+  refresh_token: string;
 }
 
 export interface RegisterPayload {

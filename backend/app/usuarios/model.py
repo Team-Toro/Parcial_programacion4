@@ -7,15 +7,20 @@ Campos clave para seguridad:
   - disabled: permite desactivar cuentas sin eliminarlas.
 """
 
-from datetime import datetime 
-from typing import Optional
-from sqlmodel import SQLModel, Field
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
+from sqlmodel import SQLModel, Field, Relationship
+
+if TYPE_CHECKING:
+    from app.refresh_tokens.model import RefreshToken
+
 
 class Rol(SQLModel, table=True):
     __tablename__ = "roles"
     codigo: str = Field(primary_key=True, max_length=20)
     nombre: str = Field(unique=True, nullable=False, max_length=50)
     description: str = Field(nullable=False)
+
 
 class Usuario(SQLModel, table=True):
     __tablename__ = "usuarios"
@@ -29,6 +34,9 @@ class Usuario(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     deleted_at: Optional[datetime] = Field(default=None, nullable=True)
+
+    refresh_tokens: List["RefreshToken"] = Relationship(back_populates="usuario")
+
 
 class UsuarioRol(SQLModel, table=True):
     __tablename__ = "usuario_rol"

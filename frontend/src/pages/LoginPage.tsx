@@ -16,7 +16,7 @@ export default function LoginPage() {
     onSuccess: async (data) => {
       useAuthStore.getState().setToken(data.access_token);
       const user = await getMe();
-      useAuthStore.getState().login(data.access_token, user);
+      useAuthStore.getState().login(data.access_token, data.refresh_token, user);
       const isAdmin = user.roles?.includes('ADMIN');
       navigate(isAdmin ? '/admin/usuarios' : '/productos');
     },

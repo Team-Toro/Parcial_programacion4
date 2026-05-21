@@ -1,0 +1,250 @@
+from typing import List
+from datetime import datetime
+from decimal import Decimal
+from fastapi import HTTPException, status
+from .model import Pedido, DetallePedido, HistorialEstadoPedido
+from .schema import PedidoCreate
+from ..uow.unit_of_work import UnitOfWork
+from ..productos.model import Producto
+from ..productos.service import calcular_stock_disponible
+from ..estados_pedido.service import EstadoPedidoService
+from ..core.config import settings
+from ..core.security import decode_access_token
+
+ROLES_PEDIDOS = {"ADMIN", "PEDIDOS"}
+
+
+class PedidoService:
+
+    def create(self, uow: UnitOfWork, usuario_id: int, data: PedidoCreate) -> Pedido:
+        # 1. Validar forma de pago
+        forma_pago = uow.formas_pago.get_by_codigo(data.forma_pago_codigo)
+        if not forma_pago:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Forma de pago '{data.forma_pago_codigo}' no existe")
+        if not forma_pago.habilitado:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Forma de pago '{data.forma_pago_codigo}' no está habilitada")
+
+        # 2. Validar dirección
+        if data.forma_pago_codigo == "EFECTIVO":
+            direccion_id = None
+        else:
+            if data.direccion_id is None:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                    detail="Debe indicar una dirección de entrega para esta forma de pago")
+            direccion = uow.direcciones.get_by_id_for_user(data.direccion_id, usuario_id)
+            if not direccion:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                    detail=f"Dirección {data.direccion_id} no encontrada")
+            direccion_id = data.direccion_id
+
+        # 3. Validar items y construir snapshots
+        item_snapshots = []
+        for item in data.items:
+            producto = uow.productos.get_by_id_including_deleted(item.producto_id)
+            if not producto:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                    detail=f"Producto {item.producto_id} no existe")
+            if producto.deleted_at is not None or not producto.disponible:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                    detail=f"Producto '{producto.nombre}' no disponible")
+            stock_disp = calcular_stock_disponible(producto)
+            if stock_disp < item.cantidad:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Stock insuficiente para '{producto.nombre}' (disponible: {stock_disp}, solicitado: {item.cantidad})"
+                )
+
+            if item.personalizacion:
+                pi_removibles = uow.productos.get_ingredientes_removibles(item.producto_id)
+                removible_ids = {pi.ingrediente_id for pi in pi_removibles}
+                for ing_id in item.personalizacion:
+                    if ing_id not in removible_ids:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Ingrediente {ing_id} no es removible en '{producto.nombre}'"
+                        )
+
+            precio = producto.precio_base
+            subtotal_snap = Decimal(str(item.cantidad)) * precio
+            item_snapshots.append({
+                "producto_id": item.producto_id,
+                "cantidad": item.cantidad,
+                "nombre_snapshot": producto.nombre,
+                "precio_snapshot": precio,
+                "subtotal_snap": subtotal_snap,
+                "personalizacion": item.personalizacion,
+            })
+
+        # 4. Calcular totales
+        subtotal = sum(s["subtotal_snap"] for s in item_snapshots)
+        descuento = Decimal("0.00")
+        costo_envio = Decimal("0.00") if data.forma_pago_codigo == "EFECTIVO" else settings.COSTO_ENVIO_DEFAULT
+        total = subtotal - descuento + costo_envio
+
+        # 5. Crear pedido
+        pedido = Pedido(
+            usuario_id=usuario_id,
+            direccion_id=direccion_id,
+            estado_codigo="PENDIENTE",
+            forma_pago_codigo=data.forma_pago_codigo,
+            subtotal=subtotal,
+            descuento=descuento,
+            costo_envio=costo_envio,
+            total=total,
+            notas=data.notas,
+        )
+        uow.pedidos.add(pedido)
+        uow.pedidos.flush()
+        uow.pedidos.refresh(pedido)
+
+        # 6. Crear detalles
+        for snap in item_snapshots:
+            uow.pedidos.add_detalle(DetallePedido(pedido_id=pedido.id, **snap))
+        uow.pedidos.flush()
+
+        # 7. Registrar primer historial
+        primer_historial = HistorialEstadoPedido(
+            pedido_id=pedido.id,
+            estado_desde=None,
+            estado_hacia="PENDIENTE",
+            usuario_id=usuario_id,
+            motivo=None,
+        )
+        uow.pedidos.add_historial(primer_historial)
+        uow.pedidos.flush()
+
+        # 8. Recargar con detalles e historial
+        uow.session.expire(pedido)
+        pedido = uow.pedidos.get_by_id(pedido.id)
+
+        # 9. Si la forma de pago es MERCADOPAGO, crear el Pago asociado
+        if data.forma_pago_codigo == "MERCADOPAGO":
+            from ..pagos.service import PagoService
+            pago = PagoService().crear_pago_para_pedido(uow, pedido)
+            pedido._external_reference = pago.external_reference  # type: ignore[attr-defined]
+        else:
+            pedido._external_reference = None  # type: ignore[attr-defined]
+
+        return pedido
+
+    def list_user_pedidos(self, uow: UnitOfWork, usuario_id: int,
+                          offset: int = 0, limit: int = 20) -> List[Pedido]:
+        return uow.pedidos.list_by_user(usuario_id, offset, limit)
+
+    def list_all_pedidos(self, uow: UnitOfWork, offset: int = 0, limit: int = 20,
+                         usuario_id: int | None = None,
+                         estado_codigo: str | None = None) -> List[Pedido]:
+        return uow.pedidos.list_all(offset, limit, usuario_id, estado_codigo)
+
+    def get_pedido_for_user(self, uow: UnitOfWork, pedido_id: int,
+                            current_user_id: int, user_roles: list) -> Pedido:
+        pedido = uow.pedidos.get_by_id(pedido_id)
+        if not pedido:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"Pedido {pedido_id} no encontrado")
+        if any(r in ROLES_PEDIDOS for r in user_roles):
+            return pedido
+        if pedido.usuario_id != current_user_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"Pedido {pedido_id} no encontrado")
+        return pedido
+
+    def cambiar_estado(self, uow: UnitOfWork, pedido_id: int, nuevo_estado: str,
+                       current_user, token: str, motivo: str | None = None) -> Pedido:
+        pedido = uow.pedidos.get_by_id(pedido_id)
+        if not pedido:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="Pedido no encontrado")
+
+        payload = decode_access_token(token)
+        roles = payload.get("roles", []) if payload else []
+        es_admin_o_pedidos = "ADMIN" in roles or "PEDIDOS" in roles
+
+        # Validar permisos
+        if nuevo_estado == "CANCELADO":
+            puede = es_admin_o_pedidos or (
+                pedido.estado_codigo == "PENDIENTE" and current_user.id == pedido.usuario_id
+            )
+            if not puede:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                    detail="No tenés permiso para cancelar este pedido")
+        else:
+            if not es_admin_o_pedidos:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                    detail="Solo ADMIN o PEDIDOS pueden avanzar el estado")
+
+        # Validar FSM
+        if not EstadoPedidoService.es_transicion_valida(pedido.estado_codigo, nuevo_estado):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Transición inválida: {pedido.estado_codigo} → {nuevo_estado}. "
+                    f"Transiciones válidas: {EstadoPedidoService.get_transiciones_validas(pedido.estado_codigo)}"
+                ),
+            )
+
+        # Validar motivo si cancela
+        if nuevo_estado == "CANCELADO" and not motivo:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="El motivo es obligatorio al cancelar")
+
+        # Ejecutar cambio
+        estado_anterior = pedido.estado_codigo
+        pedido.estado_codigo = nuevo_estado
+        pedido.updated_at = datetime.utcnow()
+        uow.pedidos.add(pedido)
+
+        historial = HistorialEstadoPedido(
+            pedido_id=pedido.id,
+            estado_desde=estado_anterior,
+            estado_hacia=nuevo_estado,
+            usuario_id=current_user.id,
+            motivo=motivo,
+        )
+        uow.pedidos.add_historial(historial)
+        uow.pedidos.flush()
+        uow.session.refresh(pedido)
+        return pedido
+
+    def cambiar_estado_por_sistema(self, uow: UnitOfWork, pedido_id: int,
+                                   nuevo_estado: str, motivo: str) -> None:
+        pedido = uow.pedidos.get_by_id(pedido_id)
+        if not pedido:
+            return  # silently ignore if not found
+
+        if not EstadoPedidoService.es_transicion_valida(pedido.estado_codigo, nuevo_estado):
+            return  # silently ignore invalid transition (no crash en webhook)
+
+        estado_anterior = pedido.estado_codigo
+        pedido.estado_codigo = nuevo_estado
+        pedido.updated_at = datetime.utcnow()
+        uow.pedidos.add(pedido)
+
+        historial = HistorialEstadoPedido(
+            pedido_id=pedido.id,
+            estado_desde=estado_anterior,
+            estado_hacia=nuevo_estado,
+            usuario_id=None,  # sistema
+            motivo=motivo,
+        )
+        uow.pedidos.add_historial(historial)
+        uow.pedidos.flush()
+
+    def get_historial(self, uow: UnitOfWork, pedido_id: int,
+                      current_user, token: str):
+        pedido = uow.pedidos.get_by_id(pedido_id)
+        if not pedido:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="Pedido no encontrado")
+
+        payload = decode_access_token(token)
+        roles = payload.get("roles", []) if payload else []
+        es_admin_o_pedidos = "ADMIN" in roles or "PEDIDOS" in roles
+
+        if not es_admin_o_pedidos and pedido.usuario_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="No tenés acceso a este pedido")
+
+        return uow.pedidos.get_historial_for_pedido(pedido_id)

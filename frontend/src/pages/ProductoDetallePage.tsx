@@ -1,7 +1,10 @@
+import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { ShoppingCart } from 'lucide-react';
 import { getProductoById } from '../api/productos';
 import { useAuthStore } from '../store/authStore';
+import { useCarritoStore } from '../store/carritoStore';
 
 function StockBadge({ value }: { value: number }) {
   const color =
@@ -21,11 +24,55 @@ export default function ProductoDetallePage() {
     enabled: !!id,
   });
 
+  const [cantidad, setCantidad] = useState(1);
+  const [removidos, setRemovidos] = useState<number[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { agregarItem, totalItems } = useCarritoStore();
+
   if (isLoading) return <div className="p-8 text-slate-500">Cargando producto...</div>;
   if (isError || !producto) return <div className="p-8 text-red-500">Producto no encontrado.</div>;
 
+  const canComprar = producto.disponible && producto.stock_disponible > 0;
+
+  const toggleRemovido = (ingId: number) =>
+    setRemovidos((prev) =>
+      prev.includes(ingId) ? prev.filter((x) => x !== ingId) : [...prev, ingId]
+    );
+
+  const handleAgregarCarrito = () => {
+    agregarItem({
+      producto_id: producto.id,
+      nombre: producto.nombre,
+      precio: Number(producto.precio_base),
+      cantidad,
+      imagen_url: producto.imagenes_url?.[0],
+      personalizacion: removidos,
+      ingredientes_removibles: producto.ingredientes
+        .filter((pi) => pi.es_removible)
+        .map((pi) => ({ id: pi.ingrediente.id, nombre: pi.ingrediente.nombre })),
+    });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(`Agregado al carrito (${totalItems() + cantidad} items)`);
+    setToastVisible(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => setToastVisible(true)));
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  };
+
   return (
     <div className="px-4 sm:px-6 lg:px-12 py-8 max-w-3xl mx-auto">
+      {/* Toast notification */}
+      {toast && (
+        <div
+          className={`fixed top-6 right-6 z-50 bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg text-sm font-medium transition-all duration-300 ${
+            toastVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+          }`}
+        >
+          {toast}
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-4">
         <Link to="/productos" className="text-orange-500 hover:underline text-sm">
           &larr; Volver a productos
@@ -109,6 +156,61 @@ export default function ProductoDetallePage() {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+
+        {/* Carrito section */}
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          {canComprar ? (
+            <>
+              {producto.ingredientes.some((pi) => pi.es_removible) && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                    Personalizar (quitar ingredientes)
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {producto.ingredientes
+                      .filter((pi) => pi.es_removible)
+                      .map((pi) => (
+                        <label
+                          key={pi.ingrediente.id}
+                          className="flex items-center gap-1.5 cursor-pointer text-sm text-slate-600"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={removidos.includes(pi.ingrediente.id)}
+                            onChange={() => toggleRemovido(pi.ingrediente.id)}
+                            className="w-4 h-4 accent-orange-500"
+                          />
+                          Sin {pi.ingrediente.nombre}
+                        </label>
+                      ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setCantidad((c) => Math.max(1, c - 1))}
+                    className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold"
+                  >−</button>
+                  <span className="px-4 py-2 text-sm font-medium">{cantidad}</span>
+                  <button
+                    onClick={() => setCantidad((c) => Math.min(producto.stock_disponible, c + 1))}
+                    className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold"
+                  >+</button>
+                </div>
+                <button
+                  onClick={handleAgregarCarrito}
+                  className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  Agregar al carrito
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="text-red-500 font-medium text-sm">Sin stock disponible</p>
           )}
         </div>
       </div>

@@ -124,6 +124,13 @@ class ProductoRepository:
             select(ProductoIngrediente).where(ProductoIngrediente.producto_id == producto_id)
         ).all()
 
+    def get_ingredientes_removibles(self, producto_id: int) -> List[ProductoIngrediente]:
+        return self.session.exec(
+            select(ProductoIngrediente)
+            .where(ProductoIngrediente.producto_id == producto_id)
+            .where(ProductoIngrediente.es_removible == True)  # noqa: E712
+        ).all()
+
     def add(self, obj) -> None:
         self.session.add(obj)
 

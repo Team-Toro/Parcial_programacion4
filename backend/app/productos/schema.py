@@ -100,5 +100,7 @@ class ProductoPublic(ProductoBase):
         for item in self.ingredientes:
             if item.cantidad <= 0 or item.ingrediente.stock_actual <= 0:
                 return 0
+            if item.ingrediente.deleted_at is not None:
+                return 0
             posibles.append(int(item.ingrediente.stock_actual / item.cantidad))
         return min(posibles) if posibles else 0

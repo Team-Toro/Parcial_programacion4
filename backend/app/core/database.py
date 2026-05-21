@@ -20,6 +20,7 @@ def get_session():
 def create_all_tables() -> None:
     """Crea las tablas registradas en SQLModel.metadata al arrancar la app."""
     import app.usuarios.model  # noqa: F401 — registra el modelo en metadata
+    import app.refresh_tokens.model  # noqa: F401 — RefreshToken vive en su propio módulo
     import app.categorias.model  # noqa: F401
     import app.productos.model  # noqa: F401
     import app.ingredientes.model  # noqa: F401

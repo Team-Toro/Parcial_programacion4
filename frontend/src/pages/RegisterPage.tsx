@@ -31,7 +31,7 @@ export default function RegisterPage() {
       const loginData = await login({ username: email, password });
       useAuthStore.getState().setToken(loginData.access_token);
       const user = await getMe();
-      useAuthStore.getState().login(loginData.access_token, user);
+      useAuthStore.getState().login(loginData.access_token, loginData.refresh_token, user);
       const isAdmin = user.roles?.includes('ADMIN');
       navigate(isAdmin ? '/admin/usuarios' : '/productos');
     },
