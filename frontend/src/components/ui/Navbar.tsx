@@ -21,15 +21,12 @@ export default function Navbar() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const refreshToken = useAuthStore((s) => s.refreshToken);
   const isAdmin = useAuthStore((s) => s.isAdmin());
   const isStaff = user?.roles?.some((r) => STAFF_ROLES.includes(r)) ?? false;
   const totalCarrito = useCarritoStore((s) => s.totalItems());
 
   const handleLogout = async () => {
-    if (refreshToken) {
-      await logoutBackend(refreshToken);
-    }
+    await logoutBackend();
     logout();
     queryClient.clear();
     navigate('/login');

@@ -13,10 +13,10 @@ export default function LoginPage() {
 
   const mutation = useMutation({
     mutationFn: login,
-    onSuccess: async (data) => {
-      useAuthStore.getState().setToken(data.access_token);
+    onSuccess: async () => {
+      // Las cookies ya fueron seteadas por el servidor — solo traemos el perfil
       const user = await getMe();
-      useAuthStore.getState().login(data.access_token, data.refresh_token, user);
+      useAuthStore.getState().login(user);
       const isAdmin = user.roles?.includes('ADMIN');
       navigate(isAdmin ? '/admin/usuarios' : '/productos');
     },

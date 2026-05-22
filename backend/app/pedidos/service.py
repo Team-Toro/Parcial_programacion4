@@ -9,8 +9,6 @@ from ..productos.model import Producto
 from ..productos.service import calcular_stock_disponible
 from ..estados_pedido.service import EstadoPedidoService
 from ..core.config import settings
-from ..core.security import decode_access_token
-
 ROLES_PEDIDOS = {"ADMIN", "PEDIDOS"}
 
 
@@ -152,14 +150,13 @@ class PedidoService:
         return pedido
 
     def cambiar_estado(self, uow: UnitOfWork, pedido_id: int, nuevo_estado: str,
-                       current_user, token: str, motivo: str | None = None) -> Pedido:
+                       current_user, motivo: str | None = None) -> Pedido:
         pedido = uow.pedidos.get_by_id(pedido_id)
         if not pedido:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail="Pedido no encontrado")
 
-        payload = decode_access_token(token)
-        roles = payload.get("roles", []) if payload else []
+        roles = getattr(current_user, "roles", [])
         es_admin_o_pedidos = "ADMIN" in roles or "PEDIDOS" in roles
 
         # Validar permisos
@@ -232,15 +229,13 @@ class PedidoService:
         uow.pedidos.add_historial(historial)
         uow.pedidos.flush()
 
-    def get_historial(self, uow: UnitOfWork, pedido_id: int,
-                      current_user, token: str):
+    def get_historial(self, uow: UnitOfWork, pedido_id: int, current_user):
         pedido = uow.pedidos.get_by_id(pedido_id)
         if not pedido:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                                 detail="Pedido no encontrado")
 
-        payload = decode_access_token(token)
-        roles = payload.get("roles", []) if payload else []
+        roles = getattr(current_user, "roles", [])
         es_admin_o_pedidos = "ADMIN" in roles or "PEDIDOS" in roles
 
         if not es_admin_o_pedidos and pedido.usuario_id != current_user.id:

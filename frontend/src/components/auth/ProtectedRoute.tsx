@@ -5,28 +5,25 @@ import { useAuthStore } from '../../store/authStore';
 import { getMe } from '../../api/auth';
 
 export default function ProtectedRoute() {
-  const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
 
-  // Solo busca el usuario si hay token pero el store no lo tiene aún
-  // (ej: token persistido pero página refrescada antes de que el user se hidratase)
+  // Si no hay usuario en el store, intenta recuperarlo via cookie (page refresh)
   const { data, isLoading } = useQuery({
     queryKey: ['me'],
     queryFn: getMe,
-    enabled: !!token && !user,
+    enabled: !user,
     retry: false,
   });
 
-  // Hidratar el store cuando llegue la respuesta
   useEffect(() => {
     if (data) setUser(data);
   }, [data, setUser]);
 
-  // Sin token → a login
-  if (!token) return <Navigate to="/login" replace />;
+  // Sin usuario y sin carga en progreso → sin sesión → a login
+  if (!user && !isLoading) return <Navigate to="/login" replace />;
 
-  // Hay token pero todavía no tenemos el user: esperar getMe
+  // Recuperando usuario desde cookie
   if (isLoading && !user) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center">

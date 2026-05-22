@@ -1,16 +1,14 @@
 import { API_URL } from '../config';
-import { getAuthToken, useAuthStore } from '../store/authStore';
-import type { LoginResponse } from '../types';
+import { useAuthStore } from '../store/authStore';
 
 // ─── Refresh Token Interceptor ────────────────────────────────────────────────
-// Estas variables son de módulo (compartidas por todas las llamadas concurrentes)
-// para garantizar que solo se haga UN refresh aunque lleguen múltiples 401 juntos.
+// Solo se hace UN refresh aunque lleguen múltiples 401 concurrentes.
 
 let isRefreshing = false;
-let refreshQueue: Array<(token: string) => void> = [];
+let refreshQueue: Array<() => void> = [];
 
-function processQueue(newToken: string): void {
-  refreshQueue.forEach((cb) => cb(newToken));
+function processQueue(): void {
+  refreshQueue.forEach((cb) => cb());
   refreshQueue = [];
 }
 
@@ -23,43 +21,31 @@ function clearQueueAndLogout(): void {
   }
 }
 
-async function doRefresh(refreshToken: string): Promise<string> {
+async function doRefresh(): Promise<void> {
   const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken }),
+    credentials: 'include',
   });
   if (!res.ok) throw new Error('Refresh failed');
-  const data = await res.json() as LoginResponse;
-  useAuthStore.getState().login(data.access_token, data.refresh_token, useAuthStore.getState().user!);
-  return data.access_token;
+  // El servidor setea las nuevas cookies — no hay nada que leer del body
 }
 
 // ─── apiFetch ─────────────────────────────────────────────────────────────────
 
 /**
- * Wrapper de fetch con autenticación Bearer, interceptor de 401 con refresh token,
+ * Wrapper de fetch con cookies HttpOnly, interceptor de 401 con refresh automático,
  * y normalización de errores de FastAPI al formato `Error.message`.
- * @param path ruta relativa al API_URL (ej. `/categorias`)
- * @param options opciones de RequestInit más `skipAuth` para omitir el header de auth
- * @returns respuesta tipada como `T`
+ * El navegador envía las cookies automáticamente con credentials: 'include'.
  */
 export async function apiFetch<T>(
   path: string,
   options?: RequestInit & { skipAuth?: boolean }
 ): Promise<T> {
-  const { skipAuth = false, headers: incomingHeaders, body, ...restOptions } = options ?? {};
+  const { skipAuth: _skipAuth, headers: incomingHeaders, body, ...restOptions } = options ?? {};
 
   const headers = new Headers(incomingHeaders);
 
-  if (!skipAuth) {
-    const token = getAuthToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-  }
-
-  // Solo agrega Content-Type JSON si hay body y no es un tipo que ya trae su propio Content-Type
+  // Solo agrega Content-Type JSON si hay body y no es un tipo que ya trae el suyo
   if (body != null && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
     if (!headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
@@ -70,6 +56,7 @@ export async function apiFetch<T>(
     ...restOptions,
     body,
     headers,
+    credentials: 'include',
   });
 
   if (response.status === 401) {
@@ -90,10 +77,9 @@ export async function apiFetch<T>(
       throw new Error(message);
     }
 
-    const { refreshToken } = useAuthStore.getState();
-
-    if (!refreshToken) {
-      // Sin sesión activa — limpiar store sin redirigir si ya estamos en login/register
+    // Sin usuario en store → no hay sesión activa, limpiar y redirigir
+    const { user } = useAuthStore.getState();
+    if (!user) {
       clearQueueAndLogout();
       throw new Error('No autorizado');
     }
@@ -101,13 +87,12 @@ export async function apiFetch<T>(
     // Si ya hay un refresh en vuelo, encolar este request hasta que termine
     if (isRefreshing) {
       return new Promise<T>((resolve, reject) => {
-        refreshQueue.push((newToken: string) => {
+        refreshQueue.push(() => {
           const retryHeaders = new Headers(incomingHeaders);
-          retryHeaders.set('Authorization', `Bearer ${newToken}`);
           if (body != null && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
             if (!retryHeaders.has('Content-Type')) retryHeaders.set('Content-Type', 'application/json');
           }
-          fetch(`${API_URL}${path}`, { ...restOptions, body, headers: retryHeaders })
+          fetch(`${API_URL}${path}`, { ...restOptions, body, headers: retryHeaders, credentials: 'include' })
             .then((r) => r.ok ? r.json() as Promise<T> : Promise.reject(new Error(`${r.status}`)))
             .then(resolve)
             .catch(reject);
@@ -117,17 +102,16 @@ export async function apiFetch<T>(
 
     isRefreshing = true;
     try {
-      const newToken = await doRefresh(refreshToken);
+      await doRefresh();
       isRefreshing = false;
-      processQueue(newToken);
+      processQueue();
 
-      // Reintentar el request original con el token nuevo
+      // Reintentar el request original — el browser ya tiene las nuevas cookies
       const retryHeaders = new Headers(incomingHeaders);
-      retryHeaders.set('Authorization', `Bearer ${newToken}`);
       if (body != null && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
         if (!retryHeaders.has('Content-Type')) retryHeaders.set('Content-Type', 'application/json');
       }
-      const retryResponse = await fetch(`${API_URL}${path}`, { ...restOptions, body, headers: retryHeaders });
+      const retryResponse = await fetch(`${API_URL}${path}`, { ...restOptions, body, headers: retryHeaders, credentials: 'include' });
       if (retryResponse.status === 204) return undefined as T;
       if (!retryResponse.ok) {
         const data = await retryResponse.json().catch(() => ({})) as { detail?: string };
@@ -162,8 +146,6 @@ export async function apiFetch<T>(
 
 /**
  * Arma un query string desde un objeto, omitiendo entradas con valor `undefined`, `null` o `''`.
- * @param params objeto clave-valor con los parámetros
- * @returns string con formato `?key=value&...`, o `''` si no hay parámetros válidos
  */
 export function buildQueryString(params: Record<string, unknown>): string {
   const entries = Object.entries(params).filter(

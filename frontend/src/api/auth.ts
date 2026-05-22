@@ -22,20 +22,18 @@ export const register = (payload: RegisterPayload): Promise<Usuario> =>
 export const getMe = (): Promise<Usuario> =>
   apiFetch<Usuario>('/api/v1/auth/me');
 
-export async function refreshAccessToken(refreshToken: string): Promise<LoginResponse> {
+export async function refreshAccessToken(): Promise<LoginResponse> {
   const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken }),
+    credentials: 'include',
   });
   if (!res.ok) throw new Error('Refresh failed');
   return res.json() as Promise<LoginResponse>;
 }
 
-export async function logoutBackend(refreshToken: string): Promise<void> {
+export async function logoutBackend(): Promise<void> {
   await fetch(`${API_URL}/api/v1/auth/logout`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken }),
+    credentials: 'include',
   }).catch(() => {});
 }

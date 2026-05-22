@@ -92,12 +92,13 @@ async def get_current_user(
     # Populate roles from repository/service so downstream dependencies
     # (authorization) can rely on a single source of truth (the DB),
     # instead of re-decoding the token.
+    # object.__setattr__ bypasses Pydantic's __setattr__ — Usuario es un modelo
+    # SQLModel table=True y no tiene 'roles' declarado como columna. El atributo
+    # queda en __dict__ de la instancia y es accesible con getattr normalmente.
     try:
-        user.roles = UsuarioService().get_roles(uow, user.id)
+        object.__setattr__(user, "roles", UsuarioService().get_roles(uow, user.id))
     except Exception:
-        # In case roles cannot be loaded for any reason, ensure it's an empty list
-        # so callers handle absence deterministically.
-        user.roles = []
+        object.__setattr__(user, "roles", [])
 
     return user
 

@@ -27,11 +27,10 @@ export default function RegisterPage() {
   const mutation = useMutation({
     mutationFn: register,
     onSuccess: async () => {
-      // Login automático tras registro exitoso
-      const loginData = await login({ username: email, password });
-      useAuthStore.getState().setToken(loginData.access_token);
+      // Login automático tras registro exitoso — cookies seteadas por el servidor
+      await login({ username: email, password });
       const user = await getMe();
-      useAuthStore.getState().login(loginData.access_token, loginData.refresh_token, user);
+      useAuthStore.getState().login(user);
       const isAdmin = user.roles?.includes('ADMIN');
       navigate(isAdmin ? '/admin/usuarios' : '/productos');
     },
