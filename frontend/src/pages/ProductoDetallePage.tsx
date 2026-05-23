@@ -107,12 +107,11 @@ export default function ProductoDetallePage() {
 
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           <p className="text-2xl font-bold text-orange-500">${Number(producto.precio_base).toFixed(2)}</p>
-          <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-            Stock: {producto.stock_cantidad}
-          </span>
-          <span className="text-sm bg-slate-100 px-3 py-1 rounded-full">
-            Stock disponible: <StockBadge value={producto.stock_disponible} />
-          </span>
+          {isAdmin && (
+            <span className="text-sm bg-slate-100 px-3 py-1 rounded-full">
+              Stock disponible: <StockBadge value={producto.stock_disponible} />
+            </span>
+          )}
         </div>
 
         <div className="mb-4">
@@ -159,60 +158,62 @@ export default function ProductoDetallePage() {
           )}
         </div>
 
-        {/* Carrito section */}
-        <div className="mt-6 border-t border-slate-100 pt-5">
-          {canComprar ? (
-            <>
-              {producto.ingredientes.some((pi) => pi.es_removible) && (
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-2">
-                    Personalizar (quitar ingredientes)
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {producto.ingredientes
-                      .filter((pi) => pi.es_removible)
-                      .map((pi) => (
-                        <label
-                          key={pi.ingrediente.id}
-                          className="flex items-center gap-1.5 cursor-pointer text-sm text-slate-600"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={removidos.includes(pi.ingrediente.id)}
-                            onChange={() => toggleRemovido(pi.ingrediente.id)}
-                            className="w-4 h-4 accent-orange-500"
-                          />
-                          Sin {pi.ingrediente.nombre}
-                        </label>
-                      ))}
+        {/* Carrito section — oculto para admin */}
+        {!isAdmin && (
+          <div className="mt-6 border-t border-slate-100 pt-5">
+            {canComprar ? (
+              <>
+                {producto.ingredientes.some((pi) => pi.es_removible) && (
+                  <div className="mb-4">
+                    <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                      Personalizar (quitar ingredientes)
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {producto.ingredientes
+                        .filter((pi) => pi.es_removible)
+                        .map((pi) => (
+                          <label
+                            key={pi.ingrediente.id}
+                            className="flex items-center gap-1.5 cursor-pointer text-sm text-slate-600"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={removidos.includes(pi.ingrediente.id)}
+                              onChange={() => toggleRemovido(pi.ingrediente.id)}
+                              className="w-4 h-4 accent-orange-500"
+                            />
+                            Sin {pi.ingrediente.nombre}
+                          </label>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden">
+                )}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setCantidad((c) => Math.max(1, c - 1))}
+                      className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold"
+                    >−</button>
+                    <span className="px-4 py-2 text-sm font-medium">{cantidad}</span>
+                    <button
+                      onClick={() => setCantidad((c) => Math.min(producto.stock_disponible, c + 1))}
+                      className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold"
+                    >+</button>
+                  </div>
                   <button
-                    onClick={() => setCantidad((c) => Math.max(1, c - 1))}
-                    className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold"
-                  >−</button>
-                  <span className="px-4 py-2 text-sm font-medium">{cantidad}</span>
-                  <button
-                    onClick={() => setCantidad((c) => Math.min(producto.stock_disponible, c + 1))}
-                    className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold"
-                  >+</button>
+                    onClick={handleAgregarCarrito}
+                    className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    Agregar al carrito
+                  </button>
                 </div>
-                <button
-                  onClick={handleAgregarCarrito}
-                  className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  Agregar al carrito
-                </button>
-              </div>
-            </>
-          ) : (
-            <p className="text-red-500 font-medium text-sm">Sin stock disponible</p>
-          )}
-        </div>
+              </>
+            ) : (
+              <p className="text-red-500 font-medium text-sm">Sin stock disponible</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

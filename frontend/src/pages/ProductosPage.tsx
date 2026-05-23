@@ -309,7 +309,7 @@ export default function ProductosPage() {
                 <th className="px-6 py-3 text-left">ID</th>
                 <th className="px-6 py-3 text-left">Nombre</th>
                 <th className="px-6 py-3 text-left">Precio</th>
-                <th className="px-6 py-3 text-left">Stock</th>
+                {isAdmin && <th className="px-6 py-3 text-left">Stock</th>}
                 <th className="px-6 py-3 text-left">Estado</th>
                 <th className="px-6 py-3 text-left">Categorías</th>
                 <th className="px-6 py-3 text-right">Acciones</th>
@@ -325,7 +325,7 @@ export default function ProductosPage() {
                       <span className={isDeleted ? 'line-through text-slate-400' : 'text-slate-800'}>{p.nombre}</span>
                     </td>
                     <td className="px-6 py-4 text-slate-700 font-semibold">${Number(p.precio_base).toFixed(2)}</td>
-                    <td className="px-6 py-4"><StockBadge value={p.stock_disponible} /></td>
+                    {isAdmin && <td className="px-6 py-4"><StockBadge value={p.stock_disponible} /></td>}
                     <td className="px-6 py-4">
                       {!isDeleted && (
                         <>
