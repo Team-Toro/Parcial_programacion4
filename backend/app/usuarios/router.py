@@ -24,7 +24,7 @@ from .model import Usuario
 from .schema import RefreshTokenRequest, UsuarioCreate, UsuarioPublic, UsuarioRolesUpdate, UsuarioToken
 from .service import UsuarioService
 
-router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 usuario_service = UsuarioService()
 
 

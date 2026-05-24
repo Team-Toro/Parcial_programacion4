@@ -52,6 +52,10 @@ class ProductoUpdate(SQLModel):
     ingredientes: Optional[List[IngredienteEnProducto]] = None
 
 
+class ProductoDisponibilidadUpdate(SQLModel):
+    disponible: bool
+
+
 class ProductoCategoriaRead(SQLModel):
     categoria: Optional[CategoriaRead] = None
     es_principal: bool = False

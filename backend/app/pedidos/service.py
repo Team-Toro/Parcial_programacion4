@@ -162,7 +162,8 @@ class PedidoService:
         # Validar permisos
         if nuevo_estado == "CANCELADO":
             puede = es_admin_o_pedidos or (
-                pedido.estado_codigo == "PENDIENTE" and current_user.id == pedido.usuario_id
+                pedido.estado_codigo in {"PENDIENTE", "CONFIRMADO"}
+                and current_user.id == pedido.usuario_id
             )
             if not puede:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,

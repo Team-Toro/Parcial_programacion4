@@ -9,10 +9,10 @@ export interface WebhookMockPayload {
 }
 
 export const simularWebhookMP = (data: WebhookMockPayload): Promise<Pago> =>
-  apiFetch<Pago>('/pagos/webhook', {
+  apiFetch<Pago>('/api/v1/pagos/webhook', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 
 export const getPagoByPedido = (pedido_id: number): Promise<Pago> =>
-  apiFetch<Pago>(`/pagos/pedido/${pedido_id}`);
+  apiFetch<Pago>(`/api/v1/pagos/pedido/${pedido_id}`);

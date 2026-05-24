@@ -225,7 +225,7 @@ export default function PedidoDetallePage() {
       )}
 
       {/* Cancelar pedido */}
-      {pedido.estado_codigo === 'PENDIENTE' && (
+      {(pedido.estado_codigo === 'PENDIENTE' || pedido.estado_codigo === 'CONFIRMADO') && (
         <div className="mt-4">
           <button
             onClick={() => setModalCancelar(true)}

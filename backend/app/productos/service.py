@@ -158,3 +158,17 @@ class ProductoService:
         repo.flush()
         repo.refresh(producto)
         return producto
+
+    def update_disponibilidad(self, uow: UnitOfWork, producto_id: int, disponible: bool) -> Producto:
+        repo = ProductoRepository(uow.session)
+        producto = repo.get_by_id_including_deleted(producto_id)
+        if not producto:
+            raise HTTPException(status_code=404, detail=f"Producto {producto_id} no encontrado")
+        if producto.deleted_at is not None:
+            raise HTTPException(status_code=400, detail="El producto está dado de baja")
+        producto.disponible = disponible
+        producto.updated_at = datetime.utcnow()
+        repo.add(producto)
+        repo.flush()
+        repo.refresh(producto)
+        return producto

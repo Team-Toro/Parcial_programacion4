@@ -1,9 +1,9 @@
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
-from .schema import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPublic
+from .schema import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPublic, ProductoDisponibilidadUpdate
 from .service import ProductoService
 from ..uow.unit_of_work import UnitOfWork, get_uow
-from ..core.deps import get_current_active_user, require_role, require_role_if_include_deleted
+from ..core.deps import get_optional_user, require_role, require_role_if_include_deleted
 from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/productos", tags=["Productos"])
@@ -18,8 +18,8 @@ producto_service = ProductoService()
 )
 def listar_productos(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
-    current_user: Annotated[Usuario, Depends(get_current_active_user)],
-    _admin_if_deleted: Annotated[Usuario, Depends(require_role_if_include_deleted(["ADMIN"]))],
+    _optional_user: Annotated[Usuario | None, Depends(get_optional_user)],
+    _admin_if_deleted: Annotated[Usuario | None, Depends(require_role_if_include_deleted(["ADMIN", "STOCK"]))],
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     disponible: Annotated[Optional[bool], Query(description="Filtrar por disponibilidad")] = None,
@@ -75,7 +75,7 @@ def obtener_producto(
     "/",
     response_model=ProductoPublic,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Crear un nuevo producto",
     responses={
         404: {"description": "Categoría o ingrediente no encontrado"},
@@ -92,7 +92,7 @@ def crear_producto(
 @router.patch(
     "/{producto_id}",
     response_model=ProductoPublic,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Actualizar parcialmente un producto",
     responses={
         404: {"description": "Producto no encontrado"},
@@ -110,7 +110,7 @@ def actualizar_producto(
 @router.delete(
     "/{producto_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Eliminar un producto (soft delete)",
     description="Marca el producto como eliminado",
     responses={
@@ -127,7 +127,7 @@ def eliminar_producto(
 @router.post(
     "/{producto_id}/reactivar",
     response_model=ProductoPublic,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Reactivar un producto dado de baja",
     responses={
         404: {"description": "Producto no encontrado"},
@@ -139,3 +139,21 @@ def reactivar_producto(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     return producto_service.reactivate(uow, producto_id)
+
+
+@router.patch(
+    "/{producto_id}/disponibilidad",
+    response_model=ProductoPublic,
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
+    summary="Actualizar disponibilidad de un producto",
+    responses={
+        404: {"description": "Producto no encontrado"},
+        400: {"description": "El producto está dado de baja"}
+    }
+)
+def actualizar_disponibilidad(
+    producto_id: Annotated[int, Path(ge=1)],
+    data: ProductoDisponibilidadUpdate,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    return producto_service.update_disponibilidad(uow, producto_id, data.disponible)

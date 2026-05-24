@@ -68,13 +68,6 @@ api.interceptors.response.use(
       config?.url?.includes('/auth/logout');
 
     if (status === 401 && !config?._retry && !isAuthEndpoint) {
-      // Sin usuario en store → no hay sesión activa
-      const { user } = useAuthStore.getState();
-      if (!user) {
-        clearQueueAndLogout();
-        return Promise.reject(normalizeAxiosError(error));
-      }
-
       // Refresh ya en curso → encolar y esperar
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

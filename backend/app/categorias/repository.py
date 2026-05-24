@@ -2,7 +2,7 @@ from typing import List, Optional
 from sqlalchemy import or_
 from sqlmodel import Session, select, col, func
 from .model import Categoria
-from ..productos.model import ProductoCategoria
+from ..productos.model import ProductoCategoria, Producto
 
 class CategoriaRepository:
     def __init__(self, session: Session):
@@ -135,6 +135,14 @@ class CategoriaRepository:
         return self.session.exec(
             select(func.count(ProductoCategoria.producto_id))
             .where(ProductoCategoria.categoria_id == categoria_id)
+        ).one()
+
+    def count_active_productos_by_categoria_ids(self, categoria_ids: List[int]) -> int:
+        return self.session.exec(
+            select(func.count(ProductoCategoria.producto_id))
+            .join(Producto, col(Producto.id) == col(ProductoCategoria.producto_id))
+            .where(col(ProductoCategoria.categoria_id).in_(categoria_ids))
+            .where(col(Producto.deleted_at).is_(None))
         ).one()
 
     def get_productos_relaciones(self, categoria_id: int):

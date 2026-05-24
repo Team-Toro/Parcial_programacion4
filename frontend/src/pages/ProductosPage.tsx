@@ -38,6 +38,7 @@ function StockBadge({ value }: { value: number }) {
 export default function ProductosPage() {
   const qc = useQueryClient();
   const isAdmin = useAuthStore((s) => s.isAdmin());
+  const isProductManager = useAuthStore((s) => s.isProductManager());
 
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Producto | null>(null);
@@ -209,7 +210,7 @@ export default function ProductosPage() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Productos</h1>
-        {isAdmin && (
+        {(isAdmin || isProductManager) && (
           <button
             onClick={openCreate}
             className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -252,7 +253,7 @@ export default function ProductosPage() {
             <option value="created_at-desc">Más recientes</option>
           </select>
 
-          {isAdmin && (
+          {(isAdmin || isProductManager) && (
             <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -293,7 +294,7 @@ export default function ProductosPage() {
             <>
               <Package className="w-16 h-16 text-slate-300" />
               <p className="text-slate-500">No hay productos aún.</p>
-              {isAdmin && (
+              {(isAdmin || isProductManager) && (
                 <button onClick={openCreate} className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
                   + Crear primer producto
                 </button>
@@ -361,7 +362,7 @@ export default function ProductosPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex gap-2 justify-end items-center">
                         {isDeleted ? (
-                          isAdmin && (
+                          (isAdmin || isProductManager) && (
                             <button
                               onClick={() => reactivarMutation.mutate(p.id)}
                               disabled={reactivarMutation.isPending}
@@ -372,7 +373,7 @@ export default function ProductosPage() {
                           )
                         ) : (
                           <>
-                            {isAdmin && (
+                            {(isAdmin || isProductManager) && (
                               <>
                                 <button onClick={() => openEdit(p)} className="text-blue-600 hover:underline text-sm">Editar</button>
                                 <button

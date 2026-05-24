@@ -16,7 +16,10 @@ function StockBadge({ value }: { value: number }) {
 
 export default function ProductoDetallePage() {
   const { id } = useParams<{ id: string }>();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = user !== null;
   const isAdmin = useAuthStore((s) => s.isAdmin());
+  const isStaff = useAuthStore((s) => s.isStaff());
 
   const { data: producto, isLoading, isError } = useQuery({
     queryKey: ['producto', Number(id)],
@@ -34,7 +37,7 @@ export default function ProductoDetallePage() {
   if (isLoading) return <div className="p-8 text-slate-500">Cargando producto...</div>;
   if (isError || !producto) return <div className="p-8 text-red-500">Producto no encontrado.</div>;
 
-  const canComprar = producto.disponible && producto.stock_disponible > 0;
+  const canComprar = isAuthenticated && !isStaff && producto.disponible && producto.stock_disponible > 0;
 
   const toggleRemovido = (ingId: number) =>
     setRemovidos((prev) =>
@@ -54,7 +57,8 @@ export default function ProductoDetallePage() {
         .map((pi) => ({ id: pi.ingrediente.id, nombre: pi.ingrediente.nombre })),
     });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(`Agregado al carrito (${totalItems() + cantidad} items)`);
+    const itemLabel = cantidad === 1 ? 'item' : 'items';
+    setToast(`Agregado al carrito (${cantidad} ${itemLabel})`);
     setToastVisible(false);
     requestAnimationFrame(() => requestAnimationFrame(() => setToastVisible(true)));
     toastTimer.current = setTimeout(() => setToast(null), 2500);
@@ -209,6 +213,20 @@ export default function ProductoDetallePage() {
                   </button>
                 </div>
               </>
+            ) : !isAuthenticated ? (
+              <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 text-center">
+                <p className="text-slate-700 text-sm mb-3">Iniciá sesión para poder agregar productos al carrito.</p>
+                <Link
+                  to="/login"
+                  className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
+                >
+                  Iniciar sesión
+                </Link>
+              </div>
+            ) : isStaff ? (
+              <p className="text-slate-500 font-medium text-sm">Tu rol no permite realizar compras.</p>
+            ) : !producto.disponible ? (
+              <p className="text-red-500 font-medium text-sm">Producto no disponible</p>
             ) : (
               <p className="text-red-500 font-medium text-sm">Sin stock disponible</p>
             )}
