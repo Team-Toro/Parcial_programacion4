@@ -116,3 +116,18 @@ def marcar_principal(
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     return service.marcar_principal(uow, direccion_id, current_user.id)
+
+
+@router.patch(
+    "/{direccion_id}/principal",
+    response_model=DireccionPublic,
+    summary="Marcar una dirección como principal",
+    responses={404: {"description": "Dirección no encontrada"}},
+)
+def marcar_principal_patch(
+    direccion_id: Annotated[int, Path(ge=1)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    service: Annotated[DireccionService, Depends(get_direccion_service)],
+    current_user: Annotated[Usuario, Depends(get_current_active_user)],
+):
+    return service.marcar_principal(uow, direccion_id, current_user.id)

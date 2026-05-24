@@ -54,15 +54,13 @@ class PagoService:
         uow.session.refresh(pago)
         return pago
 
-    def get_pago_by_pedido(self, uow, pedido_id: int, current_user, token: str) -> Pago:
-        from ..core.security import decode_access_token
+    def get_pago_by_pedido(self, uow, pedido_id: int, current_user) -> Pago:
         repo: PagoRepository = uow.pagos
         pago = repo.get_by_pedido_id(pedido_id)
         if not pago:
             raise HTTPException(status_code=404, detail="Pago no encontrado para este pedido")
 
-        payload = decode_access_token(token)
-        roles = payload.get("roles", []) if payload else []
+        roles = getattr(current_user, "roles", [])
         es_admin_o_pedidos = "ADMIN" in roles or "PEDIDOS" in roles
 
         if not es_admin_o_pedidos:

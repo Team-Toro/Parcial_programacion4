@@ -79,6 +79,22 @@ USUARIOS_INICIALES = [
         "password": "Juan1234!",
         "roles": ["CLIENTE"],
     },
+    {
+        "first_name": "Sofia",
+        "last_name": "Lopez",
+        "email": "sofia.stock@example.com",
+        "celular": "1155556666",
+        "password": "Sofia1234!",
+        "roles": ["STOCK"],
+    },
+    {
+        "first_name": "Marcos",
+        "last_name": "Diaz",
+        "email": "marcos.pedidos@example.com",
+        "celular": "1166667777",
+        "password": "Marcos1234!",
+        "roles": ["PEDIDOS"],
+    },
 ]
 
 CATEGORIAS_INICIALES = [
@@ -709,6 +725,8 @@ def run() -> None:
     print("\nUsuarios:")
     print("  admin@example.com / Admin1234!  → roles=[ADMIN]")
     print("  juan@example.com  / Juan1234!   → roles=[CLIENTE]")
+    print("  sofia.stock@example.com  / Sofia1234!  → roles=[STOCK]")
+    print("  marcos.pedidos@example.com / Marcos1234! → roles=[PEDIDOS]")
     print()
 
 

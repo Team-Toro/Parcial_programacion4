@@ -5,14 +5,13 @@ import { logoutBackend } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import { useCarritoStore } from '../../store/carritoStore';
 
-const STAFF_ROLES = ['ADMIN', 'PEDIDOS'];
-
 interface NavLink {
   to: string;
   label: string;
   adminOnly: boolean;
   staffOnly: boolean;
   hideForAdmin?: boolean;
+  authRequired?: boolean;
 }
 
 export default function Navbar() {
@@ -21,28 +20,25 @@ export default function Navbar() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const refreshToken = useAuthStore((s) => s.refreshToken);
   const isAdmin = useAuthStore((s) => s.isAdmin());
-  const isStaff = user?.roles?.some((r) => STAFF_ROLES.includes(r)) ?? false;
+  const isStaff = useAuthStore((s) => s.isStaff());
   const totalCarrito = useCarritoStore((s) => s.totalItems());
 
   const handleLogout = async () => {
-    if (refreshToken) {
-      await logoutBackend(refreshToken);
-    }
+    await logoutBackend();
     logout();
     queryClient.clear();
     navigate('/login');
   };
 
   const links: NavLink[] = [
-    { to: '/categorias', label: 'Categorías', adminOnly: false, staffOnly: false },
-    { to: '/productos', label: 'Productos', adminOnly: false, staffOnly: false },
-    { to: '/mis-direcciones', label: 'Mis direcciones', adminOnly: false, staffOnly: false, hideForAdmin: true },
-    { to: '/mis-pedidos', label: 'Mis pedidos', adminOnly: false, staffOnly: false, hideForAdmin: true },
-    { to: '/ingredientes', label: 'Ingredientes', adminOnly: true, staffOnly: false },
-    { to: '/admin/usuarios', label: 'Usuarios', adminOnly: true, staffOnly: false },
-    { to: '/admin/pedidos', label: 'Pedidos', adminOnly: false, staffOnly: true },
+    { to: '/categorias', label: 'Categorías', adminOnly: false, staffOnly: false, authRequired: false },
+    { to: '/productos', label: 'Productos', adminOnly: false, staffOnly: false, authRequired: false },
+    { to: '/mis-direcciones', label: 'Mis direcciones', adminOnly: false, staffOnly: false, hideForAdmin: true, authRequired: true },
+    { to: '/mis-pedidos', label: 'Mis pedidos', adminOnly: false, staffOnly: false, hideForAdmin: true, authRequired: true },
+    { to: '/ingredientes', label: 'Ingredientes', adminOnly: true, staffOnly: false, authRequired: true },
+    { to: '/admin/usuarios', label: 'Usuarios', adminOnly: true, staffOnly: false, authRequired: true },
+    { to: '/admin/pedidos', label: 'Pedidos', adminOnly: false, staffOnly: true, authRequired: true },
   ];
 
   return (
@@ -51,7 +47,13 @@ export default function Navbar() {
 
       <div className="flex gap-4 flex-1">
         {links
-          .filter((l) => (!l.adminOnly || isAdmin) && (!l.staffOnly || isStaff) && (!l.hideForAdmin || !isAdmin))
+          .filter(
+            (l) =>
+              (!l.authRequired || !!user) &&
+              (!l.adminOnly || isAdmin) &&
+              (!l.staffOnly || isStaff) &&
+              (!l.hideForAdmin || !isAdmin)
+          )
           .map((l) => (
             <Link
               key={l.to}
@@ -67,10 +69,10 @@ export default function Navbar() {
           ))}
       </div>
 
-      {user && (
+      {user ? (
         <div className="flex items-center gap-3">
-          {/* Carrito badge — oculto para ADMIN */}
-          {!isAdmin && (
+          {/* Carrito badge — oculto para staff */}
+          {!isStaff && (
             <Link
               to="/carrito"
               className="relative flex items-center text-slate-300 hover:text-white hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors"
@@ -98,6 +100,21 @@ export default function Navbar() {
             <LogOut className="w-4 h-4" />
             Cerrar sesión
           </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <Link
+            to="/login"
+            className="text-sm text-slate-300 hover:text-white hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors font-medium"
+          >
+            Iniciar sesión
+          </Link>
+          <Link
+            to="/register"
+            className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-3.5 py-1.5 rounded-lg transition-colors font-medium shadow-sm"
+          >
+            Registrarse
+          </Link>
         </div>
       )}
     </nav>

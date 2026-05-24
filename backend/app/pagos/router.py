@@ -1,13 +1,10 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, Path
-from fastapi.security import OAuth2PasswordBearer
 from .schema import PagoPublic, WebhookMockRequest
 from .service import PagoService
 from ..uow.unit_of_work import UnitOfWork, get_uow
 from ..core.deps import get_current_active_user
 from ..usuarios.model import Usuario
-
-oauth2_scheme_pagos = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 router = APIRouter(prefix="/pagos", tags=["Pagos"])
 
@@ -27,6 +24,5 @@ def get_pago_by_pedido(
     pedido_id: Annotated[int, Path(ge=1)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
-    token: Annotated[str, Depends(oauth2_scheme_pagos)],
 ):
-    return pago_service.get_pago_by_pedido(uow, pedido_id, current_user, token)
+    return pago_service.get_pago_by_pedido(uow, pedido_id, current_user)

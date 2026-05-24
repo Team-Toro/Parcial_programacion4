@@ -1,16 +1,17 @@
-import { API_URL } from '../config';
-import { apiFetch } from './client';
+import { api, apiFetch } from './client';
 import type { LoginCredentials, LoginResponse, RegisterPayload, Usuario } from '../types';
 
-export const login = (credentials: LoginCredentials): Promise<LoginResponse> =>
-  apiFetch<LoginResponse>('/api/v1/auth/token', {
-    method: 'POST',
-    body: new URLSearchParams({
-      username: credentials.username,
-      password: credentials.password,
-    }),
-    skipAuth: true,
+export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
+  // OAuth2PasswordRequestForm espera application/x-www-form-urlencoded, no JSON.
+  // Se llama api.post directamente para override el Content-Type de la instancia.
+  const params = new URLSearchParams();
+  params.append('username', credentials.username);
+  params.append('password', credentials.password);
+  const response = await api.post<LoginResponse>('/api/v1/auth/token', params, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   });
+  return response.data;
+}
 
 export const register = (payload: RegisterPayload): Promise<Usuario> =>
   apiFetch<Usuario>('/api/v1/auth/register', {
@@ -22,20 +23,11 @@ export const register = (payload: RegisterPayload): Promise<Usuario> =>
 export const getMe = (): Promise<Usuario> =>
   apiFetch<Usuario>('/api/v1/auth/me');
 
-export async function refreshAccessToken(refreshToken: string): Promise<LoginResponse> {
-  const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
-  if (!res.ok) throw new Error('Refresh failed');
-  return res.json() as Promise<LoginResponse>;
+export async function refreshAccessToken(): Promise<LoginResponse> {
+  const response = await api.post<LoginResponse>('/api/v1/auth/refresh');
+  return response.data;
 }
 
-export async function logoutBackend(refreshToken: string): Promise<void> {
-  await fetch(`${API_URL}/api/v1/auth/logout`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  }).catch(() => {});
+export async function logoutBackend(): Promise<void> {
+  await api.post('/api/v1/auth/logout').catch(() => {});
 }

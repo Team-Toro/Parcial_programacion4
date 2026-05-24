@@ -6,8 +6,6 @@ from .schema import CategoriaCreate, CategoriaUpdate, CategoriaStats
 from .repository import CategoriaRepository
 from ..uow.unit_of_work import UnitOfWork
 
-MAX_CATEGORY_DEPTH = 2
-
 class CategoriaService:
     def get_all(
         self,
@@ -60,17 +58,6 @@ class CategoriaService:
             productos_count=productos_count,
             nivel=nivel
         )
-
-    def _validate_depth(self, repo: CategoriaRepository, parent_id: int | None) -> None:
-        if parent_id is None:
-            return
-
-        nivel = self.get_level(repo, parent_id)
-        if nivel >= MAX_CATEGORY_DEPTH:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Se alcanzó el límite máximo de {MAX_CATEGORY_DEPTH + 1} niveles de profundidad"
-            )
 
     def _validate_circular_reference(
         self,
@@ -138,7 +125,6 @@ class CategoriaService:
 
         if data.parent_id:
             self._validate_parent_exists(repo, data.parent_id)
-            self._validate_depth(repo, data.parent_id)
 
         categoria = Categoria(
             nombre=data.nombre,
@@ -169,7 +155,6 @@ class CategoriaService:
 
         if data.parent_id is not None:
             self._validate_parent_exists(repo, data.parent_id)
-            self._validate_depth(repo, data.parent_id)
             self._validate_circular_reference(repo, categoria_id, data.parent_id)
 
         update_data = data.model_dump(exclude_unset=True)
@@ -192,6 +177,14 @@ class CategoriaService:
             )
 
         now = datetime.utcnow()
+
+        all_ids = repo.get_all_children_ids(categoria_id)
+
+        if repo.count_active_productos_by_categoria_ids(all_ids) > 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="No se puede eliminar la categoría: tiene productos activos asociados"
+            )
 
         subcategorias = repo.get_subcategorias(categoria_id)
         for sub in subcategorias:

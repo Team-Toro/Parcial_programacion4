@@ -12,18 +12,19 @@ Regla de imports:
     Router → Service → UoW → Repository → Model
 """
 
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from app.core.config import settings
 from app.uow.unit_of_work import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
 from .model import Usuario
 from .schema import RefreshTokenRequest, UsuarioCreate, UsuarioPublic, UsuarioRolesUpdate, UsuarioToken
 from .service import UsuarioService
 
-router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 usuario_service = UsuarioService()
 
 
@@ -42,10 +43,31 @@ def register(
 
 @router.post("/token", response_model=UsuarioToken)
 def login(
+    response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    return usuario_service.authenticate(uow, form_data.username, form_data.password)
+    result = usuario_service.authenticate(uow, form_data.username, form_data.password)
+    # secure=False en dev (localhost sin HTTPS); en prod cambiar a True
+    response.set_cookie(
+        key="access_token",
+        value=result.access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=result.refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        path="/api/v1/auth",
+    )
+    return result
 
 
 # ─── Rutas protegidas ────────────────────────────────────────────────────────
@@ -130,16 +152,50 @@ def update_roles(
 
 @router.post("/refresh", response_model=UsuarioToken)
 def refresh_token(
-    body: RefreshTokenRequest,
+    request: Request,
+    response: Response,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    body: Optional[RefreshTokenRequest] = None,
 ):
-    return usuario_service.refresh(uow, body.refresh_token)
+    token = request.cookies.get("refresh_token")
+    if not token and body:
+        token = body.refresh_token
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh token provided",
+        )
+    result = usuario_service.refresh(uow, token)
+    response.set_cookie(
+        key="access_token",
+        value=result.access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=result.refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        path="/api/v1/auth",
+    )
+    return result
 
 
 @router.post("/logout")
 def logout(
-    body: RefreshTokenRequest,
+    request: Request,
+    response: Response,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    usuario_service.logout(uow, body.refresh_token)
-    return {"status": "ok"}
+    token = request.cookies.get("refresh_token")
+    if token:
+        usuario_service.logout(uow, token)
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/api/v1/auth")
+    return {"message": "Sesión cerrada"}

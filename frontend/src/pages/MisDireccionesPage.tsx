@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MapPin, Plus, Loader2, PenLine, Trash2, Star } from 'lucide-react';
 import {
   getDirecciones, createDireccion, updateDireccion,
-  deleteDireccion, marcarDireccionPrincipal,
+  deleteDireccion, marcarDireccionPrincipalPatch,
 } from '../api/direcciones';
 import type { Direccion, DireccionCreate } from '../types';
 import Modal from '../components/ui/Modal';
@@ -103,7 +103,7 @@ export default function MisDireccionesPage() {
   });
 
   const marcarPrincipalMutation = useMutation({
-    mutationFn: marcarDireccionPrincipal,
+    mutationFn: marcarDireccionPrincipalPatch,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['direcciones'] });
       showToast('success', 'Dirección marcada como principal');

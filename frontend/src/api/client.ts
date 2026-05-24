@@ -1,21 +1,42 @@
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { API_URL } from '../config';
-import { getAuthToken, useAuthStore } from '../store/authStore';
-import type { LoginResponse } from '../types';
+import { useAuthStore } from '../store/authStore';
 
-// ─── Refresh Token Interceptor ────────────────────────────────────────────────
-// Estas variables son de módulo (compartidas por todas las llamadas concurrentes)
-// para garantizar que solo se haga UN refresh aunque lleguen múltiples 401 juntos.
+// Permite que el interceptor marque requests que ya fueron reintentadas
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    _retry?: boolean;
+  }
+}
+
+// ─── Instancia de Axios ───────────────────────────────────────────────────────
+
+export const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true, // envía cookies HttpOnly automáticamente en cada request
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// ─── Interceptor de response — 401 + refresh de cookies ──────────────────────
 
 let isRefreshing = false;
-let refreshQueue: Array<(token: string) => void> = [];
+let refreshQueue: Array<{
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+}> = [];
 
-function processQueue(newToken: string): void {
-  refreshQueue.forEach((cb) => cb(newToken));
+function processQueue(error: Error | null): void {
+  refreshQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(undefined);
+  });
   refreshQueue = [];
 }
 
 function clearQueueAndLogout(): void {
-  refreshQueue = [];
+  processQueue(new Error('No autorizado'));
   useAuthStore.getState().logout();
   const { pathname } = window.location;
   if (!pathname.startsWith('/login') && !pathname.startsWith('/register')) {
@@ -23,148 +44,110 @@ function clearQueueAndLogout(): void {
   }
 }
 
-async function doRefresh(refreshToken: string): Promise<string> {
-  const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
-  if (!res.ok) throw new Error('Refresh failed');
-  const data = await res.json() as LoginResponse;
-  useAuthStore.getState().login(data.access_token, data.refresh_token, useAuthStore.getState().user!);
-  return data.access_token;
+function normalizeAxiosError(error: unknown): Error {
+  const axErr = error as AxiosError<{ detail?: unknown }>;
+  const detail = axErr.response?.data?.detail;
+  if (detail !== undefined) {
+    return new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+  }
+  if (axErr.response?.status) {
+    return new Error(`${axErr.response.status} ${axErr.response.statusText ?? ''}`.trim());
+  }
+  if (error instanceof Error) return error;
+  return new Error('Network error');
 }
 
-// ─── apiFetch ─────────────────────────────────────────────────────────────────
+api.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const config = error.config as InternalAxiosRequestConfig;
+    const status = error.response?.status;
+    const isAuthEndpoint =
+      config?.url?.includes('/auth/refresh') ||
+      config?.url?.includes('/auth/token') ||
+      config?.url?.includes('/auth/logout');
 
-/**
- * Wrapper de fetch con autenticación Bearer, interceptor de 401 con refresh token,
- * y normalización de errores de FastAPI al formato `Error.message`.
- * @param path ruta relativa al API_URL (ej. `/categorias`)
- * @param options opciones de RequestInit más `skipAuth` para omitir el header de auth
- * @returns respuesta tipada como `T`
- */
+    if (status === 401 && !config?._retry && !isAuthEndpoint) {
+      // Refresh ya en curso → encolar y esperar
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          refreshQueue.push({ resolve, reject });
+        }).then(() => api(config));
+      }
+
+      config._retry = true;
+      isRefreshing = true;
+
+      try {
+        // El servidor rota los tokens y setea las nuevas cookies
+        await api.post('/api/v1/auth/refresh');
+        isRefreshing = false;
+        processQueue(null);
+        return api(config); // reintentar el request original
+      } catch (refreshError) {
+        isRefreshing = false;
+        processQueue(normalizeAxiosError(refreshError));
+        clearQueueAndLogout();
+        return Promise.reject(normalizeAxiosError(refreshError));
+      }
+    }
+
+    return Promise.reject(normalizeAxiosError(error));
+  }
+);
+
+// ─── apiFetch — wrapper de compatibilidad sobre axios ────────────────────────
+//
+// Mantiene la misma firma que el apiFetch de fetch nativo, así todos los
+// archivos api/*.ts funcionan sin cambios. Option A del enunciado.
+
 export async function apiFetch<T>(
   path: string,
   options?: RequestInit & { skipAuth?: boolean }
 ): Promise<T> {
-  const { skipAuth = false, headers: incomingHeaders, body, ...restOptions } = options ?? {};
+  const { skipAuth: _skipAuth, headers: incomingHeaders, body, method } = options ?? {};
 
-  const headers = new Headers(incomingHeaders);
+  // Traducir body de BodyInit a algo que axios entienda
+  let data: unknown = undefined;
 
-  if (!skipAuth) {
-    const token = getAuthToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+  if (body instanceof URLSearchParams) {
+    // OAuth2 form-encoded (login). Axios detecta URLSearchParams y setea
+    // Content-Type: application/x-www-form-urlencoded automáticamente.
+    data = body;
+  } else if (body instanceof FormData) {
+    // FormData: el browser setea Content-Type con boundary.
+    data = body;
+  } else if (typeof body === 'string' && body.length > 0) {
+    // JSON.stringify → parsear de vuelta; axios re-serializa con Content-Type: application/json
+    try {
+      data = JSON.parse(body);
+    } catch {
+      data = body;
     }
   }
 
-  // Solo agrega Content-Type JSON si hay body y no es un tipo que ya trae su propio Content-Type
-  if (body != null && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
-    if (!headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
-    }
+  // Copiar headers adicionales que el caller haya pasado
+  const extraHeaders: Record<string, string> = {};
+  if (incomingHeaders) {
+    new Headers(incomingHeaders as HeadersInit).forEach((v, k) => {
+      extraHeaders[k] = v;
+    });
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...restOptions,
-    body,
-    headers,
+  const response = await api.request<T>({
+    url: path,
+    method: (method || 'GET') as string,
+    data,
+    headers: Object.keys(extraHeaders).length > 0 ? extraHeaders : undefined,
   });
 
-  if (response.status === 401) {
-    // Endpoints de auth nunca pasan por el flujo de refresh — propagan el error original
-    const isAuthEndpoint =
-      path.includes('/auth/token') ||
-      path.includes('/auth/refresh') ||
-      path.includes('/auth/logout');
-
-    if (isAuthEndpoint) {
-      let message: string;
-      try {
-        const data = await response.json() as { detail?: string };
-        message = data.detail ?? `${response.status} ${response.statusText}`;
-      } catch {
-        message = `${response.status} ${response.statusText}`;
-      }
-      throw new Error(message);
-    }
-
-    const { refreshToken } = useAuthStore.getState();
-
-    if (!refreshToken) {
-      // Sin sesión activa — limpiar store sin redirigir si ya estamos en login/register
-      clearQueueAndLogout();
-      throw new Error('No autorizado');
-    }
-
-    // Si ya hay un refresh en vuelo, encolar este request hasta que termine
-    if (isRefreshing) {
-      return new Promise<T>((resolve, reject) => {
-        refreshQueue.push((newToken: string) => {
-          const retryHeaders = new Headers(incomingHeaders);
-          retryHeaders.set('Authorization', `Bearer ${newToken}`);
-          if (body != null && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
-            if (!retryHeaders.has('Content-Type')) retryHeaders.set('Content-Type', 'application/json');
-          }
-          fetch(`${API_URL}${path}`, { ...restOptions, body, headers: retryHeaders })
-            .then((r) => r.ok ? r.json() as Promise<T> : Promise.reject(new Error(`${r.status}`)))
-            .then(resolve)
-            .catch(reject);
-        });
-      });
-    }
-
-    isRefreshing = true;
-    try {
-      const newToken = await doRefresh(refreshToken);
-      isRefreshing = false;
-      processQueue(newToken);
-
-      // Reintentar el request original con el token nuevo
-      const retryHeaders = new Headers(incomingHeaders);
-      retryHeaders.set('Authorization', `Bearer ${newToken}`);
-      if (body != null && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
-        if (!retryHeaders.has('Content-Type')) retryHeaders.set('Content-Type', 'application/json');
-      }
-      const retryResponse = await fetch(`${API_URL}${path}`, { ...restOptions, body, headers: retryHeaders });
-      if (retryResponse.status === 204) return undefined as T;
-      if (!retryResponse.ok) {
-        const data = await retryResponse.json().catch(() => ({})) as { detail?: string };
-        throw new Error(data.detail ?? `${retryResponse.status}`);
-      }
-      return retryResponse.json() as Promise<T>;
-    } catch {
-      isRefreshing = false;
-      clearQueueAndLogout();
-      throw new Error('No autorizado');
-    }
-  }
-
-  // 204 No Content — el back no manda body
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  if (!response.ok) {
-    let message: string;
-    try {
-      const data = await response.json() as { detail?: string };
-      message = data.detail ?? `${response.status} ${response.statusText}`;
-    } catch {
-      message = `${response.status} ${response.statusText}`;
-    }
-    throw new Error(message);
-  }
-
-  return response.json() as Promise<T>;
+  // 204 No Content: el back no manda body
+  if (response.status === 204) return undefined as T;
+  return response.data;
 }
 
-/**
- * Arma un query string desde un objeto, omitiendo entradas con valor `undefined`, `null` o `''`.
- * @param params objeto clave-valor con los parámetros
- * @returns string con formato `?key=value&...`, o `''` si no hay parámetros válidos
- */
+// ─── buildQueryString ─────────────────────────────────────────────────────────
+
 export function buildQueryString(params: Record<string, unknown>): string {
   const entries = Object.entries(params).filter(
     ([, value]) => value !== undefined && value !== null && value !== ''

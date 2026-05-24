@@ -1,13 +1,31 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Trash2 } from 'lucide-react';
 import { useCarritoStore } from '../store/carritoStore';
+import { useAuthStore } from '../store/authStore';
 
 export default function CarritoPage() {
   const { items, removerItem, actualizarCantidad, vaciarCarrito, totalItems, subtotal } =
     useCarritoStore();
   const navigate = useNavigate();
+  const isStaff = useAuthStore((s) => s.isStaff());
 
   const total = totalItems();
+
+  if (isStaff) {
+    return (
+      <div className="px-4 sm:px-6 lg:px-12 py-16 max-w-3xl mx-auto text-center">
+        <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+        <h1 className="text-2xl font-bold text-slate-700 mb-2">Carrito no disponible</h1>
+        <p className="text-slate-500 mb-6">Tu rol no tiene acceso al carrito.</p>
+        <Link
+          to="/productos"
+          className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
+        >
+          Ver productos
+        </Link>
+      </div>
+    );
+  }
 
   if (total === 0) {
     return (

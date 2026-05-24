@@ -8,7 +8,7 @@ from .schema import (
 )
 from .service import CategoriaService
 from ..uow.unit_of_work import UnitOfWork, get_uow
-from ..core.deps import get_current_active_user, require_role, require_role_if_include_deleted
+from ..core.deps import get_optional_user, require_role, require_role_if_include_deleted
 from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/categorias", tags=["Categorías"])
@@ -25,8 +25,8 @@ def get_categoria_service() -> CategoriaService:
 def listar_categorias(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
-    current_user: Annotated[Usuario, Depends(get_current_active_user)],
-    _admin_if_deleted: Annotated[Usuario, Depends(require_role_if_include_deleted(["ADMIN"]))],
+    _optional_user: Annotated[Usuario | None, Depends(get_optional_user)],
+    _admin_if_deleted: Annotated[Usuario | None, Depends(require_role_if_include_deleted(["ADMIN"]))],
     offset: Annotated[int, Query(ge=0, description="Registros a omitir")] = 0,
     limit: Annotated[int, Query(ge=1, le=100, description="Máximo de registros")] = 20,
     q: Annotated[str | None, Query(min_length=1, description="Búsqueda (case-insensitive) por nombre/descripcion")] = None,
@@ -61,8 +61,8 @@ def obtener_categoria(
     categoria_id: Annotated[int, Path(ge=1, description="ID de la categoría")],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
-    current_user: Annotated[Usuario, Depends(get_current_active_user)],
-    _admin_if_deleted: Annotated[Usuario, Depends(require_role_if_include_deleted(["ADMIN"]))],
+    _optional_user: Annotated[Usuario | None, Depends(get_optional_user)],
+    _admin_if_deleted: Annotated[Usuario | None, Depends(require_role_if_include_deleted(["ADMIN"]))],
     include_deleted: Annotated[bool, Query(description="Incluir categorías eliminadas (solo admin)")] = False,
 ):
     return service.get_by_id(
