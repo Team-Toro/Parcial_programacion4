@@ -17,6 +17,7 @@ function StockBadge({ value }: { value: number }) {
 export default function ProductoDetallePage() {
   const { id } = useParams<{ id: string }>();
   const isAdmin = useAuthStore((s) => s.isAdmin());
+  const isStaff = useAuthStore((s) => s.isStaff());
 
   const { data: producto, isLoading, isError } = useQuery({
     queryKey: ['producto', Number(id)],
@@ -34,7 +35,7 @@ export default function ProductoDetallePage() {
   if (isLoading) return <div className="p-8 text-slate-500">Cargando producto...</div>;
   if (isError || !producto) return <div className="p-8 text-red-500">Producto no encontrado.</div>;
 
-  const canComprar = producto.disponible && producto.stock_disponible > 0;
+  const canComprar = !isStaff && producto.disponible && producto.stock_disponible > 0;
 
   const toggleRemovido = (ingId: number) =>
     setRemovidos((prev) =>
@@ -54,7 +55,8 @@ export default function ProductoDetallePage() {
         .map((pi) => ({ id: pi.ingrediente.id, nombre: pi.ingrediente.nombre })),
     });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast(`Agregado al carrito (${totalItems() + cantidad} items)`);
+    const itemLabel = cantidad === 1 ? 'item' : 'items';
+    setToast(`Agregado al carrito (${cantidad} ${itemLabel})`);
     setToastVisible(false);
     requestAnimationFrame(() => requestAnimationFrame(() => setToastVisible(true)));
     toastTimer.current = setTimeout(() => setToast(null), 2500);

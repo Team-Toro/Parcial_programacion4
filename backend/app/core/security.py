@@ -2,7 +2,7 @@
 Utilidades de seguridad: hashing de contraseñas y manejo de JWT.
 
 - hash_password / verify_password: bcrypt vía passlib.
-- create_access_token / decode_access_token: JWT con python-jose (HS256).
+- create_access_token / decode_access_token: JWT con PyJWT (HS256).
 - generate_refresh_token / hash_token: tokens opacos para refresh.
 
 Separado del router para poder reutilizarse en seeds, tests, etc.
@@ -12,7 +12,8 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -63,7 +64,7 @@ def decode_access_token(token: str) -> dict | None:
         if payload.get("type") != "access":
             return None
         return payload
-    except JWTError:
+    except InvalidTokenError:
         return None
 
 

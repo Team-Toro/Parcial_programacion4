@@ -5,8 +5,6 @@ import { logoutBackend } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import { useCarritoStore } from '../../store/carritoStore';
 
-const STAFF_ROLES = ['ADMIN', 'PEDIDOS'];
-
 interface NavLink {
   to: string;
   label: string;
@@ -22,7 +20,7 @@ export default function Navbar() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const isAdmin = useAuthStore((s) => s.isAdmin());
-  const isStaff = user?.roles?.some((r) => STAFF_ROLES.includes(r)) ?? false;
+  const isStaff = useAuthStore((s) => s.isStaff());
   const totalCarrito = useCarritoStore((s) => s.totalItems());
 
   const handleLogout = async () => {
@@ -66,8 +64,8 @@ export default function Navbar() {
 
       {user && (
         <div className="flex items-center gap-3">
-          {/* Carrito badge — oculto para ADMIN */}
-          {!isAdmin && (
+          {/* Carrito badge — oculto para staff */}
+          {!isStaff && (
             <Link
               to="/carrito"
               className="relative flex items-center text-slate-300 hover:text-white hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors"

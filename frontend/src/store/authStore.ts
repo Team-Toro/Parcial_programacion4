@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { Usuario } from '../types';
 
 interface AuthState {
@@ -8,23 +7,21 @@ interface AuthState {
   login: (user: Usuario) => void;
   logout: () => void;
   isAdmin: () => boolean;
+  isStaff: () => boolean;
+  isProductManager: () => boolean;
+  isPedidosStaff: () => boolean;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      setUser: (user) => set({ user }),
-      login: (user) => set({ user }),
-      logout: () => set({ user: null }),
-      isAdmin: () => !!get().user?.roles?.includes('ADMIN'),
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({ user: state.user }),
-    }
-  )
-);
+export const useAuthStore = create<AuthState>()((set, get) => ({
+  user: null,
+  setUser: (user) => set({ user }),
+  login: (user) => set({ user }),
+  logout: () => set({ user: null }),
+  isAdmin: () => !!get().user?.roles?.includes('ADMIN'),
+  isStaff: () => (get().user?.roles ?? []).some((r) => r === 'ADMIN' || r === 'STOCK' || r === 'PEDIDOS'),
+  isProductManager: () => (get().user?.roles ?? []).some((r) => r === 'ADMIN' || r === 'STOCK'),
+  isPedidosStaff: () => (get().user?.roles ?? []).some((r) => r === 'ADMIN' || r === 'PEDIDOS'),
+}));
 
 // Selectores con suscripción granular (evitan re-renders innecesarios)
 export const useUser = () => useAuthStore((s) => s.user);

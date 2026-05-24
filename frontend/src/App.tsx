@@ -31,13 +31,14 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* Rutas protegidas */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<MainLayout />}>
-              <Route path="/" element={<Navigate to="/productos" replace />} />
-              <Route path="/categorias" element={<CategoriasPage />} />
-              <Route path="/productos" element={<ProductosPage />} />
-              <Route path="/productos/:id" element={<ProductoDetallePage />} />
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Navigate to="/productos" replace />} />
+            <Route path="/categorias" element={<CategoriasPage />} />
+            <Route path="/productos" element={<ProductosPage />} />
+            <Route path="/productos/:id" element={<ProductoDetallePage />} />
+
+            {/* Rutas protegidas */}
+            <Route element={<ProtectedRoute />}>
               <Route path="/mis-direcciones" element={<MisDireccionesPage />} />
               <Route path="/carrito" element={<CarritoPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />

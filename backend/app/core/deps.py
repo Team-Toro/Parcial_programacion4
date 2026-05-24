@@ -62,6 +62,10 @@ class OAuth2PasswordBearerWithCookie(OAuth2PasswordBearer):
 
 # Define el esquema OAuth2 que extrae el token de la cookie (o header)
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="/api/v1/auth/token")
+oauth2_scheme_optional = OAuth2PasswordBearerWithCookie(
+    tokenUrl="/api/v1/auth/token",
+    auto_error=False,
+)
 
 
 async def get_current_user(
@@ -95,6 +99,45 @@ async def get_current_user(
     # object.__setattr__ bypasses Pydantic's __setattr__ — Usuario es un modelo
     # SQLModel table=True y no tiene 'roles' declarado como columna. El atributo
     # queda en __dict__ de la instancia y es accesible con getattr normalmente.
+    try:
+        object.__setattr__(user, "roles", UsuarioService().get_roles(uow, user.id))
+    except Exception:
+        object.__setattr__(user, "roles", [])
+
+    return user
+
+
+async def get_optional_user(
+    token: Annotated[str | None, Depends(oauth2_scheme_optional)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+) -> Usuario | None:
+    if not token:
+        return None
+
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Credenciales inválidas o token expirado",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    payload = decode_access_token(token)
+    if payload is None:
+        raise credentials_exception
+
+    email: str | None = payload.get("sub")
+    if email is None:
+        raise credentials_exception
+
+    user = UsuarioService().get_by_username(uow, email)
+    if user is None:
+        raise credentials_exception
+
+    if user.disabled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cuenta de usuario desactivada",
+        )
+
     try:
         object.__setattr__(user, "roles", UsuarioService().get_roles(uow, user.id))
     except Exception:
@@ -167,11 +210,18 @@ def require_role_if_include_deleted(allowed_roles: list[str], match: str = "any"
     allowed_set = {r.lower() for r in allowed_roles}
 
     async def role_checker(
-        current_user: Annotated[Usuario, Depends(get_current_active_user)],
+        current_user: Annotated[Usuario | None, Depends(get_optional_user)],
         include_deleted: Annotated[bool, Query()] = False,
-    ) -> Usuario:
+    ) -> Usuario | None:
         if not include_deleted:
             return current_user
+
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="No autenticado",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
         user_roles = getattr(current_user, "roles", None) or []
         if not user_roles:
