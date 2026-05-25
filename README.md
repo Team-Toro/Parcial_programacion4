@@ -1,9 +1,9 @@
-# Food Store — Proyecto Integrador Parcial 1
+# Food Store — Proyecto Integrador Parcial 2
 
 Aplicación Fullstack (FastAPI + React) para gestión de productos, categorías e ingredientes de un negocio gastronómico.
 
 ## Video de presentación
-https://youtu.be/87lTfzlcr_o
+https://youtu.be/IKM9juxEyv4
 
 ## Integrantes
 - Arena Lucio
