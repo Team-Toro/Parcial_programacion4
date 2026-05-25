@@ -86,9 +86,18 @@ api.interceptors.response.use(
         return api(config); // reintentar el request original
       } catch (refreshError) {
         isRefreshing = false;
-        processQueue(normalizeAxiosError(refreshError));
-        clearQueueAndLogout();
-        return Promise.reject(normalizeAxiosError(refreshError));
+        const normErr = normalizeAxiosError(refreshError);
+        processQueue(normErr);
+        useAuthStore.getState().logout();
+        
+        // Si el request original era /auth/me, es un invitado sin sesión.
+        // No forzamos la redirección hard al login para dejarlo navegar en rutas públicas.
+        const isAuthMe = config?.url?.includes('/auth/me');
+        if (!isAuthMe) {
+          clearQueueAndLogout();
+        }
+        
+        return Promise.reject(normErr);
       }
     }
 

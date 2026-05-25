@@ -26,7 +26,7 @@ def listar_categorias(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
     _optional_user: Annotated[Usuario | None, Depends(get_optional_user)],
-    _admin_if_deleted: Annotated[Usuario | None, Depends(require_role_if_include_deleted(["ADMIN"]))],
+    _admin_if_deleted: Annotated[Usuario | None, Depends(require_role_if_include_deleted(["ADMIN", "STOCK"]))],
     offset: Annotated[int, Query(ge=0, description="Registros a omitir")] = 0,
     limit: Annotated[int, Query(ge=1, le=100, description="Máximo de registros")] = 20,
     q: Annotated[str | None, Query(min_length=1, description="Búsqueda (case-insensitive) por nombre/descripcion")] = None,
@@ -62,7 +62,7 @@ def obtener_categoria(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
     _optional_user: Annotated[Usuario | None, Depends(get_optional_user)],
-    _admin_if_deleted: Annotated[Usuario | None, Depends(require_role_if_include_deleted(["ADMIN"]))],
+    _admin_if_deleted: Annotated[Usuario | None, Depends(require_role_if_include_deleted(["ADMIN", "STOCK"]))],
     include_deleted: Annotated[bool, Query(description="Incluir categorías eliminadas (solo admin)")] = False,
 ):
     return service.get_by_id(
@@ -93,7 +93,7 @@ def obtener_stats(
     "/",
     response_model=CategoriaPublic,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Crear una nueva categoría",
     responses={
         409: {"description": "Ya existe una categoría con ese nombre"},
@@ -112,7 +112,7 @@ def crear_categoria(
 @router.patch(
     "/{categoria_id}",
     response_model=CategoriaPublic,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Actualizar parcialmente una categoría",
     responses={
         404: {"description": "Categoría no encontrada"},
@@ -132,7 +132,7 @@ def actualizar_categoria(
 @router.delete(
     "/{categoria_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Eliminar una categoría (soft delete)",
     description="Marca la categoría y sus subcategorías como eliminadas",
     responses={
@@ -150,7 +150,7 @@ def eliminar_categoria(
 @router.post(
     "/{categoria_id}/reactivar",
     response_model=CategoriaPublic,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Reactivar una categoría dada de baja",
     responses={
         404: {"description": "Categoría no encontrada"},

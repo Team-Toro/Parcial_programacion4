@@ -17,8 +17,14 @@ export default function LoginPage() {
       // Las cookies ya fueron seteadas por el servidor — solo traemos el perfil
       const user = await getMe();
       useAuthStore.getState().login(user);
-      const isAdmin = user.roles?.includes('ADMIN');
-      navigate(isAdmin ? '/admin/usuarios' : '/productos');
+      const roles = user.roles ?? [];
+      if (roles.includes('ADMIN')) {
+        navigate('/admin/usuarios');
+      } else if (roles.includes('PEDIDOS')) {
+        navigate('/admin/pedidos');
+      } else {
+        navigate('/productos');
+      }
     },
   });
 

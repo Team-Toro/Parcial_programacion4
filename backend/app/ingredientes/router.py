@@ -12,7 +12,7 @@ ingrediente_service = IngredienteService()
 @router.get(
     "/",
     response_model=List[IngredientePublic],
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Listar todos los ingredientes",
     description="Obtiene ingredientes con paginación. Con include_deleted=true devuelve también los dados de baja."
 )
@@ -41,7 +41,7 @@ def listar_ingredientes(
 @router.get(
     "/{ingrediente_id}",
     response_model=IngredientePublic,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Obtener un ingrediente por ID",
     responses={
         404: {"description": "Ingrediente no encontrado"}
@@ -58,7 +58,7 @@ def obtener_ingrediente(
     "/",
     response_model=IngredientePublic,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Crear un nuevo ingrediente",
     responses={
         409: {"description": "Ya existe un ingrediente con ese nombre"}
@@ -74,7 +74,7 @@ def crear_ingrediente(
 @router.patch(
     "/{ingrediente_id}",
     response_model=IngredientePublic,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Actualizar parcialmente un ingrediente",
     responses={
         404: {"description": "Ingrediente no encontrado"},
@@ -92,7 +92,7 @@ def actualizar_ingrediente(
 @router.delete(
     "/{ingrediente_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Eliminar un ingrediente (soft delete)",
     description="Marca el ingrediente como eliminado",
     responses={
@@ -109,7 +109,7 @@ def eliminar_ingrediente(
 @router.post(
     "/{ingrediente_id}/reactivar",
     response_model=IngredientePublic,
-    dependencies=[Depends(require_role(["ADMIN"]))],
+    dependencies=[Depends(require_role(["ADMIN", "STOCK"]))],
     summary="Reactivar un ingrediente dado de baja",
     responses={
         404: {"description": "Ingrediente no encontrado"},

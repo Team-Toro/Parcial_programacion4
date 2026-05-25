@@ -27,7 +27,7 @@ type ToastState = { type: 'success' | 'error'; message: string } | null;
 
 export default function IngredientesPage() {
   const qc = useQueryClient();
-  const isAdmin = useAuthStore((s) => s.isAdmin());
+  const isAdmin = useAuthStore((s) => s.isProductManager());
 
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Ingrediente | null>(null);

@@ -8,10 +8,7 @@ import { useCarritoStore } from '../../store/carritoStore';
 interface NavLink {
   to: string;
   label: string;
-  adminOnly: boolean;
-  staffOnly: boolean;
-  hideForAdmin?: boolean;
-  authRequired?: boolean;
+  visible: (user: any, roles: string[], isStaffUser: boolean, isAdminUser: boolean) => boolean;
 }
 
 export default function Navbar() {
@@ -31,14 +28,44 @@ export default function Navbar() {
     navigate('/login');
   };
 
+  const roles = user?.roles ?? [];
+
   const links: NavLink[] = [
-    { to: '/categorias', label: 'Categorías', adminOnly: false, staffOnly: false, authRequired: false },
-    { to: '/productos', label: 'Productos', adminOnly: false, staffOnly: false, authRequired: false },
-    { to: '/mis-direcciones', label: 'Mis direcciones', adminOnly: false, staffOnly: false, hideForAdmin: true, authRequired: true },
-    { to: '/mis-pedidos', label: 'Mis pedidos', adminOnly: false, staffOnly: false, hideForAdmin: true, authRequired: true },
-    { to: '/ingredientes', label: 'Ingredientes', adminOnly: true, staffOnly: false, authRequired: true },
-    { to: '/admin/usuarios', label: 'Usuarios', adminOnly: true, staffOnly: false, authRequired: true },
-    { to: '/admin/pedidos', label: 'Pedidos', adminOnly: false, staffOnly: true, authRequired: true },
+    {
+      to: '/categorias',
+      label: 'Categorías',
+      visible: (u, r, isS, isA) => !isS || isA || r.includes('STOCK'),
+    },
+    {
+      to: '/productos',
+      label: 'Productos',
+      visible: (u, r, isS, isA) => !isS || isA || r.includes('STOCK'),
+    },
+    {
+      to: '/mis-direcciones',
+      label: 'Mis direcciones',
+      visible: (u, r, isS, isA) => !!u && !isS,
+    },
+    {
+      to: '/mis-pedidos',
+      label: 'Mis pedidos',
+      visible: (u, r, isS, isA) => !!u && !isS,
+    },
+    {
+      to: '/ingredientes',
+      label: 'Ingredientes',
+      visible: (u, r, isS, isA) => !!u && (isA || r.includes('STOCK')),
+    },
+    {
+      to: '/admin/usuarios',
+      label: 'Usuarios',
+      visible: (u, r, isS, isA) => !!u && isA,
+    },
+    {
+      to: '/admin/pedidos',
+      label: 'Pedidos',
+      visible: (u, r, isS, isA) => !!u && (isA || r.includes('PEDIDOS')),
+    },
   ];
 
   return (
@@ -47,13 +74,7 @@ export default function Navbar() {
 
       <div className="flex gap-4 flex-1">
         {links
-          .filter(
-            (l) =>
-              (!l.authRequired || !!user) &&
-              (!l.adminOnly || isAdmin) &&
-              (!l.staffOnly || isStaff) &&
-              (!l.hideForAdmin || !isAdmin)
-          )
+          .filter((l) => l.visible(user, roles, isStaff, isAdmin))
           .map((l) => (
             <Link
               key={l.to}
