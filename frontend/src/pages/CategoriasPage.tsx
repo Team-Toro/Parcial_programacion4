@@ -9,7 +9,7 @@ import type { Categoria, CategoriaCreate } from '../types';
 import Modal from '../components/ui/Modal';
 import { useAuthStore } from '../store/authStore';
 
-const MAX_LEVEL = 2;
+const MAX_LEVEL = 3;
 
 const getCategoriaLevel = (cat: Categoria, categorias: Categoria[]): number => {
   let level = 0;
@@ -131,7 +131,7 @@ function CategoriaTreeNode({
 
 export default function CategoriasPage() {
   const qc = useQueryClient();
-  const isAdmin = useAuthStore((s) => s.isAdmin());
+  const isAdmin = useAuthStore((s) => s.isProductManager());
 
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Categoria | null>(null);
@@ -206,19 +206,25 @@ export default function CategoriasPage() {
     onError: (e: Error) => showToast('error', e.message),
   });
 
-  // Categorías elegibles para ser padre: excluir la que se está editando y las de nivel MAX_LEVEL,
-  // ordenadas jerárquicamente (raíz primero, sus hijos inmediatamente debajo)
+  // Categorías elegibles para ser padre: excluir la que se está editando y las de nivel igual o mayor a MAX_LEVEL,
+  // ordenadas jerárquicamente (raíz primero, sus hijos inmediatamente debajo recursivamente)
   const orderedCategorias = useMemo(() => {
     const eligible = categoriasFlat
       .filter(c => c.id !== editing?.id)
       .filter(c => getCategoriaLevel(c, categoriasFlat) < MAX_LEVEL);
-    const roots = eligible.filter(c => !c.parent_id);
+
     const result: Categoria[] = [];
-    for (const root of roots) {
-      result.push(root);
-      const children = eligible.filter(c => c.parent_id === root.id);
-      result.push(...children);
-    }
+    const addChildren = (parentId: number | null) => {
+      const children = eligible.filter(c => c.parent_id === parentId);
+      // Ordenamos alfabéticamente por nombre
+      children.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      for (const child of children) {
+        result.push(child);
+        addChildren(child.id);
+      }
+    };
+
+    addChildren(null);
     return result;
   }, [categoriasFlat, editing]);
 
@@ -413,7 +419,8 @@ export default function CategoriasPage() {
 
                     {/* Categorías ordenadas jerárquicamente */}
                     {filteredCategorias.map(cat => {
-                      const isSubcategoria = !!cat.parent_id;
+                      const lvl = getCategoriaLevel(cat, categoriasFlat);
+                      const isSubcategoria = lvl > 0;
                       const isSelected = form.parent_id === cat.id;
                       return (
                         <div
@@ -424,11 +431,18 @@ export default function CategoriasPage() {
                             setParentSearch('');
                           }}
                           className={`flex items-center py-2 text-sm cursor-pointer hover:bg-slate-50 ${
-                            isSubcategoria ? 'pl-8 text-slate-500' : 'pl-3 text-slate-800'
-                          } ${isSelected ? 'bg-orange-50 text-orange-700 font-medium' : ''}`}
+                            isSelected ? 'bg-orange-50 text-orange-700 font-medium' : 'text-slate-800'
+                          }`}
+                          style={{ paddingLeft: `${lvl * 1.25 + 0.75}rem` }}
                         >
-                          {isSubcategoria && <span className="mr-1.5 text-slate-400">⤷</span>}
-                          {cat.nombre}
+                          {isSubcategoria && (
+                            <span className="mr-1.5 text-slate-400 font-normal">
+                              {'⤷'.repeat(lvl)}
+                            </span>
+                          )}
+                          <span className={isSubcategoria ? 'text-slate-600' : 'text-slate-800 font-medium'}>
+                            {cat.nombre}
+                          </span>
                         </div>
                       );
                     })}

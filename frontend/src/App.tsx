@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import StaffRoute from './components/auth/StaffRoute';
+import ProductManagerRoute from './components/auth/ProductManagerRoute';
 import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -48,8 +49,12 @@ export default function App() {
 
               {/* Solo admin */}
               <Route element={<AdminRoute />}>
-                <Route path="/ingredientes" element={<IngredientesPage />} />
                 <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
+              </Route>
+
+              {/* Admin o staff con rol STOCK (gestión de catálogo) */}
+              <Route element={<ProductManagerRoute />}>
+                <Route path="/ingredientes" element={<IngredientesPage />} />
               </Route>
 
               {/* Admin o staff con rol PEDIDOS */}
