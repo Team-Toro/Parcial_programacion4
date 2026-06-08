@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getMisPedidos } from '../api/pedidos';
+import { useWebSocket } from '../hooks/useWebSocket';
+import { useWsStore } from '../store/wsStore';
+
+const TERMINALES = new Set(['ENTREGADO', 'CANCELADO']);
 
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: 'bg-amber-100 text-amber-700',
@@ -35,11 +39,19 @@ const PAGE_SIZE = 10;
 
 export default function MisPedidosPage() {
   const [offset, setOffset] = useState(0);
+  const { subscribeToOrder, unsubscribeFromOrder } = useWebSocket();
+  const estadosRT = useWsStore((s) => s.estadosRT);
 
   const { data: pedidos = [], isLoading, isError } = useQuery({
     queryKey: ['mis-pedidos', offset],
     queryFn: () => getMisPedidos(offset, PAGE_SIZE),
   });
+
+  useEffect(() => {
+    const activeIds = pedidos.filter((p) => !TERMINALES.has(p.estado_codigo)).map((p) => p.id);
+    activeIds.forEach(subscribeToOrder);
+    return () => { activeIds.forEach(unsubscribeFromOrder); };
+  }, [pedidos, subscribeToOrder, unsubscribeFromOrder]);
 
   if (isLoading) return <div className="p-8 text-slate-500">Cargando pedidos...</div>;
   if (isError) return <div className="p-8 text-red-500">Error al cargar pedidos.</div>;
@@ -72,26 +84,29 @@ export default function MisPedidosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {pedidos.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/mis-pedidos/${p.id}`}
-                        className="text-orange-500 hover:underline font-medium"
-                      >
-                        #{p.id}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{formatFecha(p.created_at)}</td>
-                    <td className="px-4 py-3 text-slate-600">{p.forma_pago_codigo}</td>
-                    <td className="px-4 py-3">
-                      <EstadoBadge codigo={p.estado_codigo} />
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                      ${Number(p.total).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
+                {pedidos.map((p) => {
+                  const estadoEfectivo = estadosRT[p.id] ?? p.estado_codigo;
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <Link
+                          to={`/mis-pedidos/${p.id}`}
+                          className="text-orange-500 hover:underline font-medium"
+                        >
+                          #{p.id}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{formatFecha(p.created_at)}</td>
+                      <td className="px-4 py-3 text-slate-600">{p.forma_pago_codigo}</td>
+                      <td className="px-4 py-3">
+                        <EstadoBadge codigo={estadoEfectivo} />
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                        ${Number(p.total).toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

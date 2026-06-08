@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllPedidos, avanzarEstadoPedido, cancelarPedido } from '../api/pedidos';
 import { useAuthStore } from '../store/authStore';
 import ModalMotivo from '../components/pedidos/ModalMotivo';
+import { useWebSocket } from '../hooks/useWebSocket';
+import { useWsStore } from '../store/wsStore';
 
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: 'bg-amber-100 text-amber-700',
@@ -50,6 +52,15 @@ export default function AdminPedidosPage() {
   const [pedidoACancelar, setPedidoACancelar] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
+  useWebSocket();
+  const { newPedidoAlert, clearNewPedidoAlert, estadosRT } = useWsStore();
+
+  // Invalidate the list when a new pedido arrives
+  useEffect(() => {
+    if (newPedidoAlert) {
+      queryClient.invalidateQueries({ queryKey: ['admin-pedidos'] });
+    }
+  }, [newPedidoAlert, queryClient]);
 
   if (!isStaff) return <Navigate to="/productos" replace />;
 
@@ -90,6 +101,23 @@ export default function AdminPedidosPage() {
   return (
     <div className="px-4 sm:px-6 lg:px-12 py-8 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Gestión de pedidos</h1>
+
+      {/* Notificación de nuevo pedido */}
+      {newPedidoAlert && (
+        <div className="mb-4 flex items-center justify-between gap-3 bg-orange-50 border border-orange-300 text-orange-800 rounded-xl px-4 py-3 text-sm font-medium">
+          <span>
+            Nuevo pedido <strong>#{newPedidoAlert.id}</strong> del usuario{' '}
+            <strong>{newPedidoAlert.usuario_id}</strong> — ${Number(newPedidoAlert.total).toFixed(2)}
+          </span>
+          <button
+            onClick={clearNewPedidoAlert}
+            className="ml-auto text-orange-600 hover:text-orange-800 font-bold text-lg leading-none"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-5 flex flex-wrap gap-3 items-end">
@@ -149,8 +177,9 @@ export default function AdminPedidosPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {pedidos.map((p) => {
-                  const transiciones = TRANSICIONES[p.estado_codigo] ?? [];
-                  const esTerminal = TERMINALES.has(p.estado_codigo);
+                  const estadoEfectivo = estadosRT[p.id] ?? p.estado_codigo;
+                  const transiciones = TRANSICIONES[estadoEfectivo] ?? [];
+                  const esTerminal = TERMINALES.has(estadoEfectivo);
                   const siguienteEstado = transiciones.find((t) => t !== 'CANCELADO') ?? null;
                   const puedeAvanzar = !esTerminal && siguienteEstado !== null;
                   const puedeCancelar = !esTerminal && transiciones.includes('CANCELADO');
@@ -171,10 +200,10 @@ export default function AdminPedidosPage() {
                       <td className="px-4 py-3">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            ESTADO_COLORS[p.estado_codigo] ?? 'bg-slate-100 text-slate-700'
+                            ESTADO_COLORS[estadoEfectivo] ?? 'bg-slate-100 text-slate-700'
                           }`}
                         >
-                          {p.estado_codigo}
+                          {estadoEfectivo}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-slate-800">

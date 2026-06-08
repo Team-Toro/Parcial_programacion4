@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from datetime import datetime
 from decimal import Decimal
@@ -9,7 +10,28 @@ from ..productos.model import Producto
 from ..productos.service import calcular_stock_disponible
 from ..estados_pedido.service import EstadoPedidoService
 from ..core.config import settings
+
 ROLES_PEDIDOS = {"ADMIN", "PEDIDOS"}
+
+logger = logging.getLogger(__name__)
+
+_EVENTO_POR_ESTADO: dict[str, str] = {
+    "PENDIENTE":  "NUEVO_PEDIDO",
+    "CONFIRMADO": "PEDIDO_CONFIRMADO",
+    "EN_PREP":    "PEDIDO_EN_PREPARACION",
+    "EN_CAMINO":  "PEDIDO_EN_CAMINO",
+    "ENTREGADO":  "PEDIDO_ENTREGADO",
+    "CANCELADO":  "PEDIDO_CANCELADO",
+}
+
+_ROLES_POR_ESTADO: dict[str, list[str]] = {
+    "PENDIENTE":  ["ADMIN", "PEDIDOS"],
+    "CONFIRMADO": ["ADMIN", "PEDIDOS"],
+    "EN_PREP":    ["ADMIN", "PEDIDOS", "STOCK"],
+    "EN_CAMINO":  ["ADMIN", "PEDIDOS"],
+    "ENTREGADO":  ["ADMIN", "PEDIDOS"],
+    "CANCELADO":  ["ADMIN", "PEDIDOS"],
+}
 
 
 class PedidoService:
@@ -244,3 +266,23 @@ class PedidoService:
                                 detail="No tenés acceso a este pedido")
 
         return uow.pedidos.get_historial_for_pedido(pedido_id)
+
+
+async def emit_pedido_event(pedido_id: int, estado_codigo: str, data: dict) -> None:
+    """
+    Emits WebSocket events after a pedido state change.
+    Must be called OUTSIDE the UoW context so WS failures never cause a rollback.
+    """
+    from ..core.websocket import manager
+
+    event = _EVENTO_POR_ESTADO.get(estado_codigo)
+    if not event:
+        return
+
+    roles = _ROLES_POR_ESTADO.get(estado_codigo, [])
+    try:
+        await manager.broadcast_to_roles(roles, event, data)
+        if estado_codigo != "PENDIENTE":
+            await manager.broadcast_to_order(pedido_id, event, data)
+    except Exception:
+        logger.exception("WS emit failed for pedido %s estado %s", pedido_id, estado_codigo)
