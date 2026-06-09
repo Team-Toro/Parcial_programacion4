@@ -1,6 +1,6 @@
 from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
-from .schema import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPublic, ProductoDisponibilidadUpdate
+from .schema import ProductoCreate, ProductoRead, ProductoUpdate, ProductoPublic, ProductoDisponibilidadUpdate, ImagenProductoUpdate
 from .service import ProductoService
 from ..uow.unit_of_work import UnitOfWork, get_uow
 from ..core.deps import get_optional_user, require_role, require_role_if_include_deleted
@@ -139,6 +139,23 @@ def reactivar_producto(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     return producto_service.reactivate(uow, producto_id)
+
+
+@router.patch(
+    "/{producto_id}/imagenes",
+    response_model=ProductoPublic,
+    dependencies=[Depends(require_role(["ADMIN"]))],
+    summary="Reemplazar el array de imágenes de un producto",
+    responses={
+        404: {"description": "Producto no encontrado"}
+    }
+)
+def actualizar_imagenes_producto(
+    producto_id: Annotated[int, Path(ge=1)],
+    data: ImagenProductoUpdate,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    return producto_service.actualizar_imagenes(uow, producto_id, data.imagenes_url)
 
 
 @router.patch(

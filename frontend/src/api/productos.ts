@@ -30,3 +30,9 @@ export const deleteProducto = async (id: number): Promise<void> =>
 
 export const reactivarProducto = async (id: number): Promise<Producto> =>
   apiFetch<Producto>(`/api/v1/productos/${id}/reactivar`, { method: 'POST' });
+
+export const actualizarImagenesProducto = (id: number, imagenes_url: string[]): Promise<Producto> =>
+  apiFetch<Producto>(`/api/v1/productos/${id}/imagenes`, {
+    method: 'PATCH',
+    body: JSON.stringify({ imagenes_url }),
+  });

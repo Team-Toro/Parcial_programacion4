@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     # URL pública del backend (ngrok en dev). Usada para webhook y back_urls.
     NGROK_URL: Optional[str] = None
 
+    # ─── Cloudinary ──────────────────────────────────────────────────────────
+    CLOUDINARY_CLOUD_NAME: Optional[str] = None
+    CLOUDINARY_API_KEY: Optional[str] = None
+    CLOUDINARY_API_SECRET: Optional[str] = None
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

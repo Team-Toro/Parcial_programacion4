@@ -159,6 +159,16 @@ class ProductoService:
         repo.refresh(producto)
         return producto
 
+    def actualizar_imagenes(self, uow: UnitOfWork, producto_id: int, imagenes_url: List[str]) -> Producto:
+        repo = ProductoRepository(uow.session)
+        producto = self.get_by_id(uow, producto_id)
+        producto.imagenes_url = imagenes_url
+        producto.updated_at = datetime.utcnow()
+        repo.add(producto)
+        repo.flush()
+        repo.refresh(producto)
+        return producto
+
     def update_disponibilidad(self, uow: UnitOfWork, producto_id: int, disponible: bool) -> Producto:
         repo = ProductoRepository(uow.session)
         producto = repo.get_by_id_including_deleted(producto_id)

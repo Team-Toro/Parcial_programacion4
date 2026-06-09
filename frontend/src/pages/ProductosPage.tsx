@@ -13,6 +13,7 @@ import { getCategorias } from '../api/categorias';
 import { getIngredientes } from '../api/ingredientes';
 import type { Producto, ProductoCreate, IngredienteEnProducto } from '../types';
 import Modal from '../components/ui/Modal';
+import ImageUpload from '../components/ImageUpload';
 import { useDebounce } from '../hooks/useDebounce';
 import { useAuthStore } from '../store/authStore';
 
@@ -20,7 +21,7 @@ const PAGE_SIZE = 10;
 
 const defaultForm: ProductoCreate = {
   nombre: '', descripcion: '', precio_base: 0,
-  disponible: true, categoria_ids: [], ingredientes: [],
+  disponible: true, categoria_ids: [], ingredientes: [], imagenes_url: [],
 };
 
 type SortField = 'nombre' | 'precio_base' | 'created_at' | 'stock_cantidad';
@@ -148,6 +149,7 @@ export default function ProductosPage() {
         es_removible: pi.es_removible,
         cantidad: pi.cantidad,
       })),
+      imagenes_url: p.imagenes_url ?? [],
     });
     setModalError(''); setIngSearch(''); setCategoriaSearch(''); setIsOpen(true);
   };
@@ -457,6 +459,18 @@ export default function ProductosPage() {
               />
               Disponible
             </label>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Imágenes ({(form.imagenes_url ?? []).length}/5)
+              </label>
+              <ImageUpload
+                value={form.imagenes_url ?? []}
+                onChange={(urls) => setForm(f => ({ ...f, imagenes_url: urls }))}
+                multiple
+                maxImages={5}
+                folder="foodstore/productos"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Categorías{form.categoria_ids.length > 0 && ` (${form.categoria_ids.length} seleccionada${form.categoria_ids.length !== 1 ? 's' : ''})`}

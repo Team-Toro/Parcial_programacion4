@@ -4,7 +4,8 @@ from .schema import (
     CategoriaCreate,
     CategoriaUpdate,
     CategoriaPublic,
-    CategoriaStats
+    CategoriaStats,
+    ImagenCategoriaUpdate,
 )
 from .service import CategoriaService
 from ..uow.unit_of_work import UnitOfWork, get_uow
@@ -145,6 +146,24 @@ def eliminar_categoria(
     service: Annotated[CategoriaService, Depends(get_categoria_service)],
 ):
     service.delete(uow, categoria_id)
+
+
+@router.patch(
+    "/{categoria_id}/imagen",
+    response_model=CategoriaPublic,
+    dependencies=[Depends(require_role(["ADMIN"]))],
+    summary="Actualizar la imagen de una categoría",
+    responses={
+        404: {"description": "Categoría no encontrada"}
+    }
+)
+def actualizar_imagen_categoria(
+    categoria_id: Annotated[int, Path(ge=1, description="ID de la categoría")],
+    data: ImagenCategoriaUpdate,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    service: Annotated[CategoriaService, Depends(get_categoria_service)],
+):
+    return service.actualizar_imagen(uow, categoria_id, data.imagen_url)
 
 
 @router.post(

@@ -28,3 +28,9 @@ export const deleteCategoria = async (id: number): Promise<void> =>
 
 export const reactivarCategoria = async (id: number): Promise<Categoria> =>
   apiFetch<Categoria>(`/api/v1/categorias/${id}/reactivar`, { method: 'POST' });
+
+export const actualizarImagenCategoria = (id: number, imagen_url: string | null): Promise<Categoria> =>
+  apiFetch<Categoria>(`/api/v1/categorias/${id}/imagen`, {
+    method: 'PATCH',
+    body: JSON.stringify({ imagen_url }),
+  });

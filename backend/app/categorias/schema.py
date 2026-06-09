@@ -64,6 +64,10 @@ class CategoriaPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ImagenCategoriaUpdate(BaseModel):
+    imagen_url: str | None = None
+
+
 class CategoriaStats(BaseModel):
     subcategorias_count: int = Field(..., ge=0, description="Número de subcategorías directas")
     productos_count: int = Field(..., ge=0, description="Número de productos asociados")
