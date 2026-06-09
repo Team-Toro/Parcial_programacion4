@@ -20,6 +20,9 @@ import MisPedidosPage from './pages/MisPedidosPage';
 import PedidoDetallePage from './pages/PedidoDetallePage';
 import AdminPedidosPage from './pages/AdminPedidosPage';
 import PagoMockPage from './pages/PagoMockPage';
+import PagoPage from './pages/PagoPage';
+import SuccessPage from './pages/SuccessPage';
+import FailurePage from './pages/FailurePage';
 
 const queryClient = new QueryClient();
 
@@ -46,6 +49,9 @@ export default function App() {
               <Route path="/mis-pedidos" element={<MisPedidosPage />} />
               <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
               <Route path="/pago-mock/:external_reference" element={<PagoMockPage />} />
+              <Route path="/pagos/:pedido_id" element={<PagoPage />} />
+              <Route path="/pagos/:pedido_id/success" element={<SuccessPage />} />
+              <Route path="/pagos/:pedido_id/failure" element={<FailurePage />} />
 
               {/* Solo admin */}
               <Route element={<AdminRoute />}>

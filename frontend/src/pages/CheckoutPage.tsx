@@ -41,10 +41,8 @@ export default function CheckoutPage() {
     onSuccess: (pedido) => {
       vaciarCarrito();
       setTimeout(() => {
-        if (pedido.forma_pago_codigo === 'MERCADOPAGO' && pedido.external_reference) {
-          navigate(`/pago-mock/${pedido.external_reference}`, {
-            state: { pedido_id: pedido.id, monto: pedido.total },
-          });
+        if (pedido.forma_pago_codigo === 'MERCADOPAGO') {
+          navigate(`/pagos/${pedido.id}`);
         } else {
           navigate(`/mis-pedidos/${pedido.id}`);
         }
