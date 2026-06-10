@@ -19,6 +19,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import MisPedidosPage from './pages/MisPedidosPage';
 import PedidoDetallePage from './pages/PedidoDetallePage';
 import AdminPedidosPage from './pages/AdminPedidosPage';
+import DashboardPage from './pages/DashboardPage';
 import PagoMockPage from './pages/PagoMockPage';
 import PagoPage from './pages/PagoPage';
 import SuccessPage from './pages/SuccessPage';
@@ -58,6 +59,7 @@ export default function App() {
               {/* Solo admin */}
               <Route element={<AdminRoute />}>
                 <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
+                <Route path="/admin/dashboard" element={<DashboardPage />} />
               </Route>
 
               {/* Admin o staff con rol STOCK (gestión de catálogo) */}

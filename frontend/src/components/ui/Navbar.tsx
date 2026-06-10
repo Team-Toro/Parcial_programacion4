@@ -58,6 +58,11 @@ export default function Navbar() {
       visible: (u, r, isS, isA) => !!u && (isA || r.includes('STOCK')),
     },
     {
+      to: '/admin/dashboard',
+      label: 'Dashboard',
+      visible: (u, r, isS, isA) => !!u && isA,
+    },
+    {
       to: '/admin/usuarios',
       label: 'Usuarios',
       visible: (u, r, isS, isA) => !!u && isA,

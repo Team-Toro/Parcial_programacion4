@@ -14,6 +14,7 @@ from .estados_pedido.router import router as estados_pedido_router
 from .pedidos.router import router as pedidos_router
 from .pagos.router import router as pagos_router
 from .uploads.router import router as uploads_router
+from .admin.router import router as admin_router
 
 app = FastAPI(title="Food Store API", version="1.0.0")
 API_PREFIX = "/api/v1"
@@ -45,6 +46,7 @@ app.include_router(estados_pedido_router, prefix=API_PREFIX)
 app.include_router(pedidos_router, prefix=API_PREFIX)
 app.include_router(pagos_router, prefix=API_PREFIX)
 app.include_router(uploads_router, prefix=API_PREFIX)
+app.include_router(admin_router, prefix=API_PREFIX)
 
 
 @app.get("/")
