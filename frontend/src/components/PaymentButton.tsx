@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { crearPreferencia } from '../api/pagos';
+import { usePaymentStore } from '../store/paymentStore';
 
 interface Props {
   pedidoId: number;
@@ -8,15 +9,20 @@ interface Props {
 
 export default function PaymentButton({ pedidoId, onError }: Props) {
   const [loading, setLoading] = useState(false);
+  const { setStatus, setPedidoActivo, setError } = usePaymentStore();
 
   const handlePagar = async () => {
     setLoading(true);
+    setStatus('creating_preference');
     try {
       const res = await crearPreferencia(pedidoId);
+      setPedidoActivo(pedidoId, res.preference_id, res.init_point);
       window.location.href = res.init_point;
     } catch (err) {
       setLoading(false);
-      onError?.(err instanceof Error ? err.message : 'Error al crear la preferencia de pago');
+      const msg = err instanceof Error ? err.message : 'Error al crear la preferencia de pago';
+      setError(msg);
+      onError?.(msg);
     }
   };
 

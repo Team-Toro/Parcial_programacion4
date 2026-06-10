@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getMisPedidos } from '../api/pedidos';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useWsStore } from '../store/wsStore';
+import { SkeletonTable } from '../components/Skeleton';
 
 const TERMINALES = new Set(['ENTREGADO', 'CANCELADO']);
 
@@ -53,7 +54,12 @@ export default function MisPedidosPage() {
     return () => { activeIds.forEach(unsubscribeFromOrder); };
   }, [pedidos, subscribeToOrder, unsubscribeFromOrder]);
 
-  if (isLoading) return <div className="p-8 text-slate-500">Cargando pedidos...</div>;
+  if (isLoading) return (
+    <div className="px-4 sm:px-6 lg:px-12 py-8 max-w-5xl mx-auto">
+      <div className="h-9 w-36 bg-gray-200 animate-pulse rounded mb-6" />
+      <SkeletonTable rows={6} cols={5} />
+    </div>
+  );
   if (isError) return <div className="p-8 text-red-500">Error al cargar pedidos.</div>;
 
   return (

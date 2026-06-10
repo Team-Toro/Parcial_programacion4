@@ -14,6 +14,7 @@ import { getIngredientes } from '../api/ingredientes';
 import type { Producto, ProductoCreate, IngredienteEnProducto } from '../types';
 import Modal from '../components/ui/Modal';
 import ImageUpload from '../components/ImageUpload';
+import { SkeletonTable } from '../components/Skeleton';
 import { useDebounce } from '../hooks/useDebounce';
 import { useAuthStore } from '../store/authStore';
 
@@ -204,7 +205,12 @@ export default function ProductosPage() {
 
   const deletedCount = productos.filter(p => p.deleted_at).length;
 
-  if (isLoading) return <div className="p-8 text-slate-500">Cargando productos...</div>;
+  if (isLoading) return (
+    <div className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8 max-w-screen-2xl mx-auto">
+      <div className="h-9 w-40 bg-gray-200 animate-pulse rounded mb-6" />
+      <SkeletonTable rows={8} cols={7} />
+    </div>
+  );
   if (isError) return <div className="p-8 text-red-500">Error al cargar los productos.</div>;
 
   return (

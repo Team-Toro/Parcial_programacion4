@@ -36,6 +36,10 @@ services:
       - "5173:5173"
     env_file:
       - ./frontend/.env.docker
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
 
 volumes:
   postgres_data:

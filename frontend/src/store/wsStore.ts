@@ -11,14 +11,18 @@ interface WsStore {
   estadosRT: Record<number, string>;
   /** Latest NUEVO_PEDIDO event, consumed by AdminPedidosPage for the notification banner */
   newPedidoAlert: NewPedidoAlert | null;
+  /** Whether the WS connection is currently open */
+  isConnected: boolean;
 
   applyEvent: (event: string, data: Record<string, unknown>) => void;
   clearNewPedidoAlert: () => void;
+  setConnected: (connected: boolean) => void;
 }
 
 export const useWsStore = create<WsStore>((set) => ({
   estadosRT: {},
   newPedidoAlert: null,
+  isConnected: false,
 
   applyEvent: (event, data) => {
     const id = typeof data.id === 'number' ? data.id : undefined;
@@ -44,4 +48,5 @@ export const useWsStore = create<WsStore>((set) => ({
   },
 
   clearNewPedidoAlert: () => set({ newPedidoAlert: null }),
+  setConnected: (connected) => set({ isConnected: connected }),
 }));

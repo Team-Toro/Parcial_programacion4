@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import ModalMotivo from '../components/pedidos/ModalMotivo';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useWsStore } from '../store/wsStore';
+import { SkeletonTable } from '../components/Skeleton';
 
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: 'bg-amber-100 text-amber-700',
@@ -155,7 +156,7 @@ export default function AdminPedidosPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-slate-500 text-sm">Cargando...</p>
+        <SkeletonTable rows={8} cols={7} />
       ) : pedidos.length === 0 ? (
         <div className="text-center py-12 text-slate-500">
           No se encontraron pedidos con los filtros aplicados.

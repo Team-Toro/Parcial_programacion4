@@ -23,6 +23,8 @@ import PagoMockPage from './pages/PagoMockPage';
 import PagoPage from './pages/PagoPage';
 import SuccessPage from './pages/SuccessPage';
 import FailurePage from './pages/FailurePage';
+import ToastContainer from './components/ToastContainer';
+import WSManager from './components/WSManager';
 
 const queryClient = new QueryClient();
 
@@ -73,7 +75,9 @@ export default function App() {
           <Route path="*" element={<Navigate to="/productos" replace />} />
         </Routes>
       </BrowserRouter>
+      <WSManager />
       <ReactQueryDevtools initialIsOpen={false} />
+      <ToastContainer />
     </QueryClientProvider>
   );
 }

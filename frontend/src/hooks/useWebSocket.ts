@@ -21,6 +21,7 @@ export function useWebSocket() {
   const pendingSubs = useRef<Set<number>>(new Set());
 
   const applyEvent = useWsStore((s) => s.applyEvent);
+  const setConnected = useWsStore((s) => s.setConnected);
 
   const sendRaw = useCallback((msg: object) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -30,12 +31,15 @@ export function useWebSocket() {
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (wsRef.current?.readyState === WebSocket.CONNECTING) return;
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
     ws.onopen = () => {
       if (!mountedRef.current) { ws.close(); return; }
       retryCountRef.current = 0;
+      setConnected(true);
       pendingSubs.current.forEach((id) =>
         ws.send(JSON.stringify({ action: 'subscribe-order', order_id: id }))
       );
@@ -55,6 +59,7 @@ export function useWebSocket() {
 
     ws.onclose = (e: CloseEvent) => {
       wsRef.current = null;
+      setConnected(false);
       // 1008 = auth failure — the server explicitly rejected us, do not retry
       if (e.code === 1008 || !mountedRef.current) return;
       const delay = Math.min(BACKOFF_BASE_MS * 2 ** retryCountRef.current, BACKOFF_MAX_MS);
@@ -63,7 +68,11 @@ export function useWebSocket() {
         if (mountedRef.current) connect();
       }, delay);
     };
-  }, [applyEvent]);
+
+    ws.onerror = () => {
+      setConnected(false);
+    };
+  }, [applyEvent, setConnected]);
 
   useEffect(() => {
     mountedRef.current = true;

@@ -3,6 +3,7 @@ import { useParams, useSearchParams, Link, Navigate } from 'react-router-dom';
 import { confirmarPago, getPagoByPedido } from '../api/pagos';
 import { getPedido } from '../api/pedidos';
 import type { Pedido } from '../types';
+import { usePaymentStore } from '../store/paymentStore';
 
 type ResultadoPago = 'cargando' | 'aprobado' | 'pendiente' | 'rechazado';
 
@@ -21,6 +22,12 @@ export default function SuccessPage() {
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const { setStatus, reset } = usePaymentStore();
+
+  useEffect(() => {
+    return () => { reset(); };
+  }, [reset]);
+
   useEffect(() => {
     if (isNaN(pedidoId)) return;
 
@@ -28,18 +35,25 @@ export default function SuccessPage() {
     const paymentId = paymentIdStr ? Number(paymentIdStr) : null;
 
     const verificar = async () => {
+      setStatus('verifying');
       try {
         const pedidoData = await getPedido(pedidoId);
         setPedido(pedidoData);
 
         if (paymentId) {
           const res = await confirmarPago(pedidoId, paymentId);
-          setResultado(mpStatusToResultado(res.estado));
+          const r = mpStatusToResultado(res.estado);
+          setResultado(r);
+          if (r === 'aprobado') setStatus('approved');
+          else if (r === 'rechazado') setStatus('rejected');
         } else {
           // Sin payment_id: consultar estado actual del pago (webhook ya lo procesó)
           try {
             const pago = await getPagoByPedido(pedidoId);
-            setResultado(mpStatusToResultado(pago.mp_status));
+            const r = mpStatusToResultado(pago.mp_status);
+            setResultado(r);
+            if (r === 'aprobado') setStatus('approved');
+            else if (r === 'rechazado') setStatus('rejected');
           } catch {
             setResultado('pendiente');
           }
@@ -47,11 +61,12 @@ export default function SuccessPage() {
       } catch (err) {
         setErrorMsg(err instanceof Error ? err.message : 'Error al verificar el pago');
         setResultado('rechazado');
+        setStatus('rejected');
       }
     };
 
     verificar();
-  }, [pedidoId, searchParams]);
+  }, [pedidoId, searchParams, setStatus]);
 
   if (isNaN(pedidoId)) return <Navigate to="/mis-pedidos" replace />;
 
