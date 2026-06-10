@@ -397,6 +397,7 @@ class PagoService:
         return pedido
 
     def get_pago_by_pedido(self, uow: UnitOfWork, pedido_id: int, current_user) -> Pago:
+        """Retorna el Pago de un pedido validando que el usuario tenga acceso."""
         pago = uow.pagos.get_by_pedido_id(pedido_id)
         if not pago:
             raise HTTPException(

@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from app.core.database import create_all_tables
+from app.core.limiter import limiter
 from .categorias.router import router as categorias_router
 from .ingredientes.router import router as ingredientes_router
 from .productos.router import router as productos_router
@@ -14,6 +17,9 @@ from .uploads.router import router as uploads_router
 
 app = FastAPI(title="Food Store API", version="1.0.0")
 API_PREFIX = "/api/v1"
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

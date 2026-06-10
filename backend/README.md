@@ -172,6 +172,138 @@ backend/
 
 ---
 
+---
+
+## Variables de entorno
+
+Copiá `env.example` a `.env` y completá los valores. Variables disponibles:
+
+| Variable | Descripción |
+|----------|-------------|
+| `POSTGRES_USER` | Usuario de PostgreSQL |
+| `POSTGRES_PASSWORD` | Contraseña de PostgreSQL |
+| `POSTGRES_DB` | Nombre de la base de datos |
+| `POSTGRES_HOST` | Host de la base de datos (usar `db` con Docker Compose) |
+| `POSTGRES_PORT` | Puerto de PostgreSQL (default: 5432) |
+| `SECRET_KEY` | Clave secreta para firmar JWT (mínimo 32 caracteres) |
+| `ALGORITHM` | Algoritmo JWT (default: `HS256`) |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Duración del access token en minutos (default: 30) |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | Duración del refresh token en días (default: 7) |
+| `MP_ACCESS_TOKEN` | Access token de MercadoPago (modo TEST o producción) |
+| `MP_PUBLIC_KEY` | Public key de MercadoPago (para el frontend) |
+| `CLOUDINARY_CLOUD_NAME` | Cloud name de tu cuenta Cloudinary |
+| `CLOUDINARY_API_KEY` | API Key de Cloudinary |
+| `CLOUDINARY_API_SECRET` | API Secret de Cloudinary |
+| `NGROK_URL` | URL pública de NGROK para webhooks en desarrollo |
+| `CORS_ORIGINS` | Lista JSON de orígenes permitidos para CORS |
+
+---
+
+## Configuración de MercadoPago
+
+### 1. Obtener credenciales TEST
+
+1. Ingresá a [mercadopago.com/developers](https://www.mercadopago.com.ar/developers/panel)
+2. Creá una aplicación o usá una existente
+3. En la sección **Credenciales de prueba**, copiá:
+   - `Access Token` → `MP_ACCESS_TOKEN`
+   - `Public Key` → `MP_PUBLIC_KEY`
+
+### 2. Configurar NGROK para webhooks locales
+
+MercadoPago necesita una URL pública para enviarte el webhook. En desarrollo usás NGROK:
+
+```bash
+# Instalar NGROK: https://ngrok.com/download
+ngrok http 8000
+```
+
+Copiá la URL HTTPS que genera (ej: `https://abc123.ngrok-free.dev`) y pegala en `.env`:
+
+```env
+NGROK_URL=https://abc123.ngrok-free.dev
+```
+
+### 3. Configurar el webhook en el panel de MP
+
+1. En el panel de desarrolladores → **Notificaciones IPN / Webhooks**
+2. URL de notificación: `https://tu-subdominio.ngrok-free.dev/api/v1/pagos/webhook`
+3. Eventos a escuchar: `payment`
+4. Guardá los cambios
+
+> **Nota:** cada vez que reiniciás NGROK obtenés una URL nueva — actualizá el `.env` y el panel de MP.
+
+---
+
+## Configuración de Cloudinary
+
+### 1. Crear cuenta
+
+Registrate gratis en [cloudinary.com](https://cloudinary.com). El plan gratuito incluye 25 GB de almacenamiento.
+
+### 2. Obtener credenciales
+
+Desde el **Dashboard** de Cloudinary copiá:
+- **Cloud Name** → `CLOUDINARY_CLOUD_NAME`
+- **API Key** → `CLOUDINARY_API_KEY`
+- **API Secret** → `CLOUDINARY_API_SECRET`
+
+Las imágenes se suben a la carpeta `foodstore/productos` por defecto.
+
+---
+
+## WebSocket
+
+El backend expone un endpoint WebSocket para notificaciones en tiempo real sobre el estado de los pedidos.
+
+### Endpoint
+
+```
+ws://localhost:8000/api/v1/pedidos/ws
+```
+
+### Autenticación
+
+La autenticación se realiza mediante la cookie HttpOnly `access_token` que el navegador envía automáticamente al hacer el handshake. No se necesita header adicional.
+
+Si el token es inválido o está ausente, el servidor cierra la conexión con código `1008`.
+
+### Mensajes que emite el servidor
+
+El servidor envía objetos JSON con la estructura:
+
+```json
+{ "event": "NOMBRE_EVENTO", "data": { ... } }
+```
+
+| Evento | Cuándo se emite |
+|--------|-----------------|
+| `NUEVO_PEDIDO` | Al crear un pedido nuevo |
+| `PEDIDO_CONFIRMADO` | Al confirmar el pago |
+| `PEDIDO_EN_PREPARACION` | Al cambiar el estado a `EN_PREP` |
+| `PEDIDO_EN_CAMINO` | Al cambiar el estado a `EN_CAMINO` |
+| `PEDIDO_ENTREGADO` | Al marcar el pedido como entregado |
+| `PEDIDO_CANCELADO` | Al cancelar un pedido |
+| `SUBSCRIBED` | Confirmación de suscripción a un pedido específico |
+| `UNSUBSCRIBED` | Confirmación de desuscripción |
+| `ERROR` | Mensaje de error en la comunicación |
+
+### Suscripción a un pedido específico
+
+Para recibir eventos de un pedido concreto además de los de rol, enviá:
+
+```json
+{ "action": "subscribe_order", "order_id": 42 }
+```
+
+Para dejar de escucharlo:
+
+```json
+{ "action": "unsubscribe_order", "order_id": 42 }
+```
+
+---
+
 ## Autores
 
 Arena Lucio

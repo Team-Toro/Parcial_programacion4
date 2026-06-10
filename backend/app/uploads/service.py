@@ -36,6 +36,7 @@ def _check_configured() -> None:
 async def upload_imagen(
     file_bytes: bytes, folder: str = "foodstore/productos"
 ) -> CloudinaryResponse:
+    """Sube una imagen a Cloudinary y retorna la URL segura y metadatos."""
     _check_configured()
 
     result = await asyncio.to_thread(
@@ -60,6 +61,7 @@ async def upload_imagen(
 
 
 async def delete_imagen(public_id: str) -> None:
+    """Elimina una imagen de Cloudinary por su public_id (operación idempotente)."""
     _check_configured()
 
     result = await asyncio.to_thread(

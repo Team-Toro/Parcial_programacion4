@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.uow.unit_of_work import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
 from .model import Usuario
@@ -31,7 +32,9 @@ usuario_service = UsuarioService()
 # ─── Registro ─────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=UsuarioPublic, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/15minute")
 def register(
+    request: Request,
     user_in: UsuarioCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
@@ -42,7 +45,9 @@ def register(
 # ─── Login (OAuth2 Password Flow) ────────────────────────────────────────────
 
 @router.post("/token", response_model=UsuarioToken)
+@limiter.limit("5/15minute")
 def login(
+    request: Request,
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
