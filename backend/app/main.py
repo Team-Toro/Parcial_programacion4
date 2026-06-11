@@ -16,7 +16,7 @@ from .pagos.router import router as pagos_router
 from .uploads.router import router as uploads_router
 from .admin.router import router as admin_router
 
-app = FastAPI(title="Food Store API", version="1.0.0")
+app = FastAPI(title="Food Store API", version="1.0.0", redirect_slashes=False)
 API_PREFIX = "/api/v1"
 
 app.state.limiter = limiter

@@ -2,13 +2,13 @@ import type { Direccion, DireccionCreate, DireccionUpdate } from '../types';
 import { apiFetch } from './client';
 
 export const getDirecciones = async (): Promise<Direccion[]> =>
-  apiFetch<Direccion[]>('/api/v1/direcciones');
+  apiFetch<Direccion[]>('/api/v1/direcciones/');
 
 export const getDireccion = async (id: number): Promise<Direccion> =>
   apiFetch<Direccion>(`/api/v1/direcciones/${id}`);
 
 export const createDireccion = async (data: DireccionCreate): Promise<Direccion> =>
-  apiFetch<Direccion>('/api/v1/direcciones', {
+  apiFetch<Direccion>('/api/v1/direcciones/', {
     method: 'POST',
     body: JSON.stringify(data),
   });

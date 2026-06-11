@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronRight, ChevronDown, RefreshCw, Search } from 'lucide-react';
+import { ChevronRight, ChevronDown, RefreshCw, Search, X } from 'lucide-react';
+import CategoriaCard from '../components/CategoriaCard';
 import {
   getCategorias, getCategoriaStats, createCategoria,
   updateCategoria, deleteCategoria, reactivarCategoria,
@@ -10,7 +11,7 @@ import Modal from '../components/ui/Modal';
 import ImageUpload from '../components/ImageUpload';
 import { useAuthStore } from '../store/authStore';
 
-const MAX_LEVEL = 3;
+const MAX_LEVEL = 10;
 
 const getCategoriaLevel = (cat: Categoria, categorias: Categoria[]): number => {
   let level = 0;
@@ -142,6 +143,7 @@ export default function CategoriasPage() {
   const [deleteStats, setDeleteStats] = useState<{ subcategorias_count: number; productos_count: number; nivel: number } | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [includeDeleted, setIncludeDeleted] = useState(false);
+  const [treeSearch, setTreeSearch] = useState('');
   const [toast, setToast] = useState<ToastState>(null);
   const [toastVisible, setToastVisible] = useState(false);
 
@@ -164,6 +166,17 @@ export default function CategoriasPage() {
       return next;
     });
   };
+
+  const expandAll = () => {
+    const withChildren = new Set(
+      categoriasFlat
+        .filter(c => categoriasFlat.some(sub => sub.parent_id === c.id))
+        .map(c => c.id)
+    );
+    setExpandedIds(withChildren);
+  };
+
+  const collapseAll = () => setExpandedIds(new Set());
 
   // El back devuelve árbol anidado con subcategorias incluidas.
   // Pasamos only_roots=true para obtener solo raíces con hijos ya anidados.
@@ -286,6 +299,24 @@ export default function CategoriasPage() {
   if (isLoading) return <div className="p-8 text-slate-500">Cargando categorías...</div>;
   if (isError) return <div className="p-8 text-red-500">Error al cargar las categorías.</div>;
 
+  if (!isAdmin) {
+    const rootCategorias = categoriasFlat.filter(c => !c.parent_id);
+    return (
+      <div className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8 max-w-screen-2xl mx-auto">
+        <h1 className="text-2xl font-bold text-slate-800 mb-6">Categorías</h1>
+        {rootCategorias.length === 0 ? (
+          <p className="text-slate-500 text-center py-16">No hay categorías disponibles.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {rootCategorias.map(cat => (
+              <CategoriaCard key={cat.id} categoria={cat} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8 max-w-screen-2xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -318,8 +349,89 @@ export default function CategoriasPage() {
         </div>
       </div>
 
+      {/* Búsqueda + Expand/Collapse (admin) */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={treeSearch}
+            onChange={(e) => setTreeSearch(e.target.value)}
+            placeholder="Buscar categoría..."
+            className="w-full pl-9 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+          {treeSearch && (
+            <button
+              onClick={() => setTreeSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        {!treeSearch && (
+          <>
+            <button
+              onClick={expandAll}
+              className="px-3 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 transition-colors"
+            >
+              Expandir todas
+            </button>
+            <button
+              onClick={collapseAll}
+              className="px-3 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 transition-colors"
+            >
+              Colapsar todas
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="bg-white rounded-2xl shadow overflow-hidden">
-        {rootsVisibles.length === 0 ? (
+        {treeSearch ? (
+          // Vista plana cuando hay búsqueda activa
+          (() => {
+            const treeFiltered = categoriasFlat.filter(
+              c => c.nombre.toLowerCase().includes(treeSearch.toLowerCase()) && (includeDeleted || !c.deleted_at)
+            );
+            return treeFiltered.length === 0 ? (
+              <p className="px-6 py-8 text-center text-slate-400">Sin resultados para "{treeSearch}"</p>
+            ) : (
+              treeFiltered.map(cat => (
+                <div
+                  key={cat.id}
+                  className={`flex items-center px-6 py-3 border-t border-slate-100 transition-colors ${
+                    cat.deleted_at ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-orange-50'
+                  }`}
+                >
+                  <span className={`flex-1 text-sm font-medium ${cat.deleted_at ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                    {cat.nombre}
+                    {cat.parent_id && (
+                      <span className="ml-2 text-xs text-slate-400 font-normal">
+                        (subcategoría de {categoriasFlat.find(p => p.id === cat.parent_id)?.nombre ?? '?'})
+                      </span>
+                    )}
+                  </span>
+                  <div className="flex gap-2">
+                    {cat.deleted_at ? (
+                      <button
+                        onClick={() => reactivarMutation.mutate(cat.id)}
+                        className="flex items-center gap-1.5 text-green-600 hover:text-green-800 text-sm font-medium"
+                      >
+                        <RefreshCw className="w-4 h-4" />Reactivar
+                      </button>
+                    ) : (
+                      <>
+                        <button onClick={() => openEdit(cat)} className="text-blue-600 hover:underline text-sm">Editar</button>
+                        <button onClick={() => handleDeleteClick(cat)} className="text-red-500 hover:underline text-sm">Eliminar</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))
+            );
+          })()
+        ) : rootsVisibles.length === 0 ? (
           <p className="px-6 py-8 text-center text-slate-400">No hay categorías aún.</p>
         ) : (
           rootsVisibles.map(cat => (

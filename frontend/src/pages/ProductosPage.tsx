@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import ProductoCard from '../components/ProductoCard';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search, X, RotateCcw, ChevronLeft, ChevronRight,
@@ -11,7 +12,7 @@ import {
 } from '../api/productos';
 import { getCategorias } from '../api/categorias';
 import { getIngredientes } from '../api/ingredientes';
-import type { Producto, ProductoCreate, IngredienteEnProducto } from '../types';
+import type { Producto, ProductoCreate, IngredienteEnProducto, Categoria, Ingrediente } from '../types';
 import Modal from '../components/ui/Modal';
 import ImageUpload from '../components/ImageUpload';
 import { SkeletonTable } from '../components/Skeleton';
@@ -41,6 +42,9 @@ export default function ProductosPage() {
   const qc = useQueryClient();
   const isAdmin = useAuthStore((s) => s.isAdmin());
   const isProductManager = useAuthStore((s) => s.isProductManager());
+  const isAdminView = isAdmin || isProductManager;
+  const [searchParams] = useSearchParams();
+  const categoriaIdParam = searchParams.get('categoria_id');
 
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Producto | null>(null);
@@ -81,6 +85,7 @@ export default function ProductosPage() {
     sort: sortBy,
     order: sortOrder,
     include_deleted: includeDeleted || undefined,
+    categoria_id: !isAdminView && categoriaIdParam ? Number(categoriaIdParam) : undefined,
   };
 
   const hasActiveFilters = searchInput.trim() !== '' || sortBy !== 'nombre' || sortOrder !== 'asc';
@@ -97,17 +102,56 @@ export default function ProductosPage() {
     queryFn: () => getCategorias({ limit: 100 }),
   });
 
-  // Raíces primero, sus hijos inmediatamente debajo
-  const categoriasOrdenadas = categorias.filter(c => !c.parent_id).flatMap(r => [
-    r,
-    ...categorias.filter(c => c.parent_id === r.id),
-  ]);
+  // Árbol completo aplanado (DFS) con profundidad, para indentar en el selector
+  const categoriasFlat = useMemo(() => {
+    const porPadre = new Map<number | null, Categoria[]>();
+    categorias.forEach(c => {
+      const key = c.parent_id ?? null;
+      porPadre.set(key, [...(porPadre.get(key) ?? []), c]);
+    });
+    const resultado: { cat: Categoria; depth: number }[] = [];
+    const recorrer = (parentId: number | null, depth: number) => {
+      (porPadre.get(parentId) ?? []).forEach(c => {
+        resultado.push({ cat: c, depth });
+        recorrer(c.id, depth + 1);
+      });
+    };
+    recorrer(null, 0);
+    return resultado;
+  }, [categorias]);
+
+  // Solo las hojas (sin subcategorías) pueden asignarse a un producto
+  const esHoja = (cat: Categoria) => !categorias.some(c => c.parent_id === cat.id);
 
   const { data: ingredientesModal = [] } = useQuery({
     queryKey: ['ingredientes', { q: debouncedIngSearch, limit: 50 }],
     queryFn: () => getIngredientes({ q: debouncedIngSearch || undefined, limit: 50 }),
     enabled: isOpen,
   });
+
+  // Cache de ingredientes vistos: el listado del modal se filtra por búsqueda,
+  // pero el precio de los ya seleccionados tiene que seguir disponible
+  const ingredientesVistos = useRef(new Map<number, Ingrediente>());
+  useEffect(() => {
+    ingredientesModal.forEach(i => ingredientesVistos.current.set(i.id, i));
+  }, [ingredientesModal]);
+
+  const buscarIngrediente = (id: number) =>
+    ingredientesVistos.current.get(id)
+      ?? editing?.ingredientes.find(i => i.ingrediente.id === id)?.ingrediente;
+
+  // Sugerido = costo de ingredientes seleccionados + 50% markup.
+  // Si falta el precio de alguno, no se muestra (es solo informativo).
+  let costoIngredientes = 0;
+  let costoCompleto = form.ingredientes.length > 0;
+  for (const pi of form.ingredientes) {
+    const ing = buscarIngrediente(pi.ingrediente_id);
+    if (!ing || ing.precio === undefined) { costoCompleto = false; break; }
+    costoIngredientes += Number(ing.precio) * pi.cantidad;
+  }
+  const precioSugerido = costoCompleto && costoIngredientes > 0
+    ? Math.round(costoIngredientes * 1.5 * 100) / 100
+    : null;
 
   const createMutation = useMutation({
     mutationFn: createProducto,
@@ -212,6 +256,79 @@ export default function ProductosPage() {
     </div>
   );
   if (isError) return <div className="p-8 text-red-500">Error al cargar los productos.</div>;
+
+  if (!isAdminView) {
+    return (
+      <div className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8 max-w-screen-2xl mx-auto">
+        <div className="flex flex-wrap justify-between items-center mb-6 gap-3">
+          <h1 className="text-2xl font-bold text-slate-800">
+            {categoriaIdParam
+              ? (categorias.find(c => c.id === Number(categoriaIdParam))?.nombre ?? 'Productos')
+              : 'Productos'}
+          </h1>
+          {categoriaIdParam && (
+            <Link to="/productos" className="text-sm text-orange-500 hover:underline">
+              ← Ver todas las categorías
+            </Link>
+          )}
+        </div>
+
+        <div className="bg-white p-4 rounded-xl shadow border border-slate-200 mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Buscar producto..."
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+        </div>
+
+        {isFetching && !isLoading && (
+          <p className="text-xs text-slate-400 mb-3 px-1">Actualizando...</p>
+        )}
+
+        {productos.length === 0 ? (
+          <div className="text-center py-16">
+            <SearchX className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500">
+              {searchInput ? 'No se encontraron productos.' : 'No hay productos disponibles.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {productos.map((p) => (
+              <ProductoCard key={p.id} producto={p} />
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-between items-center mt-6 px-2">
+          <p className="text-sm text-slate-600">
+            {productos.length} resultado{productos.length !== 1 ? 's' : ''}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />Anterior
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={productos.length < PAGE_SIZE}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente<ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8 max-w-screen-2xl mx-auto">
@@ -456,6 +573,20 @@ export default function ProductosPage() {
                 value={form.precio_base}
                 onChange={e => setForm(f => ({ ...f, precio_base: parseFloat(e.target.value) || 0 }))}
               />
+              {precioSugerido !== null && (
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-xs text-slate-500">
+                    Precio sugerido (50% markup sobre ingredientes): ${precioSugerido.toLocaleString('es-AR')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, precio_base: precioSugerido }))}
+                    className="text-xs text-orange-500 hover:underline font-medium whitespace-nowrap"
+                  >
+                    Usar este precio
+                  </button>
+                </div>
+              )}
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
               <input
@@ -507,21 +638,26 @@ export default function ProductosPage() {
                 placeholder="Buscar categoría..."
                 className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-sm mb-1 focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
-              {/* Lista con checkboxes */}
+              {/* Lista con checkboxes — árbol completo, solo hojas seleccionables */}
               <div className="border border-slate-300 rounded-lg max-h-40 overflow-y-auto divide-y divide-slate-100">
-                {categoriasOrdenadas
-                  .filter(c => !categoriaSearch || c.nombre.toLowerCase().includes(categoriaSearch.toLowerCase()))
-                  .map(cat => {
+                {categoriasFlat
+                  .filter(({ cat }) => !categoriaSearch || cat.nombre.toLowerCase().includes(categoriaSearch.toLowerCase()))
+                  .map(({ cat, depth }) => {
+                    const hoja = esHoja(cat);
                     const isSelected = form.categoria_ids.includes(cat.id);
                     return (
                       <div
                         key={cat.id}
-                        onClick={() => toggleCategoria(cat.id)}
-                        className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-slate-50 text-sm ${isSelected ? 'bg-orange-50' : ''} ${cat.parent_id ? 'pl-6' : ''}`}
+                        onClick={() => hoja && toggleCategoria(cat.id)}
+                        className={`flex items-center gap-2 px-3 py-2 text-sm ${
+                          hoja ? 'cursor-pointer hover:bg-slate-50' : 'opacity-50 cursor-not-allowed'
+                        } ${isSelected ? 'bg-orange-50' : ''}`}
                       >
-                        <input type="checkbox" readOnly checked={isSelected} className="w-3.5 h-3.5 accent-orange-500 shrink-0" />
-                        {cat.parent_id && <span className="text-slate-400 text-xs">⤷</span>}
-                        <span className={isSelected ? 'font-medium text-orange-700' : 'text-slate-700'}>{cat.nombre}</span>
+                        <input type="checkbox" readOnly disabled={!hoja} checked={isSelected} className="w-3.5 h-3.5 accent-orange-500 shrink-0" />
+                        <span className={`whitespace-pre ${isSelected ? 'font-medium text-orange-700' : 'text-slate-700'}`}>
+                          {'　'.repeat(depth)}{hoja ? (depth > 0 ? '↳ ' : '') : '📁 '}{cat.nombre}
+                        </span>
+                        {!hoja && <span className="text-xs text-slate-400 ml-1">(tiene subcategorías)</span>}
                       </div>
                     );
                   })}

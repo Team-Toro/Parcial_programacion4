@@ -1,4 +1,5 @@
 from typing import Optional
+from decimal import Decimal
 from datetime import datetime
 from sqlmodel import SQLModel
 from pydantic import field_validator
@@ -11,6 +12,7 @@ class IngredienteBase(SQLModel):
     es_alergeno: bool = False
     unidad: UnidadMedida = UnidadMedida.UNIDAD
     stock_actual: float = 0.0
+    precio: Decimal = Decimal("0.00")
 
     @field_validator("nombre")
     @classmethod
@@ -30,6 +32,7 @@ class IngredienteUpdate(SQLModel):
     es_alergeno: Optional[bool] = None
     unidad: Optional[UnidadMedida] = None
     stock_actual: Optional[float] = None
+    precio: Optional[Decimal] = None
 
 
 class IngredienteRead(IngredienteBase):

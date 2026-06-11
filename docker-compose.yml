@@ -41,5 +41,19 @@ services:
       - ./frontend/public:/app/public
       - ./frontend/index.html:/app/index.html
 
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "http"
+      - "--domain=${NGROK_DOMAIN}"
+      - "api:8000"
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - api
+
 volumes:
   postgres_data:

@@ -4,12 +4,12 @@ import { apiFetch, buildQueryString } from './client';
 export const getIngredientes = async (params?: IngredienteListParams): Promise<Ingrediente[]> => {
   const { offset, limit, q, es_alergeno, sort, order, include_deleted } = params ?? {};
   return apiFetch<Ingrediente[]>(
-    `/api/v1/ingredientes${buildQueryString({ offset, limit, q, es_alergeno, sort, order, include_deleted })}`
+    `/api/v1/ingredientes/${buildQueryString({ offset, limit, q, es_alergeno, sort, order, include_deleted })}`
   );
 };
 
 export const createIngrediente = async (data: IngredienteCreate): Promise<Ingrediente> =>
-  apiFetch<Ingrediente>('/api/v1/ingredientes', {
+  apiFetch<Ingrediente>('/api/v1/ingredientes/', {
     method: 'POST',
     body: JSON.stringify(data),
   });

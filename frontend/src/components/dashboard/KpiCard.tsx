@@ -1,6 +1,8 @@
+import { ReactNode } from 'react';
+
 interface KpiCardProps {
   title: string;
-  value: string | number;
+  value: ReactNode;
   subtitle?: string;
   icon?: string;
   color?: 'orange' | 'blue' | 'green' | 'purple' | 'red' | 'indigo';
@@ -17,12 +19,12 @@ const COLOR_CLASSES: Record<NonNullable<KpiCardProps['color']>, string> = {
 
 export default function KpiCard({ title, value, subtitle, icon, color = 'orange' }: KpiCardProps) {
   return (
-    <div className={`rounded-xl border p-5 flex items-start gap-3 ${COLOR_CLASSES[color]}`}>
-      {icon && <span className="text-2xl mt-0.5 select-none">{icon}</span>}
-      <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wide opacity-70 truncate">{title}</p>
-        <p className="text-2xl font-bold mt-1 truncate">{value}</p>
-        {subtitle && <p className="text-xs mt-1 opacity-60">{subtitle}</p>}
+    <div className={`rounded-xl border p-5 flex items-start gap-3 min-h-[110px] ${COLOR_CLASSES[color]}`}>
+      {icon && <span className="text-2xl mt-0.5 select-none flex-shrink-0">{icon}</span>}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide opacity-70 break-words leading-tight">{title}</p>
+        <p className="text-xl md:text-2xl font-bold mt-2 break-words leading-tight" title={String(value)}>{value}</p>
+        {subtitle && <p className="text-xs mt-1 opacity-60 break-words">{subtitle}</p>}
       </div>
     </div>
   );

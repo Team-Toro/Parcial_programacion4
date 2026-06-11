@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Package } from 'lucide-react';
 import { getProductoById } from '../api/productos';
 import { useAuthStore } from '../store/authStore';
 import { useCarritoStore } from '../store/carritoStore';
@@ -27,6 +27,7 @@ export default function ProductoDetallePage() {
     enabled: !!id,
   });
 
+  const [activeImage, setActiveImage] = useState<string | undefined>(undefined);
   const [cantidad, setCantidad] = useState(1);
   const [removidos, setRemovidos] = useState<number[]>([]);
   const [toast, setToast] = useState<string | null>(null);
@@ -91,6 +92,41 @@ export default function ProductoDetallePage() {
         )}
       </div>
       <div className="bg-white rounded-2xl shadow p-6">
+        {/* Galería de imágenes */}
+        {(producto.imagenes_url?.length ?? 0) > 0 && (
+          <div className="mb-6">
+            <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100">
+              <img
+                src={activeImage ?? producto.imagenes_url![0]}
+                alt={producto.nombre}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {producto.imagenes_url!.length > 1 && (
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {producto.imagenes_url!.map((url, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImage(url)}
+                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors flex-shrink-0 ${
+                      (activeImage ?? producto.imagenes_url![0]) === url
+                        ? 'border-orange-500'
+                        : 'border-transparent hover:border-orange-300'
+                    }`}
+                  >
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {(producto.imagenes_url?.length ?? 0) === 0 && (
+          <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-orange-50 to-slate-100 flex items-center justify-center mb-6">
+            <Package className="w-16 h-16 text-orange-200" />
+          </div>
+        )}
+
         <div className="flex justify-between items-start mb-4">
           <h1 className="text-2xl font-bold text-slate-800">{producto.nombre}</h1>
           <div className="flex gap-2">

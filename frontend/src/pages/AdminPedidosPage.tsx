@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllPedidos, avanzarEstadoPedido, cancelarPedido } from '../api/pedidos';
@@ -47,7 +47,7 @@ export default function AdminPedidosPage() {
   const user = useAuthStore((s) => s.user);
   const isStaff = user?.roles?.some((r) => STAFF_ROLES.includes(r)) ?? false;
 
-  const [usuarioIdInput, setUsuarioIdInput] = useState('');
+  const [usuarioIdFilter, setUsuarioIdFilter] = useState<number | undefined>(undefined);
   const [estadoCodigo, setEstadoCodigo] = useState('');
   const [offset, setOffset] = useState(0);
   const [pedidoACancelar, setPedidoACancelar] = useState<number | null>(null);
@@ -65,18 +65,35 @@ export default function AdminPedidosPage() {
 
   if (!isStaff) return <Navigate to="/productos" replace />;
 
-  const usuarioId = usuarioIdInput.trim() ? Number(usuarioIdInput) : undefined;
-
   const { data: pedidos = [], isLoading } = useQuery({
-    queryKey: ['admin-pedidos', usuarioId, estadoCodigo, offset],
+    queryKey: ['admin-pedidos', usuarioIdFilter, estadoCodigo, offset],
     queryFn: () =>
       getAllPedidos({
-        usuario_id: usuarioId,
+        usuario_id: usuarioIdFilter,
         estado_codigo: estadoCodigo || undefined,
         offset,
         limit: PAGE_SIZE,
       }),
   });
+
+  const { data: todosPedidos = [] } = useQuery({
+    queryKey: ['admin-pedidos-usuarios'],
+    queryFn: () => getAllPedidos({ limit: 100 }),
+    staleTime: 60_000,
+  });
+
+  const usuariosUnicos = useMemo(() => {
+    const map = new Map<number, { total: number; activos: number }>();
+    todosPedidos.forEach((p) => {
+      const entry = map.get(p.usuario_id) ?? { total: 0, activos: 0 };
+      entry.total += 1;
+      if (!TERMINALES.has(p.estado_codigo)) entry.activos += 1;
+      map.set(p.usuario_id, entry);
+    });
+    return Array.from(map.entries())
+      .map(([id, { total, activos }]) => ({ id, total, activos }))
+      .sort((a, b) => b.activos - a.activos || a.id - b.id);
+  }, [todosPedidos]);
 
   const mutAvanzar = useMutation({
     mutationFn: ({ id, estado }: { id: number; estado: string }) =>
@@ -123,15 +140,22 @@ export default function AdminPedidosPage() {
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-5 flex flex-wrap gap-3 items-end">
         <div>
-          <label className="block text-xs text-slate-500 mb-1">ID de usuario</label>
-          <input
-            type="number"
-            min="1"
-            value={usuarioIdInput}
-            onChange={(e) => setUsuarioIdInput(e.target.value)}
-            placeholder="Todos"
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-orange-400"
-          />
+          <label className="block text-xs text-slate-500 mb-1">Usuario</label>
+          <select
+            value={usuarioIdFilter ?? ''}
+            onChange={(e) => {
+              setUsuarioIdFilter(e.target.value ? Number(e.target.value) : undefined);
+              setOffset(0);
+            }}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            <option value="">Todos los usuarios</option>
+            {usuariosUnicos.map((u) => (
+              <option key={u.id} value={u.id}>
+                Usuario #{u.id} ({u.activos} activos / {u.total} total)
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-xs text-slate-500 mb-1">Estado</label>

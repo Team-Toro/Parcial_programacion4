@@ -101,61 +101,64 @@ CATEGORIAS_INICIALES = [
     {
         "nombre": "Bebidas",
         "descripcion": "Bebidas frías y calientes",
+        "imagen_url": "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=800",
         "subcategorias": [
-            {"nombre": "Gaseosas", "descripcion": "Con gas y sin alcohol"},
-            {"nombre": "Jugos", "descripcion": "Jugos naturales"},
+            {"nombre": "Gaseosas", "descripcion": "Con gas y sin alcohol", "imagen_url": "https://images.unsplash.com/photo-1581636625402-29b2a704ef13?w=800"},
+            {"nombre": "Jugos", "descripcion": "Jugos naturales", "imagen_url": "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=800"},
         ],
     },
     {
         "nombre": "Comidas",
         "descripcion": "Platos principales",
+        "imagen_url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
         "subcategorias": [
-            {"nombre": "Hamburguesas", "descripcion": "Clásicas y gourmet"},
-            {"nombre": "Pizzas", "descripcion": "Tradicionales y especiales"},
+            {"nombre": "Hamburguesas", "descripcion": "Clásicas y gourmet", "imagen_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800"},
+            {"nombre": "Pizzas", "descripcion": "Tradicionales y especiales", "imagen_url": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800"},
         ],
     },
     {
         "nombre": "Postres",
         "descripcion": "Dulces y helados",
+        "imagen_url": "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=800",
         "subcategorias": [
-            {"nombre": "Helados", "descripcion": "Sabores clásicos"},
-            {"nombre": "Tortas", "descripcion": "Porciones individuales"},
+            {"nombre": "Helados", "descripcion": "Sabores clásicos", "imagen_url": "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=800"},
+            {"nombre": "Tortas", "descripcion": "Porciones individuales", "imagen_url": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800"},
         ],
     },
-    {"nombre": "Entradas",    "descripcion": "Para abrir el apetito"},
-    {"nombre": "Ensaladas",   "descripcion": "Opciones frescas"},
-    {"nombre": "Pastas",      "descripcion": "Caseras y rellenas"},
-    {"nombre": "Sándwiches",  "descripcion": "Rápidos y sabrosos"},
-    {"nombre": "Cafetería",   "descripcion": "Café y acompañamientos"},
-    {"nombre": "Vegano",      "descripcion": "Opciones sin productos animales"},
-    {"nombre": "Sin gluten",  "descripcion": "Opciones aptas celíacos"},
+    {"nombre": "Entradas",    "descripcion": "Para abrir el apetito",            "imagen_url": "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=800"},
+    {"nombre": "Ensaladas",   "descripcion": "Opciones frescas",                 "imagen_url": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800"},
+    {"nombre": "Pastas",      "descripcion": "Caseras y rellenas",               "imagen_url": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=800"},
+    {"nombre": "Sándwiches",  "descripcion": "Rápidos y sabrosos",               "imagen_url": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800"},
+    {"nombre": "Cafetería",   "descripcion": "Café y acompañamientos",           "imagen_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800"},
+    {"nombre": "Vegano",      "descripcion": "Opciones sin productos animales",  "imagen_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800"},
+    {"nombre": "Sin gluten",  "descripcion": "Opciones aptas celíacos",          "imagen_url": "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800"},
 ]
 
 INGREDIENTES_INICIALES = [
-    {"nombre": "Harina",        "descripcion": "Harina de trigo 000",    "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 50.0},
-    {"nombre": "Leche",         "descripcion": "Leche entera",            "es_alergeno": True,  "unidad": UnidadMedida.LITRO,  "stock_actual": 30.0},
-    {"nombre": "Queso",         "descripcion": "Queso mozzarella",        "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 10.0},
-    {"nombre": "Tomate",        "descripcion": "Tomate fresco",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 25.0},
-    {"nombre": "Lechuga",       "descripcion": "Lechuga mantecosa",       "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 15.0},
-    {"nombre": "Cebolla",       "descripcion": "Cebolla morada",          "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 10.0},
-    {"nombre": "Pollo",         "descripcion": "Pechuga de pollo",        "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 20.0},
-    {"nombre": "Carne vacuna",  "descripcion": "Carne de res",            "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 25.0},
-    {"nombre": "Huevo",         "descripcion": "Huevo de gallina",        "es_alergeno": True,  "unidad": UnidadMedida.UNIDAD, "stock_actual": 200.0},
-    {"nombre": "Azúcar",        "descripcion": "Azúcar blanca",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 20.0},
-    {"nombre": "Chocolate",     "descripcion": "Cacao y azúcar",          "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 8.0},
-    {"nombre": "Pan",           "descripcion": "Pan artesanal",           "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 15.0},
-    {"nombre": "Sal",           "descripcion": "Sal fina",                "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 5.0},
-    {"nombre": "Pimienta",      "descripcion": "Pimienta negra",          "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 2.0},
-    {"nombre": "Aceite de oliva","descripcion": "Oliva extra virgen",     "es_alergeno": False, "unidad": UnidadMedida.LITRO,  "stock_actual": 10.0},
-    {"nombre": "Ajo",           "descripcion": "Ajo fresco",              "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 3.0},
-    {"nombre": "Perejil",       "descripcion": "Hierba fresca",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 2.0},
-    {"nombre": "Jamón",         "descripcion": "Jamón cocido",            "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 8.0},
-    {"nombre": "Bacon",         "descripcion": "Panceta ahumada",         "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 6.0},
-    {"nombre": "Champiñones",   "descripcion": "Frescos laminados",       "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 8.0},
-    {"nombre": "Pimiento",      "descripcion": "Pimiento rojo",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 10.0},
-    {"nombre": "Mayonesa",      "descripcion": "Salsa de huevo",          "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 5.0},
-    {"nombre": "Ketchup",       "descripcion": "Salsa de tomate",         "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 5.0},
-    {"nombre": "Mostaza",       "descripcion": "Salsa de mostaza",        "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 3.0},
+    {"nombre": "Harina",        "descripcion": "Harina de trigo 000",    "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 50.0,  "precio": Decimal("800.00")},
+    {"nombre": "Leche",         "descripcion": "Leche entera",            "es_alergeno": True,  "unidad": UnidadMedida.LITRO,  "stock_actual": 30.0,  "precio": Decimal("1200.00")},
+    {"nombre": "Queso",         "descripcion": "Queso mozzarella",        "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 10.0,  "precio": Decimal("7500.00")},
+    {"nombre": "Tomate",        "descripcion": "Tomate fresco",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 25.0,  "precio": Decimal("1800.00")},
+    {"nombre": "Lechuga",       "descripcion": "Lechuga mantecosa",       "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 15.0,  "precio": Decimal("1500.00")},
+    {"nombre": "Cebolla",       "descripcion": "Cebolla morada",          "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 10.0,  "precio": Decimal("1000.00")},
+    {"nombre": "Pollo",         "descripcion": "Pechuga de pollo",        "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 20.0,  "precio": Decimal("6500.00")},
+    {"nombre": "Carne vacuna",  "descripcion": "Carne de res",            "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 25.0,  "precio": Decimal("9000.00")},
+    {"nombre": "Huevo",         "descripcion": "Huevo de gallina",        "es_alergeno": True,  "unidad": UnidadMedida.UNIDAD, "stock_actual": 200.0, "precio": Decimal("250.00")},
+    {"nombre": "Azúcar",        "descripcion": "Azúcar blanca",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 20.0,  "precio": Decimal("1100.00")},
+    {"nombre": "Chocolate",     "descripcion": "Cacao y azúcar",          "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 8.0,   "precio": Decimal("12000.00")},
+    {"nombre": "Pan",           "descripcion": "Pan artesanal",           "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 15.0,  "precio": Decimal("2500.00")},
+    {"nombre": "Sal",           "descripcion": "Sal fina",                "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 5.0,   "precio": Decimal("700.00")},
+    {"nombre": "Pimienta",      "descripcion": "Pimienta negra",          "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 2.0,   "precio": Decimal("8000.00")},
+    {"nombre": "Aceite de oliva","descripcion": "Oliva extra virgen",     "es_alergeno": False, "unidad": UnidadMedida.LITRO,  "stock_actual": 10.0,  "precio": Decimal("9500.00")},
+    {"nombre": "Ajo",           "descripcion": "Ajo fresco",              "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 3.0,   "precio": Decimal("4000.00")},
+    {"nombre": "Perejil",       "descripcion": "Hierba fresca",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 2.0,   "precio": Decimal("3000.00")},
+    {"nombre": "Jamón",         "descripcion": "Jamón cocido",            "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 8.0,   "precio": Decimal("8500.00")},
+    {"nombre": "Bacon",         "descripcion": "Panceta ahumada",         "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 6.0,   "precio": Decimal("9800.00")},
+    {"nombre": "Champiñones",   "descripcion": "Frescos laminados",       "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 8.0,   "precio": Decimal("5500.00")},
+    {"nombre": "Pimiento",      "descripcion": "Pimiento rojo",           "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 10.0,  "precio": Decimal("2800.00")},
+    {"nombre": "Mayonesa",      "descripcion": "Salsa de huevo",          "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 5.0,   "precio": Decimal("3500.00")},
+    {"nombre": "Ketchup",       "descripcion": "Salsa de tomate",         "es_alergeno": False, "unidad": UnidadMedida.KG,     "stock_actual": 5.0,   "precio": Decimal("3200.00")},
+    {"nombre": "Mostaza",       "descripcion": "Salsa de mostaza",        "es_alergeno": True,  "unidad": UnidadMedida.KG,     "stock_actual": 3.0,   "precio": Decimal("3300.00")},
 ]
 
 PRODUCTOS_INICIALES = [
@@ -461,7 +464,11 @@ def run() -> None:
                 print(f"  [=] Ya existe: {data['nombre']}")
                 continue
 
-            cat = Categoria(nombre=data["nombre"], descripcion=data.get("descripcion"))
+            cat = Categoria(
+                nombre=data["nombre"],
+                descripcion=data.get("descripcion"),
+                imagen_url=data.get("imagen_url"),
+            )
             session.add(cat)
             session.flush()
             cats_creadas += 1
@@ -475,6 +482,7 @@ def run() -> None:
                     session.add(Categoria(
                         nombre      = sub["nombre"],
                         descripcion = sub.get("descripcion"),
+                        imagen_url  = sub.get("imagen_url"),
                         parent_id   = cat.id,
                     ))
                     cats_creadas += 1
@@ -497,6 +505,7 @@ def run() -> None:
                 es_alergeno = data.get("es_alergeno", False),
                 unidad      = data["unidad"],
                 stock_actual= data["stock_actual"],
+                precio      = data.get("precio", Decimal("0.00")),
             ))
             ings_creados += 1
             print(f"  [+] Creado: {data['nombre']} ({data['stock_actual']} {data['unidad'].value})")

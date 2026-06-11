@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 import { getDashboardStats } from '../api/admin';
 import KpiCard from '../components/dashboard/KpiCard';
 import EstadosPieChart from '../components/dashboard/EstadosPieChart';
@@ -8,14 +10,23 @@ import PedidosRecientesTable from '../components/dashboard/PedidosRecientesTable
 import { SkeletonTable } from '../components/Skeleton';
 
 const fmt = (n: number) =>
-  `$${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
 
 export default function DashboardPage() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: getDashboardStats,
     refetchInterval: 30_000,
   });
+
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 5_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const ageSeconds = dataUpdatedAt ? Math.floor((now - dataUpdatedAt) / 1000) : 0;
+  const ageText = ageSeconds < 60 ? `hace ${ageSeconds}s` : `hace ${Math.floor(ageSeconds / 60)}m`;
 
   if (isLoading) {
     return (
@@ -37,9 +48,20 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
-        <span className="text-xs text-slate-400">Actualización automática cada 30 s</span>
+        <div className="flex items-center gap-3">
+          {dataUpdatedAt > 0 && (
+            <span className="text-xs text-slate-500">Actualizado {ageText}</span>
+          )}
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refrescar
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
