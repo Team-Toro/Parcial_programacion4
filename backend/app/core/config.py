@@ -38,6 +38,8 @@ class Settings(BaseSettings):
 
     COSTO_ENVIO_DEFAULT: Decimal = Decimal("50.00")
 
+    FRONTEND_URL: str = "http://localhost:5173"
+
     # ─── MercadoPago ─────────────────────────────────────────────────────────
     MP_ACCESS_TOKEN: Optional[str] = None
     MP_PUBLIC_KEY: Optional[str] = None

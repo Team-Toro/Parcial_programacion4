@@ -208,17 +208,7 @@ class CategoriaService:
 
     def actualizar_imagen(self, uow: UnitOfWork, categoria_id: int, imagen_url: str | None) -> Categoria:
         """Actualiza la imagen de una categoría (acepta None para eliminarla)."""
-        repo = CategoriaRepository(uow.session)
-        categoria = repo.get_by_id(categoria_id)
-        if not categoria:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Categoría {categoria_id} no encontrada",
-            )
-        categoria.imagen_url = imagen_url
-        categoria.updated_at = datetime.utcnow()
-        repo.save(categoria)
-        return categoria
+        return self.update(uow, categoria_id, CategoriaUpdate(imagen_url=imagen_url))
 
     def reactivate(self, uow: UnitOfWork, categoria_id: int) -> Categoria:
         """Reactiva una categoría dada de baja limpiando su deleted_at."""

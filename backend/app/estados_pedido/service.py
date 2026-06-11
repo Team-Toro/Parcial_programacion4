@@ -1,15 +1,27 @@
+from enum import Enum
 from typing import List
 from fastapi import HTTPException, status
 from .model import EstadoPedido
 from ..uow.unit_of_work import UnitOfWork
 
-TRANSICIONES_VALIDAS: dict[str, list[str]] = {
-    "PENDIENTE":  ["CONFIRMADO", "CANCELADO"],
-    "CONFIRMADO": ["EN_PREP",    "CANCELADO"],
-    "EN_PREP":    ["EN_CAMINO",  "CANCELADO"],
-    "EN_CAMINO":  ["ENTREGADO"],
-    "ENTREGADO":  [],
-    "CANCELADO":  [],
+
+class EstadoCodigo(str, Enum):
+    """Códigos de estado del pedido. Hereda de str para serialización JSON automática."""
+    PENDIENTE = "PENDIENTE"
+    CONFIRMADO = "CONFIRMADO"
+    EN_PREP = "EN_PREP"
+    EN_CAMINO = "EN_CAMINO"
+    ENTREGADO = "ENTREGADO"
+    CANCELADO = "CANCELADO"
+
+
+TRANSICIONES_VALIDAS: dict[EstadoCodigo, list[EstadoCodigo]] = {
+    EstadoCodigo.PENDIENTE:  [EstadoCodigo.CONFIRMADO, EstadoCodigo.CANCELADO],
+    EstadoCodigo.CONFIRMADO: [EstadoCodigo.EN_PREP,    EstadoCodigo.CANCELADO],
+    EstadoCodigo.EN_PREP:    [EstadoCodigo.EN_CAMINO,  EstadoCodigo.CANCELADO],
+    EstadoCodigo.EN_CAMINO:  [EstadoCodigo.ENTREGADO],
+    EstadoCodigo.ENTREGADO:  [],
+    EstadoCodigo.CANCELADO:  [],
 }
 
 
@@ -29,12 +41,25 @@ class EstadoPedidoService:
 
     @staticmethod
     def es_transicion_valida(desde: str, hacia: str) -> bool:
-        return hacia in TRANSICIONES_VALIDAS.get(desde, [])
+        try:
+            desde_enum = EstadoCodigo(desde)
+            hacia_enum = EstadoCodigo(hacia)
+        except ValueError:
+            return False
+        return hacia_enum in TRANSICIONES_VALIDAS.get(desde_enum, [])
 
     @staticmethod
     def es_terminal(estado: str) -> bool:
-        return TRANSICIONES_VALIDAS.get(estado) == []
+        try:
+            estado_enum = EstadoCodigo(estado)
+        except ValueError:
+            return False
+        return TRANSICIONES_VALIDAS.get(estado_enum) == []
 
     @staticmethod
     def get_transiciones_validas(desde: str) -> list[str]:
-        return TRANSICIONES_VALIDAS.get(desde, [])
+        try:
+            desde_enum = EstadoCodigo(desde)
+        except ValueError:
+            return []
+        return [e.value for e in TRANSICIONES_VALIDAS.get(desde_enum, [])]

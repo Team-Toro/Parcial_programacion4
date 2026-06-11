@@ -13,6 +13,7 @@ from .schema import (
 )
 from .service import PagoService
 from ..uow.unit_of_work import UnitOfWork, get_uow
+from ..core.config import settings
 from ..core.deps import get_current_active_user
 from ..usuarios.model import Usuario
 from ..pedidos.schema import PedidoPublic
@@ -127,7 +128,7 @@ async def redirect_after_pago(
     mp_status: str,
     request: Request,
 ):
-    frontend_url = "http://localhost:5173"
+    frontend_url = settings.FRONTEND_URL
     qs = str(request.url.query)
     destination = f"{frontend_url}/pagos/{pedido_id}/{mp_status}"
     if qs:

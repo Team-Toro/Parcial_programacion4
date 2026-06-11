@@ -167,14 +167,7 @@ class ProductoService:
 
     def actualizar_imagenes(self, uow: UnitOfWork, producto_id: int, imagenes_url: List[str]) -> Producto:
         """Reemplaza la lista de URLs de imágenes de un producto."""
-        repo = ProductoRepository(uow.session)
-        producto = self.get_by_id(uow, producto_id)
-        producto.imagenes_url = imagenes_url
-        producto.updated_at = datetime.utcnow()
-        repo.add(producto)
-        repo.flush()
-        repo.refresh(producto)
-        return producto
+        return self.update(uow, producto_id, ProductoUpdate(imagenes_url=imagenes_url))
 
     def update_disponibilidad(self, uow: UnitOfWork, producto_id: int, disponible: bool) -> Producto:
         """Activa o desactiva la visibilidad de un producto en el catálogo."""
