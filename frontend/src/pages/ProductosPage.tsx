@@ -19,7 +19,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDebounce } from '../hooks/useDebounce';
 import { useAuthStore } from '../store/authStore';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 12;
 
 const defaultForm: ProductoCreate = {
   nombre: '', descripcion: '', precio_base: 0,
@@ -267,8 +267,8 @@ export default function ProductosPage() {
               : 'Productos'}
           </h1>
           {categoriaIdParam && (
-            <Link to="/productos" className="text-sm text-orange-500 hover:underline">
-              ← Ver todas las categorías
+            <Link to="/categorias" className="text-sm text-orange-500 hover:underline">
+              ← Ver categorías
             </Link>
           )}
         </div>
@@ -294,8 +294,17 @@ export default function ProductosPage() {
           <div className="text-center py-16">
             <SearchX className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-500">
-              {searchInput ? 'No se encontraron productos.' : 'No hay productos disponibles.'}
+              {searchInput
+                ? 'No se encontraron productos.'
+                : categoriaIdParam
+                  ? 'No hay productos en esta categoría.'
+                  : 'No hay productos disponibles.'}
             </p>
+            {!searchInput && categoriaIdParam && (
+              <Link to="/categorias" className="mt-4 inline-block text-sm text-orange-500 hover:underline">
+                ← Ver todas las categorías
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

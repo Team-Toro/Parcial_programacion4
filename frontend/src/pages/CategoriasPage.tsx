@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, ChevronDown, RefreshCw, Search, X } from 'lucide-react';
 import CategoriaCard from '../components/CategoriaCard';
@@ -124,6 +125,210 @@ function CategoriaTreeNode({
               isAdmin={isAdmin}
               includeDeleted={includeDeleted}
             />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Cliente tree node (sin acciones de admin) ---
+
+interface ClienteTreeNodeProps {
+  categoria: Categoria;
+  level: number;
+  expandedIds: Set<number>;
+  toggleExpand: (id: number) => void;
+}
+
+function ClienteTreeNode({ categoria, level, expandedIds, toggleExpand }: ClienteTreeNodeProps) {
+  const children = categoria.subcategorias ?? [];
+  const hasChildren = children.length > 0;
+  const isExpanded = expandedIds.has(categoria.id);
+
+  return (
+    <div>
+      <div
+        className="flex items-center border-t border-slate-100 hover:bg-orange-50 transition-colors"
+        style={{ paddingLeft: `${level * 2 + 1}rem` }}
+      >
+        <button
+          onClick={() => hasChildren && toggleExpand(categoria.id)}
+          className={`w-6 h-6 flex items-center justify-center mr-2 rounded transition-colors ${
+            hasChildren ? 'text-slate-500 hover:text-slate-700 hover:bg-slate-200' : 'cursor-default text-transparent'
+          }`}
+        >
+          {hasChildren
+            ? isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+            : <span className="w-4 h-4" />}
+        </button>
+
+        {hasChildren ? (
+          <button
+            onClick={() => toggleExpand(categoria.id)}
+            className="flex-1 py-3 pr-4 text-left font-medium text-sm text-slate-800"
+          >
+            {categoria.nombre}
+            <span className="ml-2 text-xs text-slate-400">({children.length} subcategoría{children.length !== 1 ? 's' : ''})</span>
+          </button>
+        ) : (
+          <Link
+            to={`/productos?categoria_id=${categoria.id}`}
+            className="flex-1 py-3 pr-4 font-medium text-sm text-orange-600 hover:underline"
+          >
+            {categoria.nombre}
+          </Link>
+        )}
+      </div>
+
+      {isExpanded && hasChildren && (
+        <div>
+          {children.map(child => (
+            <ClienteTreeNode
+              key={child.id}
+              categoria={child}
+              level={level + 1}
+              expandedIds={expandedIds}
+              toggleExpand={toggleExpand}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Builds breadcrumb path from root down to the current parent_id
+function buildBreadcrumb(parentId: number, roots: Categoria[]): Categoria[] {
+  const findPath = (cats: Categoria[], targetId: number): Categoria[] | null => {
+    for (const cat of cats) {
+      if (cat.id === targetId) return [cat];
+      const sub = cat.subcategorias ?? [];
+      if (sub.length > 0) {
+        const path = findPath(sub, targetId);
+        if (path) return [cat, ...path];
+      }
+    }
+    return null;
+  };
+  return findPath(roots, parentId) ?? [];
+}
+
+interface ClienteCategoriasViewProps {
+  categoriasRaiz: Categoria[];
+}
+
+function ClienteCategoriasView({ categoriasRaiz }: ClienteCategoriasViewProps) {
+  const [searchParams] = useSearchParams();
+  const parentIdParam = searchParams.get('parent_id');
+  const parentId = parentIdParam ? Number(parentIdParam) : null;
+
+  const [treeMode, setTreeMode] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  const toggleExpand = (id: number) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const collectAllIds = (cats: Categoria[]): number[] =>
+    cats.flatMap(c => [c.id, ...collectAllIds(c.subcategorias ?? [])]);
+
+  const handleExpandAll = () => {
+    setTreeMode(true);
+    setExpandedIds(new Set(collectAllIds(currentCats)));
+  };
+
+  const handleCollapseAll = () => {
+    setTreeMode(false);
+    setExpandedIds(new Set());
+  };
+
+  // Find current category and its children from the nested tree
+  const findCategoria = (cats: Categoria[], id: number): Categoria | null => {
+    for (const c of cats) {
+      if (c.id === id) return c;
+      const found = findCategoria(c.subcategorias ?? [], id);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const currentCats: Categoria[] = parentId
+    ? (findCategoria(categoriasRaiz, parentId)?.subcategorias ?? [])
+    : categoriasRaiz;
+
+  const breadcrumb = parentId ? buildBreadcrumb(parentId, categoriasRaiz) : [];
+
+  return (
+    <div className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8 max-w-screen-2xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+          <div className="flex items-center gap-1 text-sm text-slate-500 mb-1 flex-wrap">
+            <Link to="/categorias" className="hover:text-orange-500">Categorías</Link>
+            {breadcrumb.map((cat, i) => (
+              <span key={cat.id} className="flex items-center gap-1">
+                <ChevronRight className="w-3 h-3" />
+                {i < breadcrumb.length - 1 ? (
+                  <Link to={`/categorias?parent_id=${cat.id}`} className="hover:text-orange-500">{cat.nombre}</Link>
+                ) : (
+                  <span className="text-slate-800 font-medium">{cat.nombre}</span>
+                )}
+              </span>
+            ))}
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">
+            {breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].nombre : 'Categorías'}
+          </h1>
+        </div>
+
+        <div className="flex gap-2">
+          {!treeMode ? (
+            <button
+              onClick={handleExpandAll}
+              className="flex items-center gap-1.5 text-sm border border-slate-300 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <ChevronDown className="w-4 h-4" /> Expandir todo
+            </button>
+          ) : (
+            <button
+              onClick={handleCollapseAll}
+              className="flex items-center gap-1.5 text-sm border border-slate-300 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" /> Colapsar todo
+            </button>
+          )}
+        </div>
+      </div>
+
+      {currentCats.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="text-slate-500">No hay categorías disponibles.</p>
+          {parentId && (
+            <Link to="/categorias" className="mt-3 inline-block text-sm text-orange-500 hover:underline">
+              ← Volver a categorías
+            </Link>
+          )}
+        </div>
+      ) : treeMode ? (
+        <div className="bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
+          {currentCats.map(cat => (
+            <ClienteTreeNode
+              key={cat.id}
+              categoria={cat}
+              level={0}
+              expandedIds={expandedIds}
+              toggleExpand={toggleExpand}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {currentCats.map(cat => (
+            <CategoriaCard key={cat.id} categoria={cat} />
           ))}
         </div>
       )}
@@ -300,21 +505,7 @@ export default function CategoriasPage() {
   if (isError) return <div className="p-8 text-red-500">Error al cargar las categorías.</div>;
 
   if (!isAdmin) {
-    const rootCategorias = categoriasFlat.filter(c => !c.parent_id);
-    return (
-      <div className="px-4 sm:px-6 lg:px-12 xl:px-16 py-8 max-w-screen-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-slate-800 mb-6">Categorías</h1>
-        {rootCategorias.length === 0 ? (
-          <p className="text-slate-500 text-center py-16">No hay categorías disponibles.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {rootCategorias.map(cat => (
-              <CategoriaCard key={cat.id} categoria={cat} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
+    return <ClienteCategoriasView categoriasRaiz={categorias} />;
   }
 
   return (

@@ -46,10 +46,11 @@ services:
     restart: unless-stopped
     command:
       - "http"
-      - "--domain=${NGROK_DOMAIN}"
+      - "--url=${NGROK_URL}"
+      - "--log=stdout"
       - "api:8000"
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    env_file:
+      - ./backend/.env.docker
     ports:
       - "4040:4040"
     depends_on:
