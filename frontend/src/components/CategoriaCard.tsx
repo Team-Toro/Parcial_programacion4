@@ -33,6 +33,11 @@ export default function CategoriaCard({ categoria }: Props) {
             {categoria.subcategorias!.length} subcategoría{categoria.subcategorias!.length !== 1 ? 's' : ''}
           </p>
         )}
+        {!hasChildren && categoria.productos_count !== undefined && (
+          <p className="text-white/60 text-xs mt-1 drop-shadow">
+            {categoria.productos_count} producto{categoria.productos_count !== 1 ? 's' : ''}
+          </p>
+        )}
       </div>
     </div>
   );

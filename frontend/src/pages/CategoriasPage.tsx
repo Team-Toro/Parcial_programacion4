@@ -541,7 +541,8 @@ export default function CategoriasPage() {
       </div>
 
       {/* Búsqueda + Expand/Collapse (admin) */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="bg-white p-4 rounded-xl shadow border border-slate-200 mb-4">
+        <div className="flex flex-wrap gap-2">
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
@@ -576,6 +577,7 @@ export default function CategoriasPage() {
             </button>
           </>
         )}
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow overflow-hidden">

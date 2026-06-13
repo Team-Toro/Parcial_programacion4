@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Check } from 'lucide-react';
 import type { Producto } from '../types';
 import { useCarritoStore } from '../store/carritoStore';
 import { useAuthStore } from '../store/authStore';
@@ -13,6 +14,7 @@ export default function ProductoCard({ producto }: Props) {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = user !== null;
   const isStaff = useAuthStore((s) => s.isStaff());
+  const [added, setAdded] = useState(false);
 
   const canAdd = isAuthenticated && !isStaff && producto.disponible && producto.stock_disponible > 0;
 
@@ -30,6 +32,8 @@ export default function ProductoCard({ producto }: Props) {
         .filter((pi) => pi.es_removible)
         .map((pi) => ({ id: pi.ingrediente.id, nombre: pi.ingrediente.nombre })),
     });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
   };
 
   const btnLabel = !producto.disponible
@@ -72,13 +76,15 @@ export default function ProductoCard({ producto }: Props) {
           onClick={canAdd ? handleAgregar : undefined}
           disabled={!canAdd}
           className={`mt-1 w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
-            canAdd
+            added
+              ? 'bg-green-500 text-white'
+              : canAdd
               ? 'bg-orange-500 hover:bg-orange-600 text-white'
               : 'bg-slate-100 text-slate-400 cursor-default'
           }`}
         >
-          <ShoppingCart className="w-4 h-4" />
-          {btnLabel}
+          {added ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
+          {added ? '¡Agregado!' : btnLabel}
         </button>
       </div>
     </Link>

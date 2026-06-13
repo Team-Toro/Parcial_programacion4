@@ -1,14 +1,22 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { LogIn, User, Lock, Loader2 } from 'lucide-react';
+import { LogIn, User, Lock, Loader2, ChevronDown } from 'lucide-react';
 import { login, getMe } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
+
+const DEMO_USERS = [
+  { rol: 'Admin',    email: 'admin@example.com',          password: 'Admin1234!' },
+  { rol: 'Cliente',  email: 'juan@example.com',            password: 'Juan1234!' },
+  { rol: 'Stock',    email: 'sofia.stock@example.com',     password: 'Sofia1234!' },
+  { rol: 'Pedidos',  email: 'marcos.pedidos@example.com',  password: 'Marcos1234!' },
+];
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showDemo, setShowDemo] = useState(false);
   const [validationError, setValidationError] = useState('');
 
   const mutation = useMutation({
@@ -110,6 +118,37 @@ export default function LoginPage() {
             Registrate
           </Link>
         </p>
+
+        {/* Demo credentials */}
+        <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowDemo(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <span className="font-medium">Usuarios de prueba</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showDemo ? 'rotate-180' : ''}`} />
+          </button>
+          {showDemo && (
+            <div className="border-t border-slate-200 divide-y divide-slate-100">
+              {DEMO_USERS.map(u => (
+                <div key={u.rol} className="flex items-center justify-between px-4 py-2.5 gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-700">{u.rol}</p>
+                    <p className="text-xs text-slate-400 truncate">{u.email}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setUsername(u.email); setPassword(u.password); setShowDemo(false); }}
+                    className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 font-medium transition-colors"
+                  >
+                    Autocompletar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
       </div>
     </div>

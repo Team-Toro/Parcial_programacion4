@@ -82,6 +82,7 @@ export interface Categoria {
   parent_id?: number;
   imagen_url?: string;
   subcategorias?: Categoria[];
+  productos_count?: number;
   created_at: string;
   updated_at: string;
   deleted_at?: string;
