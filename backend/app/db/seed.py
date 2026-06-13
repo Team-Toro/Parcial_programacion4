@@ -101,37 +101,37 @@ CATEGORIAS_INICIALES = [
     {
         "nombre": "Bebidas",
         "descripcion": "Bebidas frías y calientes",
-        "imagen_url": "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=800",
+        "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371497/foodstore/seed/h3rzas13febqfhzgilu9.jpg",
         "subcategorias": [
-            {"nombre": "Gaseosas", "descripcion": "Con gas y sin alcohol", "imagen_url": "https://images.unsplash.com/photo-1581636625402-29b2a704ef13?w=800"},
-            {"nombre": "Jugos", "descripcion": "Jugos naturales", "imagen_url": "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=800"},
+            {"nombre": "Gaseosas", "descripcion": "Con gas y sin alcohol", "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371108/foodstore/seed/zbc2z13bkkrwjomlijmr.jpg"},
+            {"nombre": "Jugos", "descripcion": "Jugos naturales", "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371500/foodstore/seed/d1mequc14yh3qydzuklx.jpg"},
         ],
     },
     {
         "nombre": "Comidas",
         "descripcion": "Platos principales",
-        "imagen_url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
+        "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371494/foodstore/seed/cddmhhnhw6ac8iienfhn.jpg",
         "subcategorias": [
-            {"nombre": "Hamburguesas", "descripcion": "Clásicas y gourmet", "imagen_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800"},
-            {"nombre": "Pizzas", "descripcion": "Tradicionales y especiales", "imagen_url": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800"},
+            {"nombre": "Hamburguesas", "descripcion": "Clásicas y gourmet", "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371110/foodstore/seed/yeciwfx17foxqugflk47.jpg"},
+            {"nombre": "Pizzas", "descripcion": "Tradicionales y especiales", "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371112/foodstore/seed/eimcdqobvrkyhnd6wsyw.jpg"},
         ],
     },
     {
         "nombre": "Postres",
         "descripcion": "Dulces y helados",
-        "imagen_url": "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=800",
+        "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371111/foodstore/seed/h8d1cknmlrfsxnkgg37b.jpg",
         "subcategorias": [
-            {"nombre": "Helados", "descripcion": "Sabores clásicos", "imagen_url": "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=800"},
-            {"nombre": "Tortas", "descripcion": "Porciones individuales", "imagen_url": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800"},
+            {"nombre": "Helados", "descripcion": "Sabores clásicos", "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371113/foodstore/seed/mrqbvirmki1cpg12te3v.jpg"},
+            {"nombre": "Tortas", "descripcion": "Porciones individuales", "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371109/foodstore/seed/utgexyhwddctymodhu7s.jpg"},
         ],
     },
-    {"nombre": "Entradas",    "descripcion": "Para abrir el apetito",            "imagen_url": "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=800"},
-    {"nombre": "Ensaladas",   "descripcion": "Opciones frescas",                 "imagen_url": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800"},
-    {"nombre": "Pastas",      "descripcion": "Caseras y rellenas",               "imagen_url": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=800"},
-    {"nombre": "Sándwiches",  "descripcion": "Rápidos y sabrosos",               "imagen_url": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800"},
-    {"nombre": "Cafetería",   "descripcion": "Café y acompañamientos",           "imagen_url": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800"},
-    {"nombre": "Vegano",      "descripcion": "Opciones sin productos animales",  "imagen_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800"},
-    {"nombre": "Sin gluten",  "descripcion": "Opciones aptas celíacos",          "imagen_url": "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800"},
+    {"nombre": "Entradas",    "descripcion": "Para abrir el apetito",            "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371497/foodstore/seed/spn1lk8txxmohw8hbts2.jpg"},
+    {"nombre": "Ensaladas",   "descripcion": "Opciones frescas",                 "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371494/foodstore/seed/qhx8ivnmxh91n96tx3kw.jpg"},
+    {"nombre": "Pastas",      "descripcion": "Caseras y rellenas",               "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371111/foodstore/seed/p0zyhduk7zzlnnemsvaq.jpg"},
+    {"nombre": "Sándwiches",  "descripcion": "Rápidos y sabrosos",               "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/w1lyxtzq2on5wpmy4qig.jpg"},
+    {"nombre": "Cafetería",   "descripcion": "Café y acompañamientos",           "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/wygx3my5izdwa7by8mp1.jpg"},
+    {"nombre": "Vegano",      "descripcion": "Opciones sin productos animales",  "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/axbtwqz26bsuyycsn06e.jpg"},
+    {"nombre": "Sin gluten",  "descripcion": "Opciones aptas celíacos",          "imagen_url": "https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/zlsvro4njiqysymee5up.jpg"},
 ]
 
 INGREDIENTES_INICIALES = [
@@ -168,7 +168,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("3200.00"),
         "stock_cantidad": 25,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1550547660-d9450f859349"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/kfskp7gjq16cor4cee6m.jpg"],
         "categorias": ["Comidas", "Hamburguesas"],
         "ingredientes": [
             {"nombre": "Carne vacuna", "es_removible": False, "cantidad": 0.15},
@@ -183,7 +183,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("4200.00"),
         "stock_cantidad": 15,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1548365328-9f547f3c07b6"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371502/foodstore/seed/ugobdmddqg3kitv6z0jy.jpg"],
         "categorias": ["Comidas", "Pizzas"],
         "ingredientes": [
             {"nombre": "Harina", "es_removible": False, "cantidad": 0.4},
@@ -197,7 +197,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("2800.00"),
         "stock_cantidad": 18,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1540420773420-3366772f4999"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/axbtwqz26bsuyycsn06e.jpg"],
         "categorias": ["Ensaladas"],
         "ingredientes": [
             {"nombre": "Lechuga", "es_removible": False, "cantidad": 0.1},
@@ -211,7 +211,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("1400.00"),
         "stock_cantidad": 40,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1497534446932-c925b458314e"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371498/foodstore/seed/sye7plo8jtug5hauhvcu.jpg"],
         "categorias": ["Bebidas", "Jugos"],
         "ingredientes": [
             {"nombre": "Azúcar", "es_removible": True, "cantidad": 0.02},
@@ -223,7 +223,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("2200.00"),
         "stock_cantidad": 12,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1509042239860-f550ce710b93"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371498/foodstore/seed/uhxu9grwrekqgpjoccnv.jpg"],
         "categorias": ["Postres", "Tortas"],
         "ingredientes": [
             {"nombre": "Chocolate", "es_removible": False, "cantidad": 0.08},
@@ -237,7 +237,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("2600.00"),
         "stock_cantidad": 20,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1508736793122-f516e3ba5569"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/ms9ckbjq3ukz6zmlr5sh.jpg"],
         "categorias": ["Sándwiches"],
         "ingredientes": [
             {"nombre": "Pollo",    "es_removible": False, "cantidad": 0.15},
@@ -252,7 +252,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("1200.00"),
         "stock_cantidad": 50,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1495474472287-4d71bcdd2085"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/wygx3my5izdwa7by8mp1.jpg"],
         "categorias": ["Cafetería"],
         "ingredientes": [
             {"nombre": "Azúcar", "es_removible": True, "cantidad": 0.01},
@@ -264,7 +264,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("1800.00"),
         "stock_cantidad": 35,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1509042239860-f550ce710b93"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371496/foodstore/seed/leusqdr5kvzdznfdpja8.jpg"],
         "categorias": ["Cafetería"],
         "ingredientes": [
             {"nombre": "Leche",  "es_removible": False, "cantidad": 0.15},
@@ -277,7 +277,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("2400.00"),
         "stock_cantidad": 22,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1504674900247-0877df9cc836"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371496/foodstore/seed/w6bcxd99djy1naxnjshk.jpg"],
         "categorias": ["Entradas"],
         "ingredientes": [
             {"nombre": "Queso", "es_removible": False, "cantidad": 0.05},
@@ -290,7 +290,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("2600.00"),
         "stock_cantidad": 14,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1512621776951-a57141f2eefd"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371494/foodstore/seed/qhx8ivnmxh91n96tx3kw.jpg"],
         "categorias": ["Ensaladas", "Vegano"],
         "ingredientes": [
             {"nombre": "Lechuga",  "es_removible": False, "cantidad": 0.1},
@@ -305,7 +305,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("4500.00"),
         "stock_cantidad": 10,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1548365328-9f547f3c07b6"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/lfglilf00dehqxzhn2le.jpg"],
         "categorias": ["Comidas", "Pizzas"],
         "ingredientes": [
             {"nombre": "Harina",      "es_removible": False, "cantidad": 0.4},
@@ -320,7 +320,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("3600.00"),
         "stock_cantidad": 16,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1550547660-d9450f859349"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/kfskp7gjq16cor4cee6m.jpg"],
         "categorias": ["Comidas", "Hamburguesas"],
         "ingredientes": [
             {"nombre": "Carne vacuna", "es_removible": False, "cantidad": 0.15},
@@ -336,7 +336,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("3800.00"),
         "stock_cantidad": 13,
         "disponible": True,
-        "imagenes_url": ["https://images.unsplash.com/photo-1473093295043-cdd812d0e601"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371496/foodstore/seed/y7hftxkj0uwgbdoxmleq.jpg"],
         "categorias": ["Pastas"],
         "ingredientes": [
             {"nombre": "Queso", "es_removible": False, "cantidad": 0.08},
