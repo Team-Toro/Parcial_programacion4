@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getMisPedidos } from '../api/pedidos';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useWsStore } from '../store/wsStore';
+import { useUiStore } from '../store/uiStore';
 import { SkeletonTable } from '../components/Skeleton';
 
 const TERMINALES = new Set(['ENTREGADO', 'CANCELADO']);
@@ -38,11 +39,22 @@ function formatFecha(iso: string) {
 
 const PAGE_SIZE = 10;
 
+const ESTADO_LABELS: Record<string, string> = {
+  PENDIENTE: 'Pendiente',
+  CONFIRMADO: 'Confirmado',
+  EN_PREP: 'En preparación',
+  EN_CAMINO: 'En camino',
+  ENTREGADO: 'Entregado',
+  CANCELADO: 'Cancelado',
+};
+
 export default function MisPedidosPage() {
   const [offset, setOffset] = useState(0);
   const [activeTab, setActiveTab] = useState<'proceso' | 'historial'>('proceso');
   const { subscribeToOrder, unsubscribeFromOrder } = useWebSocket();
   const estadosRT = useWsStore((s) => s.estadosRT);
+  const addToast = useUiStore((s) => s.addToast);
+  const prevEstadosRT = useRef<Record<number, string>>({});
 
   const { data: pedidos = [], isLoading, isError } = useQuery({
     queryKey: ['mis-pedidos', offset],
@@ -54,6 +66,19 @@ export default function MisPedidosPage() {
     activeIds.forEach(subscribeToOrder);
     return () => { activeIds.forEach(unsubscribeFromOrder); };
   }, [pedidos, subscribeToOrder, unsubscribeFromOrder]);
+
+  useEffect(() => {
+    const prev = prevEstadosRT.current;
+    for (const [idStr, newEstado] of Object.entries(estadosRT)) {
+      const id = Number(idStr);
+      if (prev[id] !== newEstado) {
+        const label = ESTADO_LABELS[newEstado] ?? newEstado;
+        const tipo = newEstado === 'CANCELADO' ? 'error' : newEstado === 'ENTREGADO' ? 'success' : 'info';
+        addToast(tipo, `Pedido #${id}: ${label}`);
+      }
+    }
+    prevEstadosRT.current = { ...estadosRT };
+  }, [estadosRT, addToast]);
 
   const enProceso = pedidos.filter((p) => !TERMINALES.has(estadosRT[p.id] ?? p.estado_codigo));
   const historial = pedidos.filter((p) => TERMINALES.has(estadosRT[p.id] ?? p.estado_codigo));

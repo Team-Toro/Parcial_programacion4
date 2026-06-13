@@ -144,7 +144,7 @@ class AdminService:
                 email=r[2],
                 estado=r[3],
                 total=float(r[4]),
-                created_at=str(r[5]),
+                created_at=r[5].isoformat() if hasattr(r[5], 'isoformat') else str(r[5]),
             )
             for r in recientes_rows
         ]

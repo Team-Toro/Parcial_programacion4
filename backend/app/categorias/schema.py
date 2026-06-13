@@ -55,6 +55,7 @@ class CategoriaPublic(BaseModel):
     updated_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
     subcategorias: List["CategoriaPublic"] = Field(default_factory=list)
+    productos_count: Optional[int] = None
 
     @field_validator("subcategorias", mode="before")
     @classmethod

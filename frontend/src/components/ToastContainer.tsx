@@ -14,24 +14,17 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 items-end">
+    <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center">
       {toasts.map((toast) => (
         <div
           key={toast.id}
           onClick={() => removeToast(toast.id)}
-          className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium cursor-pointer
-            animate-in fade-in slide-in-from-bottom-2 duration-200
+          className={`px-6 py-3 rounded-full shadow-xl text-base font-semibold cursor-pointer whitespace-nowrap
+            animate-in fade-in slide-in-from-top-4 duration-200
             ${TYPE_CLASSES[toast.type] ?? 'bg-slate-700 text-white'}`}
           role="alert"
         >
-          <span>{toast.message}</span>
-          <button
-            onClick={(e) => { e.stopPropagation(); removeToast(toast.id); }}
-            className="ml-2 opacity-70 hover:opacity-100 leading-none text-lg"
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
+          {toast.message}
         </div>
       ))}
     </div>
