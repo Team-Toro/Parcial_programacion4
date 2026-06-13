@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { getFormasPago } from '../api/formas_pago';
 import { getDirecciones } from '../api/direcciones';
 import { createPedido } from '../api/pedidos';
+import { crearPreferencia } from '../api/pagos';
 import { useCarritoStore } from '../store/carritoStore';
 import type { Direccion } from '../types';
 
@@ -38,15 +39,18 @@ export default function CheckoutPage() {
 
   const mutation = useMutation({
     mutationFn: createPedido,
-    onSuccess: (pedido) => {
-      vaciarCarrito();
-      setTimeout(() => {
-        if (pedido.forma_pago_codigo === 'MERCADOPAGO') {
-          navigate(`/pagos/${pedido.id}`);
-        } else {
-          navigate(`/mis-pedidos/${pedido.id}`);
+    onSuccess: async (pedido) => {
+      if (pedido.forma_pago_codigo === 'MERCADOPAGO') {
+        try {
+          const pref = await crearPreferencia(pedido.id);
+          window.location.href = pref.init_point;
+        } catch (err) {
+          setErrorMsg(err instanceof Error ? err.message : 'Error al iniciar el pago con Mercado Pago');
         }
-      }, 1500);
+      } else {
+        vaciarCarrito();
+        setTimeout(() => navigate(`/mis-pedidos/${pedido.id}`), 1500);
+      }
     },
     onError: (err: Error) => {
       setErrorMsg(err.message);

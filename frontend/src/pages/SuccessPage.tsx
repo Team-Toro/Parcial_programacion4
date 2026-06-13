@@ -4,6 +4,7 @@ import { confirmarPago, getPagoByPedido } from '../api/pagos';
 import { getPedido } from '../api/pedidos';
 import type { Pedido } from '../types';
 import { usePaymentStore } from '../store/paymentStore';
+import { useCarritoStore } from '../store/carritoStore';
 
 type ResultadoPago = 'cargando' | 'aprobado' | 'pendiente' | 'rechazado';
 
@@ -23,6 +24,7 @@ export default function SuccessPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { setStatus, reset } = usePaymentStore();
+  const { vaciarCarrito } = useCarritoStore();
 
   useEffect(() => {
     return () => { reset(); };
@@ -44,7 +46,7 @@ export default function SuccessPage() {
           const res = await confirmarPago(pedidoId, paymentId);
           const r = mpStatusToResultado(res.estado);
           setResultado(r);
-          if (r === 'aprobado') setStatus('approved');
+          if (r === 'aprobado') { setStatus('approved'); vaciarCarrito(); }
           else if (r === 'rechazado') setStatus('rejected');
         } else {
           // Sin payment_id: consultar estado actual del pago (webhook ya lo procesó)
@@ -52,7 +54,7 @@ export default function SuccessPage() {
             const pago = await getPagoByPedido(pedidoId);
             const r = mpStatusToResultado(pago.mp_status);
             setResultado(r);
-            if (r === 'aprobado') setStatus('approved');
+            if (r === 'aprobado') { setStatus('approved'); vaciarCarrito(); }
             else if (r === 'rechazado') setStatus('rejected');
           } catch {
             setResultado('pendiente');

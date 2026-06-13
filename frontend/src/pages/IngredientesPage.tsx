@@ -148,6 +148,9 @@ export default function IngredientesPage() {
   const handleSubmit = () => {
     if (!form.nombre.trim()) { setModalError('El nombre es obligatorio'); return; }
     if (form.stock_actual < 0) { setModalError('El stock no puede ser negativo'); return; }
+    if (form.unidad === 'unidad' && !Number.isInteger(form.stock_actual)) {
+      setModalError('El stock debe ser un número entero para ingredientes por unidad'); return;
+    }
     if (form.precio < 0) { setModalError('El precio no puede ser negativo'); return; }
     if (editing) {
       updateMutation.mutate({ id: editing.id, data: form });
@@ -437,7 +440,14 @@ export default function IngredientesPage() {
               <select
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 value={form.unidad}
-                onChange={e => setForm(f => ({ ...f, unidad: e.target.value as UnidadMedida }))}
+                onChange={e => {
+                  const u = e.target.value as UnidadMedida;
+                  setForm(f => ({
+                    ...f,
+                    unidad: u,
+                    stock_actual: u === 'unidad' ? Math.floor(f.stock_actual) : f.stock_actual,
+                  }));
+                }}
               >
                 <option value="unidad">Unidad</option>
                 <option value="kg">Kg</option>
@@ -449,10 +459,13 @@ export default function IngredientesPage() {
               <input
                 type="number"
                 min={0}
-                step="0.01"
+                step={form.unidad === 'unidad' ? '1' : '0.01'}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 value={form.stock_actual}
-                onChange={e => setForm(f => ({ ...f, stock_actual: parseFloat(e.target.value) || 0 }))}
+                onChange={e => {
+                  const val = parseFloat(e.target.value) || 0;
+                  setForm(f => ({ ...f, stock_actual: f.unidad === 'unidad' ? Math.floor(val) : val }));
+                }}
               />
             </div>
             <div>

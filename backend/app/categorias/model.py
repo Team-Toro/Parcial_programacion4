@@ -24,3 +24,7 @@ class Categoria(SQLModel, table=True):
         }
     )
     subcategorias: List["Categoria"] = Relationship(back_populates="parent")
+
+    @property
+    def productos_count(self) -> int:
+        return len(self.productos) if self.productos is not None else 0

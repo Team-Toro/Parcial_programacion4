@@ -24,8 +24,8 @@ export default function PedidosRecientesTable({ data }: Props) {
               <th className="pb-2 font-medium">ID</th>
               <th className="pb-2 font-medium">Cliente</th>
               <th className="pb-2 font-medium">Estado</th>
-              <th className="pb-2 font-medium text-right">Total</th>
-              <th className="pb-2 font-medium">Fecha</th>
+              <th className="pb-2 font-medium pl-4">Fecha</th>
+              <th className="pb-2 text-right font-medium pr-4">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -45,11 +45,11 @@ export default function PedidosRecientesTable({ data }: Props) {
                     {p.estado}
                   </span>
                 </td>
-                <td className="py-2.5 text-right font-medium text-slate-700">
-                  ${p.total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                </td>
-                <td className="py-2.5 text-slate-400 text-xs">
+                <td className="py-2.5 text-slate-400 text-xs pl-4">
                   {new Date(p.created_at).toLocaleDateString('es-AR')}
+                </td>
+                <td className="py-2.5 text-right font-medium text-slate-700 pr-4">
+                ${Number(p.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}

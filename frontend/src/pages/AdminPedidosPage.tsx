@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllPedidos, avanzarEstadoPedido, cancelarPedido } from '../api/pedidos';
@@ -51,6 +51,9 @@ export default function AdminPedidosPage() {
   const [estadoCodigo, setEstadoCodigo] = useState('');
   const [offset, setOffset] = useState(0);
   const [pedidoACancelar, setPedidoACancelar] = useState<number | null>(null);
+  const [flashedIds, setFlashedIds] = useState<Set<number>>(new Set());
+  const prevEstadosRT = useRef<Record<number, string>>({});
+  const flashTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   const queryClient = useQueryClient();
   useWebSocket();
@@ -62,6 +65,27 @@ export default function AdminPedidosPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-pedidos'] });
     }
   }, [newPedidoAlert, queryClient]);
+
+  // Flash rows when their estado changes via WS
+  useEffect(() => {
+    const prev = prevEstadosRT.current;
+    const changed: number[] = [];
+    for (const [idStr, newEstado] of Object.entries(estadosRT)) {
+      const id = Number(idStr);
+      if (prev[id] !== newEstado) changed.push(id);
+    }
+    prevEstadosRT.current = { ...estadosRT };
+    if (changed.length === 0) return;
+
+    setFlashedIds((s) => new Set([...s, ...changed]));
+    changed.forEach((id) => {
+      if (flashTimers.current.has(id)) clearTimeout(flashTimers.current.get(id)!);
+      flashTimers.current.set(id, setTimeout(() => {
+        setFlashedIds((s) => { const next = new Set(s); next.delete(id); return next; });
+        flashTimers.current.delete(id);
+      }, 500));
+    });
+  }, [estadosRT]);
 
   if (!isStaff) return <Navigate to="/productos" replace />;
 
@@ -209,8 +233,9 @@ export default function AdminPedidosPage() {
                   const puedeAvanzar = !esTerminal && siguienteEstado !== null;
                   const puedeCancelar = !esTerminal && transiciones.includes('CANCELADO');
 
+                  const isFlashing = flashedIds.has(p.id);
                   return (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={p.id} className={`transition-colors duration-500 ${isFlashing ? 'bg-orange-100' : 'bg-white hover:bg-slate-50'}`}>
                       <td className="px-4 py-3">
                         <Link
                           to={`/mis-pedidos/${p.id}`}

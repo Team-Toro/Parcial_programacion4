@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPedido, cancelarPedido } from '../api/pedidos';
-import { getPagoByPedido } from '../api/pagos';
+import { getPagoByPedido, crearPreferencia } from '../api/pagos';
 import TimelinePedido from '../components/pedidos/TimelinePedido';
 import ModalMotivo from '../components/pedidos/ModalMotivo';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -50,6 +50,8 @@ export default function PedidoDetallePage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [modalCancelar, setModalCancelar] = useState(false);
+  const [retryLoading, setRetryLoading] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   const { subscribeToOrder, unsubscribeFromOrder } = useWebSocket();
   const estadosRT = useWsStore((s) => s.estadosRT);
@@ -221,20 +223,27 @@ export default function PedidoDetallePage() {
             </span>
           </div>
           {(pago.mp_status === 'pending' || pago.mp_status === 'rejected') &&
-            pedido.estado_codigo === 'PENDIENTE' &&
-            pago.external_reference && (
-              <div className="mt-3">
+            pedido.estado_codigo === 'PENDIENTE' && (
+              <div className="mt-3 flex flex-col gap-2">
                 <button
-                  onClick={() =>
-                    navigate(`/pago-mock/${pago.external_reference}`, {
-                      state: { pedido_id: pedido.id, monto: pedido.total },
-                    })
-                  }
-                  className="flex items-center gap-2 text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  disabled={retryLoading}
+                  onClick={async () => {
+                    setRetryError(null);
+                    setRetryLoading(true);
+                    try {
+                      const pref = await crearPreferencia(pedido.id);
+                      window.location.href = pref.init_point;
+                    } catch (e) {
+                      setRetryError(e instanceof Error ? e.message : 'Error al iniciar el pago');
+                      setRetryLoading(false);
+                    }
+                  }}
+                  className="flex items-center gap-2 text-sm bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium transition-colors w-fit"
                 >
-                  <RefreshCw size={14} />
-                  Reintentar pago
+                  <RefreshCw size={14} className={retryLoading ? 'animate-spin' : ''} />
+                  {retryLoading ? 'Redirigiendo...' : 'Reintentar pago'}
                 </button>
+                {retryError && <p className="text-red-500 text-xs">{retryError}</p>}
               </div>
             )}
         </div>

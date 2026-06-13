@@ -13,7 +13,7 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
 
 export default function DashboardPage() {
-  const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
+  const { data, isLoading, error, refetch, isRefetching, dataUpdatedAt } = useQuery({
     queryKey: ['admin-dashboard'],
     queryFn: getDashboardStats,
     refetchInterval: 30_000,
@@ -25,7 +25,7 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const ageSeconds = dataUpdatedAt ? Math.floor((now - dataUpdatedAt) / 1000) : 0;
+  const ageSeconds = dataUpdatedAt ? Math.max(0, Math.floor((now - dataUpdatedAt) / 1000)) : 0;
   const ageText = ageSeconds < 60 ? `hace ${ageSeconds}s` : `hace ${Math.floor(ageSeconds / 60)}m`;
 
   if (isLoading) {
@@ -56,16 +56,17 @@ export default function DashboardPage() {
           )}
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors"
+            disabled={isRefetching}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors disabled:opacity-60"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${isRefetching ? 'animate-spin' : ''}`} />
             Refrescar
           </button>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <KpiCard title="Ventas totales"    value={fmt(data.ventas_totales)}   color="orange" icon="💰" />
         <KpiCard title="Pedidos hoy"       value={data.pedidos_hoy}           color="blue"   icon="📦" />
         <KpiCard title="Pedidos este mes"  value={data.pedidos_mes}           color="indigo" icon="📅" />

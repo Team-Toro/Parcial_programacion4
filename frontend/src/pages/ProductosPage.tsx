@@ -19,7 +19,7 @@ import { SkeletonTable } from '../components/Skeleton';
 import { useDebounce } from '../hooks/useDebounce';
 import { useAuthStore } from '../store/authStore';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 12;
 
 const defaultForm: ProductoCreate = {
   nombre: '', descripcion: '', precio_base: 0,
@@ -267,22 +267,39 @@ export default function ProductosPage() {
               : 'Productos'}
           </h1>
           {categoriaIdParam && (
-            <Link to="/productos" className="text-sm text-orange-500 hover:underline">
-              ← Ver todas las categorías
+            <Link to="/categorias" className="text-sm text-orange-500 hover:underline">
+              ← Ver categorías
             </Link>
           )}
         </div>
 
         <div className="bg-white p-4 rounded-xl shadow border border-slate-200 mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Buscar producto..."
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="relative flex-1 min-w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Buscar producto..."
+                className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+            <select
+              value={sortValue}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="py-2 px-3 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="nombre-asc">Nombre A–Z</option>
+              <option value="nombre-desc">Nombre Z–A</option>
+              <option value="precio_base-asc">Precio menor</option>
+              <option value="precio_base-desc">Precio mayor</option>
+            </select>
+            {hasActiveFilters && (
+              <button onClick={clearFilters} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50">
+                <RotateCcw className="w-3.5 h-3.5" />Limpiar
+              </button>
+            )}
           </div>
         </div>
 
@@ -294,8 +311,17 @@ export default function ProductosPage() {
           <div className="text-center py-16">
             <SearchX className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-500">
-              {searchInput ? 'No se encontraron productos.' : 'No hay productos disponibles.'}
+              {searchInput
+                ? 'No se encontraron productos.'
+                : categoriaIdParam
+                  ? 'No hay productos en esta categoría.'
+                  : 'No hay productos disponibles.'}
             </p>
+            {!searchInput && categoriaIdParam && (
+              <Link to="/categorias" className="mt-4 inline-block text-sm text-orange-500 hover:underline">
+                ← Ver todas las categorías
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
