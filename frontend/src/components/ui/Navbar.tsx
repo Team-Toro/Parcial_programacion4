@@ -4,6 +4,7 @@ import { LogOut, ShoppingCart } from 'lucide-react';
 import { logoutBackend } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import { useCarritoStore } from '../../store/carritoStore';
+import WSConnectionBadge from '../WSConnectionBadge';
 
 interface NavLink {
   to: string;
@@ -57,6 +58,11 @@ export default function Navbar() {
       visible: (u, r, isS, isA) => !!u && (isA || r.includes('STOCK')),
     },
     {
+      to: '/admin/dashboard',
+      label: 'Dashboard',
+      visible: (u, r, isS, isA) => !!u && isA,
+    },
+    {
       to: '/admin/usuarios',
       label: 'Usuarios',
       visible: (u, r, isS, isA) => !!u && isA,
@@ -92,6 +98,8 @@ export default function Navbar() {
 
       {user ? (
         <div className="flex items-center gap-3">
+          <WSConnectionBadge />
+
           {/* Carrito badge — oculto para staff */}
           {!isStaff && (
             <Link

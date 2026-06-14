@@ -1,6 +1,8 @@
 from enum import Enum
+from decimal import Decimal
 from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
+from sqlalchemy import Column, Numeric
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
@@ -21,6 +23,7 @@ class Ingrediente(SQLModel, table=True):
     es_alergeno: bool = Field(default=False)
     unidad: UnidadMedida = Field(default=UnidadMedida.UNIDAD)
     stock_actual: float = Field(default=0.0, nullable=False)
+    precio: Decimal = Field(default=Decimal("0.00"), sa_column=Column(Numeric(10, 2), nullable=False))
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     deleted_at: Optional[datetime] = Field(default=None)

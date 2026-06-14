@@ -7,6 +7,7 @@ Los valores sensibles (SECRET_KEY, POSTGRES_PASSWORD) viven en .env.
 """
 
 from decimal import Decimal
+from typing import Optional
 from pydantic import computed_field
 from pydantic_settings import BaseSettings
 
@@ -36,6 +37,19 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     COSTO_ENVIO_DEFAULT: Decimal = Decimal("50.00")
+
+    FRONTEND_URL: str = "http://localhost:5173"
+
+    # ─── MercadoPago ─────────────────────────────────────────────────────────
+    MP_ACCESS_TOKEN: Optional[str] = None
+    MP_PUBLIC_KEY: Optional[str] = None
+    # URL pública del backend (ngrok en dev). Usada para webhook y back_urls.
+    NGROK_URL: Optional[str] = None
+
+    # ─── Cloudinary ──────────────────────────────────────────────────────────
+    CLOUDINARY_CLOUD_NAME: Optional[str] = None
+    CLOUDINARY_API_KEY: Optional[str] = None
+    CLOUDINARY_API_SECRET: Optional[str] = None
 
     model_config = {
         "env_file": ".env",

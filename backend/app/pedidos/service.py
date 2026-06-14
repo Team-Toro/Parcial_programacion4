@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from datetime import datetime
 from decimal import Decimal
@@ -9,12 +10,34 @@ from ..productos.model import Producto
 from ..productos.service import calcular_stock_disponible
 from ..estados_pedido.service import EstadoPedidoService
 from ..core.config import settings
+
 ROLES_PEDIDOS = {"ADMIN", "PEDIDOS"}
+
+logger = logging.getLogger(__name__)
+
+_EVENTO_POR_ESTADO: dict[str, str] = {
+    "PENDIENTE":  "NUEVO_PEDIDO",
+    "CONFIRMADO": "PEDIDO_CONFIRMADO",
+    "EN_PREP":    "PEDIDO_EN_PREPARACION",
+    "EN_CAMINO":  "PEDIDO_EN_CAMINO",
+    "ENTREGADO":  "PEDIDO_ENTREGADO",
+    "CANCELADO":  "PEDIDO_CANCELADO",
+}
+
+_ROLES_POR_ESTADO: dict[str, list[str]] = {
+    "PENDIENTE":  ["ADMIN", "PEDIDOS"],
+    "CONFIRMADO": ["ADMIN", "PEDIDOS"],
+    "EN_PREP":    ["ADMIN", "PEDIDOS", "STOCK"],
+    "EN_CAMINO":  ["ADMIN", "PEDIDOS"],
+    "ENTREGADO":  ["ADMIN", "PEDIDOS"],
+    "CANCELADO":  ["ADMIN", "PEDIDOS"],
+}
 
 
 class PedidoService:
 
     def create(self, uow: UnitOfWork, usuario_id: int, data: PedidoCreate) -> Pedido:
+        """Valida stock, crea el Pedido con sus detalles y registra el historial inicial."""
         # 1. Validar forma de pago
         forma_pago = uow.formas_pago.get_by_codigo(data.forma_pago_codigo)
         if not forma_pago:
@@ -129,15 +152,18 @@ class PedidoService:
 
     def list_user_pedidos(self, uow: UnitOfWork, usuario_id: int,
                           offset: int = 0, limit: int = 20) -> List[Pedido]:
+        """Retorna los pedidos del usuario autenticado, paginados."""
         return uow.pedidos.list_by_user(usuario_id, offset, limit)
 
     def list_all_pedidos(self, uow: UnitOfWork, offset: int = 0, limit: int = 20,
                          usuario_id: int | None = None,
                          estado_codigo: str | None = None) -> List[Pedido]:
+        """Retorna todos los pedidos (admin/staff), con filtros opcionales por usuario y estado."""
         return uow.pedidos.list_all(offset, limit, usuario_id, estado_codigo)
 
     def get_pedido_for_user(self, uow: UnitOfWork, pedido_id: int,
                             current_user_id: int, user_roles: list) -> Pedido:
+        """Retorna el pedido si el usuario tiene acceso; lanza 404 si no pertenece ni tiene rol."""
         pedido = uow.pedidos.get_by_id(pedido_id)
         if not pedido:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -151,6 +177,7 @@ class PedidoService:
 
     def cambiar_estado(self, uow: UnitOfWork, pedido_id: int, nuevo_estado: str,
                        current_user, motivo: str | None = None) -> Pedido:
+        """Valida permisos y FSM, luego avanza el estado del pedido y registra historial."""
         pedido = uow.pedidos.get_by_id(pedido_id)
         if not pedido:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -208,6 +235,7 @@ class PedidoService:
 
     def cambiar_estado_por_sistema(self, uow: UnitOfWork, pedido_id: int,
                                    nuevo_estado: str, motivo: str) -> None:
+        """Avanza el estado de un pedido de forma silenciosa (sin validar permisos de usuario)."""
         pedido = uow.pedidos.get_by_id(pedido_id)
         if not pedido:
             return  # silently ignore if not found
@@ -231,6 +259,7 @@ class PedidoService:
         uow.pedidos.flush()
 
     def get_historial(self, uow: UnitOfWork, pedido_id: int, current_user):
+        """Retorna el historial de estados de un pedido, validando acceso del usuario."""
         pedido = uow.pedidos.get_by_id(pedido_id)
         if not pedido:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -244,3 +273,23 @@ class PedidoService:
                                 detail="No tenés acceso a este pedido")
 
         return uow.pedidos.get_historial_for_pedido(pedido_id)
+
+
+async def emit_pedido_event(pedido_id: int, estado_codigo: str, data: dict) -> None:
+    """
+    Emits WebSocket events after a pedido state change.
+    Must be called OUTSIDE the UoW context so WS failures never cause a rollback.
+    """
+    from ..core.websocket import manager
+
+    event = _EVENTO_POR_ESTADO.get(estado_codigo)
+    if not event:
+        return
+
+    roles = _ROLES_POR_ESTADO.get(estado_codigo, [])
+    try:
+        await manager.broadcast_to_roles(roles, event, data)
+        if estado_codigo != "PENDIENTE":
+            await manager.broadcast_to_order(pedido_id, event, data)
+    except Exception:
+        logger.exception("WS emit failed for pedido %s estado %s", pedido_id, estado_codigo)

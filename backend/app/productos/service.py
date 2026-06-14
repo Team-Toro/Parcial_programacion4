@@ -44,6 +44,7 @@ class ProductoService:
         order: str = "asc",
         include_deleted: bool = False,
     ) -> List[Producto]:
+        """Retorna la lista paginada de productos aplicando todos los filtros opcionales."""
         repo = ProductoRepository(uow.session)
         return repo.get_all(
             offset=offset,
@@ -64,6 +65,7 @@ class ProductoService:
         )
 
     def get_by_id(self, uow: UnitOfWork, producto_id: int) -> Producto:
+        """Obtiene un producto por ID o lanza 404 si no existe."""
         repo = ProductoRepository(uow.session)
         p = repo.get_by_id(producto_id)
         if not p:
@@ -71,6 +73,7 @@ class ProductoService:
         return p
 
     def create(self, uow: UnitOfWork, data: ProductoCreate) -> Producto:
+        """Crea un producto nuevo con sus categorías e ingredientes asociados."""
         repo = ProductoRepository(uow.session)
         producto = Producto(
             nombre=data.nombre,
@@ -103,6 +106,7 @@ class ProductoService:
         return producto
 
     def update(self, uow: UnitOfWork, producto_id: int, data: ProductoUpdate) -> Producto:
+        """Actualiza los campos y relaciones de un producto existente."""
         repo = ProductoRepository(uow.session)
         producto = self.get_by_id(uow, producto_id)
         update_data = data.model_dump(exclude_unset=True, exclude={"categoria_ids", "ingredientes"})
@@ -139,6 +143,7 @@ class ProductoService:
         return producto
 
     def delete(self, uow: UnitOfWork, producto_id: int) -> None:
+        """Realiza un soft delete del producto (setea deleted_at)."""
         repo = ProductoRepository(uow.session)
         producto = self.get_by_id(uow, producto_id)
         producto.deleted_at = datetime.utcnow()
@@ -146,6 +151,7 @@ class ProductoService:
         repo.flush()
 
     def reactivate(self, uow: UnitOfWork, producto_id: int) -> Producto:
+        """Reactiva un producto dado de baja limpiando su deleted_at."""
         repo = ProductoRepository(uow.session)
         producto = repo.get_by_id_including_deleted(producto_id)
         if not producto:
@@ -159,7 +165,12 @@ class ProductoService:
         repo.refresh(producto)
         return producto
 
+    def actualizar_imagenes(self, uow: UnitOfWork, producto_id: int, imagenes_url: List[str]) -> Producto:
+        """Reemplaza la lista de URLs de imágenes de un producto."""
+        return self.update(uow, producto_id, ProductoUpdate(imagenes_url=imagenes_url))
+
     def update_disponibilidad(self, uow: UnitOfWork, producto_id: int, disponible: bool) -> Producto:
+        """Activa o desactiva la visibilidad de un producto en el catálogo."""
         repo = ProductoRepository(uow.session)
         producto = repo.get_by_id_including_deleted(producto_id)
         if not producto:

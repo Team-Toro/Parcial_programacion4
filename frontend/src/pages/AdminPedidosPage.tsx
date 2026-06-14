@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllPedidos, avanzarEstadoPedido, cancelarPedido } from '../api/pedidos';
 import { useAuthStore } from '../store/authStore';
 import ModalMotivo from '../components/pedidos/ModalMotivo';
+import { useWebSocket } from '../hooks/useWebSocket';
+import { useWsStore } from '../store/wsStore';
+import { SkeletonTable } from '../components/Skeleton';
 
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: 'bg-amber-100 text-amber-700',
@@ -44,27 +47,77 @@ export default function AdminPedidosPage() {
   const user = useAuthStore((s) => s.user);
   const isStaff = user?.roles?.some((r) => STAFF_ROLES.includes(r)) ?? false;
 
-  const [usuarioIdInput, setUsuarioIdInput] = useState('');
+  const [usuarioIdFilter, setUsuarioIdFilter] = useState<number | undefined>(undefined);
   const [estadoCodigo, setEstadoCodigo] = useState('');
   const [offset, setOffset] = useState(0);
   const [pedidoACancelar, setPedidoACancelar] = useState<number | null>(null);
+  const [flashedIds, setFlashedIds] = useState<Set<number>>(new Set());
+  const prevEstadosRT = useRef<Record<number, string>>({});
+  const flashTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   const queryClient = useQueryClient();
+  useWebSocket();
+  const { newPedidoAlert, clearNewPedidoAlert, estadosRT } = useWsStore();
+
+  // Invalidate the list when a new pedido arrives
+  useEffect(() => {
+    if (newPedidoAlert) {
+      queryClient.invalidateQueries({ queryKey: ['admin-pedidos'] });
+    }
+  }, [newPedidoAlert, queryClient]);
+
+  // Flash rows when their estado changes via WS
+  useEffect(() => {
+    const prev = prevEstadosRT.current;
+    const changed: number[] = [];
+    for (const [idStr, newEstado] of Object.entries(estadosRT)) {
+      const id = Number(idStr);
+      if (prev[id] !== newEstado) changed.push(id);
+    }
+    prevEstadosRT.current = { ...estadosRT };
+    if (changed.length === 0) return;
+
+    setFlashedIds((s) => new Set([...s, ...changed]));
+    changed.forEach((id) => {
+      if (flashTimers.current.has(id)) clearTimeout(flashTimers.current.get(id)!);
+      flashTimers.current.set(id, setTimeout(() => {
+        setFlashedIds((s) => { const next = new Set(s); next.delete(id); return next; });
+        flashTimers.current.delete(id);
+      }, 500));
+    });
+  }, [estadosRT]);
 
   if (!isStaff) return <Navigate to="/productos" replace />;
 
-  const usuarioId = usuarioIdInput.trim() ? Number(usuarioIdInput) : undefined;
-
   const { data: pedidos = [], isLoading } = useQuery({
-    queryKey: ['admin-pedidos', usuarioId, estadoCodigo, offset],
+    queryKey: ['admin-pedidos', usuarioIdFilter, estadoCodigo, offset],
     queryFn: () =>
       getAllPedidos({
-        usuario_id: usuarioId,
+        usuario_id: usuarioIdFilter,
         estado_codigo: estadoCodigo || undefined,
         offset,
         limit: PAGE_SIZE,
       }),
   });
+
+  const { data: todosPedidos = [] } = useQuery({
+    queryKey: ['admin-pedidos-usuarios'],
+    queryFn: () => getAllPedidos({ limit: 100 }),
+    staleTime: 60_000,
+  });
+
+  const usuariosUnicos = useMemo(() => {
+    const map = new Map<number, { total: number; activos: number }>();
+    todosPedidos.forEach((p) => {
+      const entry = map.get(p.usuario_id) ?? { total: 0, activos: 0 };
+      entry.total += 1;
+      if (!TERMINALES.has(p.estado_codigo)) entry.activos += 1;
+      map.set(p.usuario_id, entry);
+    });
+    return Array.from(map.entries())
+      .map(([id, { total, activos }]) => ({ id, total, activos }))
+      .sort((a, b) => b.activos - a.activos || a.id - b.id);
+  }, [todosPedidos]);
 
   const mutAvanzar = useMutation({
     mutationFn: ({ id, estado }: { id: number; estado: string }) =>
@@ -91,18 +144,42 @@ export default function AdminPedidosPage() {
     <div className="px-4 sm:px-6 lg:px-12 py-8 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Gestión de pedidos</h1>
 
+      {/* Notificación de nuevo pedido */}
+      {newPedidoAlert && (
+        <div className="mb-4 flex items-center justify-between gap-3 bg-orange-50 border border-orange-300 text-orange-800 rounded-xl px-4 py-3 text-sm font-medium">
+          <span>
+            Nuevo pedido <strong>#{newPedidoAlert.id}</strong> del usuario{' '}
+            <strong>{newPedidoAlert.usuario_id}</strong> — ${Number(newPedidoAlert.total).toFixed(2)}
+          </span>
+          <button
+            onClick={clearNewPedidoAlert}
+            className="ml-auto text-orange-600 hover:text-orange-800 font-bold text-lg leading-none"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-5 flex flex-wrap gap-3 items-end">
         <div>
-          <label className="block text-xs text-slate-500 mb-1">ID de usuario</label>
-          <input
-            type="number"
-            min="1"
-            value={usuarioIdInput}
-            onChange={(e) => setUsuarioIdInput(e.target.value)}
-            placeholder="Todos"
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-orange-400"
-          />
+          <label className="block text-xs text-slate-500 mb-1">Usuario</label>
+          <select
+            value={usuarioIdFilter ?? ''}
+            onChange={(e) => {
+              setUsuarioIdFilter(e.target.value ? Number(e.target.value) : undefined);
+              setOffset(0);
+            }}
+            className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            <option value="">Todos los usuarios</option>
+            {usuariosUnicos.map((u) => (
+              <option key={u.id} value={u.id}>
+                Usuario #{u.id} ({u.activos} activos / {u.total} total)
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-xs text-slate-500 mb-1">Estado</label>
@@ -127,7 +204,7 @@ export default function AdminPedidosPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-slate-500 text-sm">Cargando...</p>
+        <SkeletonTable rows={8} cols={7} />
       ) : pedidos.length === 0 ? (
         <div className="text-center py-12 text-slate-500">
           No se encontraron pedidos con los filtros aplicados.
@@ -149,14 +226,16 @@ export default function AdminPedidosPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {pedidos.map((p) => {
-                  const transiciones = TRANSICIONES[p.estado_codigo] ?? [];
-                  const esTerminal = TERMINALES.has(p.estado_codigo);
+                  const estadoEfectivo = estadosRT[p.id] ?? p.estado_codigo;
+                  const transiciones = TRANSICIONES[estadoEfectivo] ?? [];
+                  const esTerminal = TERMINALES.has(estadoEfectivo);
                   const siguienteEstado = transiciones.find((t) => t !== 'CANCELADO') ?? null;
                   const puedeAvanzar = !esTerminal && siguienteEstado !== null;
                   const puedeCancelar = !esTerminal && transiciones.includes('CANCELADO');
 
+                  const isFlashing = flashedIds.has(p.id);
                   return (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={p.id} className={`transition-colors duration-500 ${isFlashing ? 'bg-orange-100' : 'bg-white hover:bg-slate-50'}`}>
                       <td className="px-4 py-3">
                         <Link
                           to={`/mis-pedidos/${p.id}`}
@@ -171,10 +250,10 @@ export default function AdminPedidosPage() {
                       <td className="px-4 py-3">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            ESTADO_COLORS[p.estado_codigo] ?? 'bg-slate-100 text-slate-700'
+                            ESTADO_COLORS[estadoEfectivo] ?? 'bg-slate-100 text-slate-700'
                           }`}
                         >
-                          {p.estado_codigo}
+                          {estadoEfectivo}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-slate-800">

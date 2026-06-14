@@ -19,7 +19,13 @@ import CheckoutPage from './pages/CheckoutPage';
 import MisPedidosPage from './pages/MisPedidosPage';
 import PedidoDetallePage from './pages/PedidoDetallePage';
 import AdminPedidosPage from './pages/AdminPedidosPage';
+import DashboardPage from './pages/DashboardPage';
 import PagoMockPage from './pages/PagoMockPage';
+import PagoPage from './pages/PagoPage';
+import SuccessPage from './pages/SuccessPage';
+import FailurePage from './pages/FailurePage';
+import ToastContainer from './components/ToastContainer';
+import WSManager from './components/WSManager';
 
 const queryClient = new QueryClient();
 
@@ -46,10 +52,14 @@ export default function App() {
               <Route path="/mis-pedidos" element={<MisPedidosPage />} />
               <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
               <Route path="/pago-mock/:external_reference" element={<PagoMockPage />} />
+              <Route path="/pagos/:pedido_id" element={<PagoPage />} />
+              <Route path="/pagos/:pedido_id/success" element={<SuccessPage />} />
+              <Route path="/pagos/:pedido_id/failure" element={<FailurePage />} />
 
               {/* Solo admin */}
               <Route element={<AdminRoute />}>
                 <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
+                <Route path="/admin/dashboard" element={<DashboardPage />} />
               </Route>
 
               {/* Admin o staff con rol STOCK (gestión de catálogo) */}
@@ -67,7 +77,9 @@ export default function App() {
           <Route path="*" element={<Navigate to="/productos" replace />} />
         </Routes>
       </BrowserRouter>
+      <WSManager />
       <ReactQueryDevtools initialIsOpen={false} />
+      <ToastContainer />
     </QueryClientProvider>
   );
 }

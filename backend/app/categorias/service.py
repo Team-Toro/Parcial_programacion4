@@ -19,6 +19,7 @@ class CategoriaService:
         order: str = "asc",
         include_deleted: bool = False,
     ) -> List[Categoria]:
+        """Retorna la lista paginada de categorías con filtros opcionales."""
         repo = CategoriaRepository(uow.session)
         return repo.get_all(
             offset=offset,
@@ -32,6 +33,7 @@ class CategoriaService:
         )
 
     def get_by_id(self, uow: UnitOfWork, categoria_id: int, include_deleted: bool = False) -> Categoria:
+        """Obtiene una categoría por ID o lanza 404 si no existe."""
         repo = CategoriaRepository(uow.session)
         categoria = (
             repo.get_by_id_including_deleted(categoria_id)
@@ -46,6 +48,7 @@ class CategoriaService:
         return categoria
 
     def get_stats(self, uow: UnitOfWork, categoria_id: int) -> CategoriaStats:
+        """Retorna conteo de subcategorías, productos y nivel jerárquico de una categoría."""
         self.get_by_id(uow, categoria_id)
 
         repo = CategoriaRepository(uow.session)
@@ -101,6 +104,7 @@ class CategoriaService:
         return ancestors
 
     def get_level(self, repo: CategoriaRepository, categoria_id: int) -> int:
+        """Retorna la profundidad de la categoría en el árbol jerárquico (0 = raíz)."""
         ancestors = self._get_ancestors(repo, categoria_id)
         return len(ancestors)
 
@@ -115,6 +119,7 @@ class CategoriaService:
             )
 
     def create(self, uow: UnitOfWork, data: CategoriaCreate) -> Categoria:
+        """Crea una categoría nueva validando unicidad de nombre y existencia del padre."""
         repo = CategoriaRepository(uow.session)
 
         if repo.get_by_nombre(data.nombre):
@@ -136,6 +141,7 @@ class CategoriaService:
         return categoria
 
     def update(self, uow: UnitOfWork, categoria_id: int, data: CategoriaUpdate) -> Categoria:
+        """Actualiza campos de una categoría validando nombre único y sin referencias circulares."""
         repo = CategoriaRepository(uow.session)
         categoria = repo.get_by_id(categoria_id)
 
@@ -167,6 +173,7 @@ class CategoriaService:
         return categoria
 
     def delete(self, uow: UnitOfWork, categoria_id: int) -> None:
+        """Soft delete de categoría y sus hijos; falla si tiene productos activos."""
         repo = CategoriaRepository(uow.session)
         categoria = repo.get_by_id(categoria_id)
 
@@ -199,7 +206,12 @@ class CategoriaService:
         categoria.deleted_at = now
         repo.save(categoria)
 
+    def actualizar_imagen(self, uow: UnitOfWork, categoria_id: int, imagen_url: str | None) -> Categoria:
+        """Actualiza la imagen de una categoría (acepta None para eliminarla)."""
+        return self.update(uow, categoria_id, CategoriaUpdate(imagen_url=imagen_url))
+
     def reactivate(self, uow: UnitOfWork, categoria_id: int) -> Categoria:
+        """Reactiva una categoría dada de baja limpiando su deleted_at."""
         repo = CategoriaRepository(uow.session)
         categoria = repo.get_by_id_including_deleted(categoria_id)
         if not categoria:

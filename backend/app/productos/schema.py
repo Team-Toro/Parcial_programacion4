@@ -56,6 +56,10 @@ class ProductoDisponibilidadUpdate(SQLModel):
     disponible: bool
 
 
+class ImagenProductoUpdate(SQLModel):
+    imagenes_url: List[str]
+
+
 class ProductoCategoriaRead(SQLModel):
     categoria: Optional[CategoriaRead] = None
     es_principal: bool = False

@@ -164,6 +164,7 @@ class UsuarioService:
             uow.refresh_tokens.revoke(rt)
 
     def to_public(self, uow: UnitOfWork, usuario: Usuario) -> UsuarioPublic:
+        """Serializa un Usuario ORM al schema público incluyendo sus roles actuales."""
         repo = UsuarioRepository(uow.session)
         roles = repo.get_roles_for_user(usuario.id)
         return UsuarioPublic(
@@ -192,6 +193,7 @@ class UsuarioService:
         sort: str | None = None,
         order: str = "asc",
     ) -> list[Usuario]:
+        """Lista usuarios con filtros de búsqueda, rol, estado y paginación."""
         repo = UsuarioRepository(uow.session)
         return repo.list(
             offset=offset,
@@ -219,6 +221,7 @@ class UsuarioService:
         return user
 
     def set_roles(self, uow: UnitOfWork, user_id: int, roles: list[str] | None) -> Usuario:
+        """Reemplaza los roles del usuario; si queda sin roles válidos, desactiva la cuenta."""
         repo = UsuarioRepository(uow.session)
         user = repo.get_by_id(user_id)
         if not user:
@@ -239,6 +242,7 @@ class UsuarioService:
         return user
 
     def ensure_default_role_on_activate(self, uow: UnitOfWork, user: Usuario) -> None:
+        """Asigna el rol CLIENTE si el usuario no tiene ningún rol al reactivarse."""
         repo = UsuarioRepository(uow.session)
         roles = repo.get_roles_for_user(user.id)
         if not roles:

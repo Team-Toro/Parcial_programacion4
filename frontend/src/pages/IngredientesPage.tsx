@@ -17,8 +17,11 @@ import { useAuthStore } from '../store/authStore';
 const PAGE_SIZE = 10;
 const defaultForm: IngredienteCreate = {
   nombre: '', descripcion: '', es_alergeno: false,
-  unidad: 'unidad', stock_actual: 0,
+  unidad: 'unidad', stock_actual: 0, precio: 0,
 };
+
+const formatPrecio = (value: number) =>
+  `$${Number(value).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
 type AlergenoFilter = 'all' | 'si' | 'no';
 type SortField = 'nombre' | 'created_at' | 'stock_actual';
@@ -135,6 +138,7 @@ export default function IngredientesPage() {
     setForm({
       nombre: ing.nombre, descripcion: ing.descripcion ?? '',
       es_alergeno: ing.es_alergeno, unidad: ing.unidad, stock_actual: ing.stock_actual,
+      precio: Number(ing.precio),
     });
     setModalError(''); setIsOpen(true);
   };
@@ -144,6 +148,10 @@ export default function IngredientesPage() {
   const handleSubmit = () => {
     if (!form.nombre.trim()) { setModalError('El nombre es obligatorio'); return; }
     if (form.stock_actual < 0) { setModalError('El stock no puede ser negativo'); return; }
+    if (form.unidad === 'unidad' && !Number.isInteger(form.stock_actual)) {
+      setModalError('El stock debe ser un número entero para ingredientes por unidad'); return;
+    }
+    if (form.precio < 0) { setModalError('El precio no puede ser negativo'); return; }
     if (editing) {
       updateMutation.mutate({ id: editing.id, data: form });
     } else {
@@ -299,6 +307,7 @@ export default function IngredientesPage() {
                 <th className="px-6 py-3 text-left">Nombre</th>
                 <th className="px-6 py-3 text-left">Descripción</th>
                 <th className="px-6 py-3 text-left">Alérgeno</th>
+                <th className="px-6 py-3 text-left">Precio</th>
                 <th className="px-6 py-3 text-left">Stock</th>
                 {isAdmin && <th className="px-6 py-3 text-right">Acciones</th>}
               </tr>
@@ -332,6 +341,9 @@ export default function IngredientesPage() {
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />No
                         </span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-slate-700 font-semibold">
+                      {formatPrecio(ing.precio)} <span className="text-slate-400 text-xs font-normal">/ {ing.unidad}</span>
                     </td>
                     <td className="px-6 py-4 text-slate-700">
                       {ing.stock_actual} <span className="text-slate-400 text-xs">{ing.unidad}</span>
@@ -428,7 +440,14 @@ export default function IngredientesPage() {
               <select
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 value={form.unidad}
-                onChange={e => setForm(f => ({ ...f, unidad: e.target.value as UnidadMedida }))}
+                onChange={e => {
+                  const u = e.target.value as UnidadMedida;
+                  setForm(f => ({
+                    ...f,
+                    unidad: u,
+                    stock_actual: u === 'unidad' ? Math.floor(f.stock_actual) : f.stock_actual,
+                  }));
+                }}
               >
                 <option value="unidad">Unidad</option>
                 <option value="kg">Kg</option>
@@ -440,10 +459,24 @@ export default function IngredientesPage() {
               <input
                 type="number"
                 min={0}
-                step="0.01"
+                step={form.unidad === 'unidad' ? '1' : '0.01'}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 value={form.stock_actual}
-                onChange={e => setForm(f => ({ ...f, stock_actual: parseFloat(e.target.value) || 0 }))}
+                onChange={e => {
+                  const val = parseFloat(e.target.value) || 0;
+                  setForm(f => ({ ...f, stock_actual: f.unidad === 'unidad' ? Math.floor(val) : val }));
+                }}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Precio (por {form.unidad})</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                value={form.precio}
+                onChange={e => setForm(f => ({ ...f, precio: parseFloat(e.target.value) || 0 }))}
               />
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer mt-1">
