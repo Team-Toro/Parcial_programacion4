@@ -5,7 +5,8 @@ import { getDashboardStats } from '../api/admin';
 import KpiCard from '../components/dashboard/KpiCard';
 import EstadosPieChart from '../components/dashboard/EstadosPieChart';
 import VentasLineChart from '../components/dashboard/VentasLineChart';
-import TopProductosTable from '../components/dashboard/TopProductosTable';
+import TopProductosBarChart from '../components/dashboard/TopProductosBarChart';
+import IngresosBarChart from '../components/dashboard/IngresosBarChart';
 import PedidosRecientesTable from '../components/dashboard/PedidosRecientesTable';
 import { SkeletonTable } from '../components/Skeleton';
 
@@ -67,23 +68,34 @@ export default function DashboardPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        <KpiCard title="Ventas totales"    value={fmt(data.ventas_totales)}   color="orange" icon="💰" />
-        <KpiCard title="Pedidos hoy"       value={data.pedidos_hoy}           color="blue"   icon="📦" />
-        <KpiCard title="Pedidos este mes"  value={data.pedidos_mes}           color="indigo" icon="📅" />
-        <KpiCard title="Ticket promedio"   value={fmt(data.ticket_promedio)}  color="green"  icon="🎫" />
+        <KpiCard title="Ventas totales"    value={fmt(Number(data.ventas_totales))}   color="orange" icon="💰" />
+        <KpiCard title="Pedidos hoy"       value={data.pedidos_hoy}                   color="blue"   icon="📦" />
+        <KpiCard title="Pedidos este mes"  value={data.pedidos_mes}                   color="indigo" icon="📅" />
+        <KpiCard title="Ticket promedio"   value={fmt(Number(data.ticket_promedio))}  color="green"  icon="🎫" />
         <KpiCard title="Clientes activos"  value={data.total_clientes}        color="purple" icon="👤" />
         <KpiCard title="Productos activos" value={data.productos_activos}     color="red"    icon="🍽️" />
       </div>
 
-      {/* Gráficos */}
+      {/* Gráficos — fila 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <VentasLineChart  data={data.ventas_por_dia} />
         <EstadosPieChart  data={data.estados} />
       </div>
 
-      {/* Tablas */}
+      {/* Gráficos — fila 2 (BarCharts) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TopProductosTable       data={data.top_productos} />
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">Top 5 productos vendidos</h3>
+          <TopProductosBarChart data={data.top_productos} />
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">Ingresos por forma de pago</h3>
+          <IngresosBarChart data={data.ingresos_por_forma_pago} />
+        </div>
+      </div>
+
+      {/* Tablas */}
+      <div className="grid grid-cols-1 gap-6">
         <PedidosRecientesTable   data={data.pedidos_recientes} />
       </div>
     </div>

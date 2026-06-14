@@ -5,15 +5,23 @@ export interface EstadoCount {
   cantidad: number;
 }
 
+// Los montos llegan como string (el backend serializa Decimal → string para
+// preservar precisión). Castear con Number() antes de formatear/graficar.
 export interface VentasPorDia {
   fecha: string;
-  total: number;
+  total: string;
 }
 
 export interface TopProducto {
   nombre: string;
   total_unidades: number;
-  total_ventas: number;
+  total_ventas: string;
+}
+
+export interface IngresoPorFormaPago {
+  forma_pago_codigo: string;
+  cantidad_pedidos: number;
+  total_ingresos: string;
 }
 
 export interface PedidoReciente {
@@ -21,20 +29,21 @@ export interface PedidoReciente {
   cliente: string;
   email: string;
   estado: string;
-  total: number;
+  total: string;
   created_at: string;
 }
 
 export interface DashboardStats {
-  ventas_totales: number;
+  ventas_totales: string;
   pedidos_hoy: number;
   pedidos_mes: number;
-  ticket_promedio: number;
+  ticket_promedio: string;
   total_clientes: number;
   productos_activos: number;
   estados: EstadoCount[];
   ventas_por_dia: VentasPorDia[];
   top_productos: TopProducto[];
+  ingresos_por_forma_pago: IngresoPorFormaPago[];
   pedidos_recientes: PedidoReciente[];
 }
 
