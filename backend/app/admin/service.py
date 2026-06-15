@@ -15,9 +15,6 @@ from app.admin.schema import (
 )
 from app.uow.unit_of_work import UnitOfWork
 
-# EST-03: solo cuentan los ingresos confirmados. Para MERCADOPAGO se exige
-# mp_status='approved'; EFECTIVO y TRANSFERENCIA no tienen verificación de pago,
-# así que se cuentan todos los pedidos no cancelados.
 _PAGO_CONFIRMADO = "(p.forma_pago_codigo != 'MERCADOPAGO' OR pg.mp_status = 'approved')"
 
 

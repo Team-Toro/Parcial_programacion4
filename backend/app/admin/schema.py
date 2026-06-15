@@ -3,9 +3,6 @@ from typing import Annotated
 
 from pydantic import BaseModel, PlainSerializer
 
-# EST-04: el dinero se maneja como Decimal en todo el backend (nunca float nativo).
-# Se serializa a string en el JSON de respuesta para preservar la precisión decimal
-# en el transporte (JS no tiene un tipo decimal nativo). El frontend lo castea con Number().
 Money = Annotated[Decimal, PlainSerializer(lambda v: str(v), return_type=str)]
 
 
