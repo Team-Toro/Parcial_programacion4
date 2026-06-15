@@ -6,6 +6,21 @@ Sistema de gestión de pedidos de comida full-stack con pagos online, WebSocket 
 
 ---
 
+## 👨‍💻 Integrantes
+
+- Arena Lucio
+- Cunto Tiago
+- Lopez Mariano
+- Rojo Emiliano
+
+---
+
+## 🎥 Video explicativo + demo
+
+📹 **https://youtu.be/mw7X0z7cMCc**
+
+---
+
 ## 📋 Tabla de contenidos
 
 - [Arquitectura](#-arquitectura)
@@ -368,21 +383,6 @@ Parcial_programacion4/
 ├── docker-compose.yml       # db + api + frontend + ngrok
 └── README.md
 ```
-
----
-
-## 🎥 Video demo
-
-📹 **https://youtu.be/IKM9juxEyv4**
-
----
-
-## 👨‍💻 Integrantes
-
-- Arena Lucio
-- Cunto Tiago
-- Lopez Mariano
-- Rojo Emiliano
 
 ---
 
