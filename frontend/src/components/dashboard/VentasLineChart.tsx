@@ -22,11 +22,14 @@ export default function VentasLineChart({ data }: Props) {
     );
   }
 
+  // El backend serializa los montos como string (Decimal) → coercionar a number para graficar.
+  const chartData = data.map((d) => ({ fecha: d.fecha, total: Number(d.total) }));
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5">
       <h3 className="text-sm font-semibold text-slate-700 mb-4">Ventas últimos 14 días</h3>
       <ResponsiveContainer width="100%" height={280}>
-        <AreaChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+        <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
           <defs>
             <linearGradient id="ventasGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />

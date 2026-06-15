@@ -1,5 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
 import type { Categoria } from '../types';
+import { cloudinaryTransform } from '../lib/cloudinary';
 
 interface Props {
   categoria: Categoria;
@@ -14,8 +15,9 @@ export default function CategoriaCard({ categoria }: Props) {
       {categoria.imagen_url ? (
         <>
           <img
-            src={categoria.imagen_url}
+            src={cloudinaryTransform(categoria.imagen_url, 800)}
             alt={categoria.nombre}
+            loading="lazy"
             className="w-full h-full object-cover group-hover:brightness-110 transition-all duration-300"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />

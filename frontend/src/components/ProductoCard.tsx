@@ -4,6 +4,7 @@ import { ShoppingCart, Check } from 'lucide-react';
 import type { Producto } from '../types';
 import { useCarritoStore } from '../store/carritoStore';
 import { useAuthStore } from '../store/authStore';
+import { cloudinaryTransform } from '../lib/cloudinary';
 
 interface Props {
   producto: Producto;
@@ -56,8 +57,9 @@ export default function ProductoCard({ producto }: Props) {
       <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden">
         {producto.imagenes_url?.[0] ? (
           <img
-            src={producto.imagenes_url[0]}
+            src={cloudinaryTransform(producto.imagenes_url[0], 400)}
             alt={producto.nombre}
+            loading="lazy"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (

@@ -42,7 +42,7 @@ async def create_preference(
     service: Annotated[PagoService, Depends(get_service)],
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
-    result = service.crear_pago(uow, data.pedido_id)
+    result = service.crear_pago(uow, data.pedido_id, current_user)
     return PagoCrearResponse(**result)
 
 

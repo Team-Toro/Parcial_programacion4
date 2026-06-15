@@ -5,6 +5,7 @@ import { ShoppingCart, Package } from 'lucide-react';
 import { getProductoById } from '../api/productos';
 import { useAuthStore } from '../store/authStore';
 import { useCarritoStore } from '../store/carritoStore';
+import { cloudinaryTransform } from '../lib/cloudinary';
 
 function StockBadge({ value }: { value: number }) {
   const color =
@@ -97,7 +98,7 @@ export default function ProductoDetallePage() {
           <div className="mb-6">
             <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100">
               <img
-                src={activeImage ?? producto.imagenes_url![0]}
+                src={cloudinaryTransform(activeImage ?? producto.imagenes_url![0], 800)}
                 alt={producto.nombre}
                 className="w-full h-full object-cover"
               />
@@ -114,7 +115,7 @@ export default function ProductoDetallePage() {
                         : 'border-transparent hover:border-orange-300'
                     }`}
                   >
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <img src={cloudinaryTransform(url, 200)} alt="" loading="lazy" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

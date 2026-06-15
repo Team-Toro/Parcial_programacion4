@@ -96,7 +96,7 @@ class CategoriaService:
         while current_id and current_id not in visited:
             visited.add(current_id)
             cat = repo.get_by_id(current_id)
-            if not cat or not cat.parent_id:
+            if not cat:
                 break
             ancestors.append(cat)
             current_id = cat.parent_id
