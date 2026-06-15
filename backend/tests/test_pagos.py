@@ -107,10 +107,30 @@ def test_webhook_idempotente(client, seed_data, monkeypatch):
     assert pedido["estado_codigo"] == "CONFIRMADO"
 
 
-@pytest.mark.skip(
-    reason="POST /pagos/create-preference no valida que el pedido pertenezca al usuario "
-    "autenticado (el service.crear_pago no chequea ownership). Posible gap de seguridad "
-    "a revisar; no se corrige en esta tanda (solo tests)."
-)
-def test_create_preference_pedido_ajeno_403():
-    ...
+def test_create_preference_pedido_ajeno_403(client, seed_data, monkeypatch):
+    """Un cliente no puede generar la preferencia del pedido de otro usuario."""
+    monkeypatch.setattr(settings, "MP_ACCESS_TOKEN", "TEST-token")
+
+    # El cliente crea su propio pedido
+    login(client, "cliente@test.com", "Cliente1234!")
+    pid = _crear_pedido_mp(client, seed_data).json()["id"]
+
+    # Registrar un segundo cliente
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "first_name": "Otro",
+            "last_name": "Cliente",
+            "email": "otro@test.com",
+            "celular": "3333",
+            "password": "Otro1234!",
+        },
+    )
+
+    # Loguear como el segundo cliente e intentar pagar el pedido ajeno
+    login(client, "otro@test.com", "Otro1234!")
+    fake_pref = {"preference_id": "pref_x", "init_point": "https://mp.test/x"}
+    with patch.object(PagoService, "_crear_preferencia_mp", return_value=fake_pref):
+        resp = client.post("/api/v1/pagos/create-preference", json={"pedido_id": pid})
+
+    assert resp.status_code == 403

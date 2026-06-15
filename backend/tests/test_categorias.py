@@ -90,11 +90,10 @@ def test_referencia_circular_auto(client, seed_data):
     assert resp.status_code == 400
 
 
-@pytest.mark.skip(
-    reason="BUG del código (no se corrige en esta tanda): CategoriaService._get_ancestors "
-    "appendea el nodo actual en vez de su padre, así que NO detecta el ciclo padre↔hijo "
-    "(A padre de B, luego B padre de A). En vez de 400 deja pasar la actualización y la "
-    "serialización del response recursa infinito (ResponseValidationError). A reportar."
-)
-def test_referencia_circular_padre_hijo():
-    ...
+def test_referencia_circular_padre_hijo(client, seed_data):
+    """A es padre de B; intentar que B sea padre de A debe dar 400."""
+    _login_admin(client)
+    a_id = client.post("/api/v1/categorias/", json={"nombre": "Abuelo"}).json()["id"]
+    b_id = client.post("/api/v1/categorias/", json={"nombre": "Hijo", "parent_id": a_id}).json()["id"]
+    resp = client.patch(f"/api/v1/categorias/{a_id}", json={"parent_id": b_id})
+    assert resp.status_code == 400
