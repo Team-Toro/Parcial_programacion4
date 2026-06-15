@@ -134,7 +134,7 @@ class PagoService:
         logger.info("Pago pendiente creado para pedido=%s (sin preferencia MP)", pedido.id)
         return pago
 
-    def crear_pago(self, uow: UnitOfWork, pedido_id: int) -> dict:
+    def crear_pago(self, uow: UnitOfWork, pedido_id: int, current_user=None) -> dict:
         """
         Llamado desde POST /pagos/create-preference.
         Crea (o reutiliza) la preferencia de MP y devuelve init_point.
@@ -147,6 +147,16 @@ class PagoService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No existe un pago para este pedido. Verificá que el pedido existe y es MERCADOPAGO.",
             )
+
+        if current_user is not None:
+            roles = getattr(current_user, "roles", [])
+            if "ADMIN" not in roles and "PEDIDOS" not in roles:
+                pedido_check = uow.pedidos.get_by_id(pedido_id)
+                if not pedido_check or pedido_check.usuario_id != current_user.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="No tenés acceso a este pedido",
+                    )
 
         if pago.mp_status == "approved":
             raise HTTPException(
