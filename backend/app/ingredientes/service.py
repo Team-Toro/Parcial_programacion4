@@ -1,9 +1,12 @@
+from decimal import Decimal
 from typing import List
 from datetime import datetime
 from fastapi import HTTPException
 from .model import Ingrediente
 from .schema import IngredienteCreate, IngredienteUpdate
 from .repository import IngredienteRepository
+from ..productos.model import Producto
+from ..productos.repository import ProductoRepository
 from ..uow.unit_of_work import UnitOfWork
 
 
@@ -63,7 +66,32 @@ class IngredienteService:
         for key, value in update_data.items():
             setattr(ing, key, value)
         repo.save(ing)
+
+        if "precio" in update_data:
+            self._recalcular_precios_productos(uow, ingrediente_id)
+
         return ing
+
+    def _recalcular_precios_productos(self, uow: UnitOfWork, ingrediente_id: int) -> None:
+        producto_repo = ProductoRepository(uow.session)
+        pivots = producto_repo.get_pivots_by_ingrediente(ingrediente_id)
+        now = datetime.utcnow()
+        seen_producto_ids: set[int] = set()
+        for pivot in pivots:
+            if pivot.producto_id is None or pivot.producto_id in seen_producto_ids:
+                continue
+            producto = uow.session.get(Producto, pivot.producto_id)
+            if producto is None or producto.deleted_at is not None:
+                continue
+            nuevo_precio = Decimal("0")
+            for link in producto.ingredientes:
+                if link.ingrediente is None or link.ingrediente.deleted_at is not None:
+                    continue
+                nuevo_precio += Decimal(str(link.ingrediente.precio)) * Decimal(str(link.cantidad))
+            producto.precio_base = nuevo_precio
+            producto.updated_at = now
+            uow.session.add(producto)
+            seen_producto_ids.add(pivot.producto_id)
 
     def delete(self, uow: UnitOfWork, ingrediente_id: int) -> None:
         repo = IngredienteRepository(uow.session)

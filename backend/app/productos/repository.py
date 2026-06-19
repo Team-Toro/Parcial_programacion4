@@ -124,6 +124,11 @@ class ProductoRepository:
             select(ProductoIngrediente).where(ProductoIngrediente.producto_id == producto_id)
         ).all()
 
+    def get_pivots_by_ingrediente(self, ingrediente_id: int) -> List[ProductoIngrediente]:
+        return self.session.exec(
+            select(ProductoIngrediente).where(ProductoIngrediente.ingrediente_id == ingrediente_id)
+        ).all()
+
     def get_ingredientes_removibles(self, producto_id: int) -> List[ProductoIngrediente]:
         return self.session.exec(
             select(ProductoIngrediente)
