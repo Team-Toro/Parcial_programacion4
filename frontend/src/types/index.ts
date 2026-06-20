@@ -162,6 +162,8 @@ export interface Producto {
   nombre: string;
   descripcion?: string;
   precio_base: number;
+  markup_porcentaje: number;
+  precio_final: number;
   imagenes_url?: string[];
   stock_cantidad: number;
   stock_disponible: number;
@@ -177,6 +179,7 @@ export interface ProductoCreate {
   nombre: string;
   descripcion?: string;
   precio_base: number;
+  markup_porcentaje: number;
   imagenes_url?: string[];
   stock_cantidad?: number;
   disponible: boolean;

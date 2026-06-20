@@ -50,7 +50,7 @@ export default function ProductoDetallePage() {
     agregarItem({
       producto_id: producto.id,
       nombre: producto.nombre,
-      precio: Number(producto.precio_base),
+      precio: Number(producto.precio_final),
       cantidad,
       imagen_url: producto.imagenes_url?.[0],
       personalizacion: removidos,
@@ -147,7 +147,7 @@ export default function ProductoDetallePage() {
         <p className="text-slate-500 mb-4">{producto.descripcion ?? 'Sin descripción.'}</p>
 
         <div className="flex items-center gap-4 mb-6 flex-wrap">
-          <p className="text-2xl font-bold text-orange-500">${Number(producto.precio_base).toFixed(2)}</p>
+          <p className="text-2xl font-bold text-orange-500">${Number(producto.precio_final).toFixed(2)}</p>
           {isAdmin && (
             <span className="text-sm bg-slate-100 px-3 py-1 rounded-full">
               Stock disponible: <StockBadge value={producto.stock_disponible} />

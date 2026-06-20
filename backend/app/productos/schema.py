@@ -11,6 +11,7 @@ class ProductoBase(SQLModel):
     nombre: str
     descripcion: Optional[str] = None
     precio_base: Decimal
+    markup_porcentaje: Decimal = Decimal("50")
     imagenes_url: Optional[List[str]] = None
     stock_cantidad: int = 0
     disponible: bool = True
@@ -45,6 +46,7 @@ class ProductoUpdate(SQLModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
     precio_base: Optional[Decimal] = None
+    markup_porcentaje: Optional[Decimal] = None
     imagenes_url: Optional[List[str]] = None
     stock_cantidad: Optional[int] = None
     disponible: Optional[bool] = None
@@ -98,6 +100,11 @@ class ProductoPublic(ProductoBase):
     deleted_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def precio_final(self) -> Decimal:
+        return (self.precio_base * (1 + self.markup_porcentaje / 100)).quantize(Decimal("0.01"))
 
     @computed_field
     @property

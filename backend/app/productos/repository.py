@@ -70,10 +70,11 @@ class ProductoRepository:
             ).where(col(ProductoIngrediente.ingrediente_id) == ingrediente_id)
             needs_distinct = True
 
+        precio_final = col(Producto.precio_base) * (1 + col(Producto.markup_porcentaje) / 100)
         if precio_min is not None:
-            query = query.where(col(Producto.precio_base) >= precio_min)
+            query = query.where(precio_final >= precio_min)
         if precio_max is not None:
-            query = query.where(col(Producto.precio_base) <= precio_max)
+            query = query.where(precio_final <= precio_max)
 
         if stock_min is not None:
             query = query.where(col(Producto.stock_cantidad) >= stock_min)
@@ -87,9 +88,10 @@ class ProductoRepository:
         if needs_distinct:
             query = query.distinct()
 
+        precio_final_expr = col(Producto.precio_base) * (1 + col(Producto.markup_porcentaje) / 100)
         sort_map = {
             "nombre": col(Producto.nombre),
-            "precio_base": col(Producto.precio_base),
+            "precio_base": precio_final_expr,
             "created_at": col(Producto.created_at),
             "stock_cantidad": col(Producto.stock_cantidad),
         }

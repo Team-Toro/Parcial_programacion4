@@ -25,7 +25,7 @@ export default function ProductoCard({ producto }: Props) {
     agregarItem({
       producto_id: producto.id,
       nombre: producto.nombre,
-      precio: Number(producto.precio_base),
+      precio: Number(producto.precio_final),
       cantidad: 1,
       imagen_url: producto.imagenes_url?.[0],
       personalizacion: [],
@@ -72,7 +72,7 @@ export default function ProductoCard({ producto }: Props) {
       <div className="bg-white p-4 flex flex-col gap-2">
         <p className="font-semibold text-slate-800 text-sm line-clamp-1">{producto.nombre}</p>
         <p className="text-orange-500 font-bold text-lg">
-          ${Number(producto.precio_base).toLocaleString('es-AR')}
+          ${Number(producto.precio_final).toLocaleString('es-AR')}
         </p>
         <button
           onClick={canAdd ? handleAgregar : undefined}

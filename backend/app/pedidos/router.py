@@ -3,7 +3,6 @@ import logging
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, WebSocket, WebSocketDisconnect, status
-from sqlmodel import Session
 
 from .schema import (
     PedidoCreate,
@@ -16,10 +15,7 @@ from .service import PedidoService, emit_pedido_event
 from ..uow.unit_of_work import UnitOfWork, get_uow
 from ..core.deps import get_current_active_user, require_role
 from ..core.security import decode_access_token
-from ..core.database import engine
 from ..core.websocket import manager
-from ..usuarios.repository import UsuarioRepository
-from .repository import PedidoRepository
 from ..usuarios.model import Usuario
 
 router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
@@ -67,15 +63,14 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         await websocket.close(code=1008, reason="Token inválido")
         return
 
-    with Session(engine) as db_session:
-        repo = UsuarioRepository(db_session)
-        user = repo.get_by_username(email)
-        if not user or user.disabled:
-            await websocket.accept()
-            await websocket.close(code=1008, reason="Usuario no autorizado")
-            return
-        roles: list[str] = repo.get_roles_for_user(user.id)
-        user_id: int = user.id
+    service = PedidoService()
+    try:
+        with UnitOfWork() as uow:
+            user_id, roles = service.authenticate_ws_user(uow, email)
+    except HTTPException:
+        await websocket.accept()
+        await websocket.close(code=1008, reason="Usuario no autorizado")
+        return
 
     primary_role = _get_primary_role(roles)
     await manager.connect(websocket, primary_role, user_id)
@@ -98,13 +93,11 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     continue
 
                 # CLIENTE role: validate ownership
-                if "ADMIN" not in roles and "PEDIDOS" not in roles:
-                    with Session(engine) as db_session:
-                        pedido_repo = PedidoRepository(db_session)
-                        pedido = pedido_repo.get_by_id(order_id)
-                    if not pedido or pedido.usuario_id != user_id:
-                        await websocket.send_json({"event": "ERROR", "data": {"message": f"No tenés acceso al pedido {order_id}"}})
-                        continue
+                with UnitOfWork() as uow:
+                    allowed = service.can_subscribe_to_order(uow, user_id, roles, order_id)
+                if not allowed:
+                    await websocket.send_json({"event": "ERROR", "data": {"message": f"No tenés acceso al pedido {order_id}"}})
+                    continue
 
                 manager.join_order_room(websocket, order_id)
                 await websocket.send_json({"event": "SUBSCRIBED", "data": {"order_id": order_id}})

@@ -22,7 +22,7 @@ import { useAuthStore } from '../store/authStore';
 const PAGE_SIZE = 12;
 
 const defaultForm: ProductoCreate = {
-  nombre: '', descripcion: '', precio_base: 0,
+  nombre: '', descripcion: '', precio_base: 0, markup_porcentaje: 50,
   disponible: true, categoria_ids: [], ingredientes: [], imagenes_url: [],
 };
 
@@ -140,18 +140,33 @@ export default function ProductosPage() {
     ingredientesVistos.current.get(id)
       ?? editing?.ingredientes.find(i => i.ingrediente.id === id)?.ingrediente;
 
-  // Sugerido = costo de ingredientes seleccionados + 50% markup.
-  // Si falta el precio de alguno, no se muestra (es solo informativo).
-  let costoIngredientes = 0;
-  let costoCompleto = form.ingredientes.length > 0;
+  // Costo de ingredientes: Σ ing.precio × cantidad. null si algún precio falta.
+  let costoIngredientes: number | null = form.ingredientes.length > 0 ? 0 : null;
   for (const pi of form.ingredientes) {
     const ing = buscarIngrediente(pi.ingrediente_id);
-    if (!ing || ing.precio === undefined) { costoCompleto = false; break; }
-    costoIngredientes += Number(ing.precio) * pi.cantidad;
+    if (!ing || ing.precio === undefined) { costoIngredientes = null; break; }
+    costoIngredientes = (costoIngredientes ?? 0) + Number(ing.precio) * pi.cantidad;
   }
-  const precioSugerido = costoCompleto && costoIngredientes > 0
-    ? Math.round(costoIngredientes * 1.5 * 100) / 100
+  const precioFinal = costoIngredientes !== null
+    ? Math.round(costoIngredientes * (1 + form.markup_porcentaje / 100) * 100) / 100
     : null;
+
+  const handleMarkupChange = (markup: number) => {
+    setForm(f => ({ ...f, markup_porcentaje: markup }));
+    if (costoIngredientes !== null) {
+      const newPrecio = Math.round(costoIngredientes * (1 + markup / 100) * 100) / 100;
+      setForm(f => ({ ...f, markup_porcentaje: markup, precio_base: newPrecio }));
+    }
+  };
+
+  const handlePrecioFinalChange = (precio: number) => {
+    if (costoIngredientes !== null && costoIngredientes > 0) {
+      const markup = Math.round(((precio / costoIngredientes) - 1) * 100 * 100) / 100;
+      setForm(f => ({ ...f, precio_base: costoIngredientes!, markup_porcentaje: markup }));
+    } else {
+      setForm(f => ({ ...f, precio_base: precio }));
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: createProducto,
@@ -187,6 +202,7 @@ export default function ProductosPage() {
       nombre: p.nombre,
       descripcion: p.descripcion ?? '',
       precio_base: Number(p.precio_base),
+      markup_porcentaje: Number(p.markup_porcentaje),
       disponible: p.disponible,
       categoria_ids: p.categorias.map(pc => pc.categoria?.id).filter((id): id is number => id !== undefined),
       ingredientes: p.ingredientes.map(pi => ({
@@ -203,12 +219,18 @@ export default function ProductosPage() {
 
   const handleSubmit = () => {
     if (!form.nombre.trim()) { setModalError('El nombre es obligatorio'); return; }
-    if (form.precio_base < 0) { setModalError('El precio no puede ser negativo'); return; }
+    const finalPrice = precioFinal ?? form.precio_base;
+    if (finalPrice < 0) { setModalError('El precio final no puede ser negativo'); return; }
     if (form.ingredientes.length === 0) { setModalError('El producto debe tener al menos un ingrediente'); return; }
+    // Always persist raw ingredient cost as precio_base before submitting
+    const payload: ProductoCreate = {
+      ...form,
+      precio_base: costoIngredientes !== null ? costoIngredientes : form.precio_base,
+    };
     if (editing) {
-      updateMutation.mutate({ id: editing.id, data: form });
+      updateMutation.mutate({ id: editing.id, data: payload });
     } else {
-      createMutation.mutate(form);
+      createMutation.mutate(payload);
     }
   };
 
@@ -476,7 +498,7 @@ export default function ProductosPage() {
                     <td className="px-6 py-4 font-medium">
                       <span className={isDeleted ? 'line-through text-slate-400' : 'text-slate-800'}>{p.nombre}</span>
                     </td>
-                    <td className="px-6 py-4 text-slate-700 font-semibold">${Number(p.precio_base).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-slate-700 font-semibold">${Number(p.precio_final).toFixed(2)}</td>
                     {isAdmin && <td className="px-6 py-4"><StockBadge value={p.stock_disponible} /></td>}
                     <td className="px-6 py-4">
                       {!isDeleted && (
@@ -591,27 +613,40 @@ export default function ProductosPage() {
                 placeholder="Descripción opcional..."
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Precio base *</label>
-              <input
-                type="number" min={0} step="0.01"
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                value={form.precio_base}
-                onChange={e => setForm(f => ({ ...f, precio_base: parseFloat(e.target.value) || 0 }))}
-              />
-              {precioSugerido !== null && (
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-xs text-slate-500">
-                    Precio sugerido (50% markup sobre ingredientes): ${precioSugerido.toLocaleString('es-AR')}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, precio_base: precioSugerido }))}
-                    className="text-xs text-orange-500 hover:underline font-medium whitespace-nowrap"
-                  >
-                    Usar este precio
-                  </button>
-                </div>
+            <div className="flex flex-col gap-2">
+              <label className="block text-sm font-medium text-slate-700">Precio</label>
+              {costoIngredientes !== null ? (
+                <>
+                  <div className="flex items-center justify-between text-sm bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                    <span className="text-slate-500">Costo de ingredientes</span>
+                    <span className="font-semibold text-slate-700">${costoIngredientes.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-slate-500 whitespace-nowrap w-20">Markup %</label>
+                    <input
+                      type="number" step="0.01"
+                      className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      value={form.markup_porcentaje}
+                      onChange={e => handleMarkupChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-slate-500 whitespace-nowrap w-20">Precio final</label>
+                    <input
+                      type="number" min={0} step="0.01"
+                      className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      value={precioFinal ?? 0}
+                      onChange={e => handlePrecioFinalChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </>
+              ) : (
+                <input
+                  type="number" min={0} step="0.01"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  value={form.precio_base}
+                  onChange={e => setForm(f => ({ ...f, precio_base: parseFloat(e.target.value) || 0 }))}
+                />
               )}
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">

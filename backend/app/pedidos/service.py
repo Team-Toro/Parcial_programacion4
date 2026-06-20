@@ -6,7 +6,6 @@ from fastapi import HTTPException, status
 from .model import Pedido, DetallePedido, HistorialEstadoPedido
 from .schema import PedidoCreate
 from ..uow.unit_of_work import UnitOfWork
-from ..productos.model import Producto
 from ..productos.service import calcular_stock_disponible
 from ..estados_pedido.service import EstadoPedidoService
 from ..core.config import settings
@@ -62,6 +61,7 @@ class PedidoService:
 
         # 3. Validar items y construir snapshots
         item_snapshots = []
+        productos_por_item: list[tuple] = []  # (producto, cantidad) for stock decrement
         for item in data.items:
             producto = uow.productos.get_by_id_including_deleted(item.producto_id)
             if not producto:
@@ -87,7 +87,7 @@ class PedidoService:
                             detail=f"Ingrediente {ing_id} no es removible en '{producto.nombre}'"
                         )
 
-            precio = producto.precio_base
+            precio = (producto.precio_base * (1 + producto.markup_porcentaje / 100)).quantize(Decimal("0.01"))
             subtotal_snap = Decimal(str(item.cantidad)) * precio
             item_snapshots.append({
                 "producto_id": item.producto_id,
@@ -97,6 +97,7 @@ class PedidoService:
                 "subtotal_snap": subtotal_snap,
                 "personalizacion": item.personalizacion,
             })
+            productos_por_item.append((producto, item.cantidad))
 
         # 4. Calcular totales
         subtotal = sum(s["subtotal_snap"] for s in item_snapshots)
@@ -123,6 +124,18 @@ class PedidoService:
         # 6. Crear detalles
         for snap in item_snapshots:
             uow.pedidos.add_detalle(DetallePedido(pedido_id=pedido.id, **snap))
+        uow.pedidos.flush()
+
+        # 6b. Descontar stock
+        for producto, cantidad in productos_por_item:
+            if not producto.ingredientes:
+                producto.stock_cantidad -= cantidad
+                uow.session.add(producto)
+            else:
+                for link in producto.ingredientes:
+                    if link.ingrediente is not None:
+                        link.ingrediente.stock_actual -= link.cantidad * cantidad
+                        uow.session.add(link.ingrediente)
         uow.pedidos.flush()
 
         # 7. Registrar primer historial
@@ -257,6 +270,23 @@ class PedidoService:
         )
         uow.pedidos.add_historial(historial)
         uow.pedidos.flush()
+
+    def authenticate_ws_user(self, uow: UnitOfWork, email: str) -> tuple[int, list[str]]:
+        """Returns (user_id, roles) or raises HTTPException 403 if user is missing or disabled."""
+        user = uow.usuarios.get_by_username(email)
+        if not user or user.disabled:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Usuario no autorizado")
+        assert user.id is not None
+        roles: list[str] = uow.usuarios.get_roles_for_user(user.id)
+        return user.id, roles
+
+    def can_subscribe_to_order(self, uow: UnitOfWork, user_id: int, roles: list[str], order_id: int) -> bool:
+        """Returns True if user is allowed to subscribe to this order's WS feed."""
+        if "ADMIN" in roles or "PEDIDOS" in roles:
+            return True
+        pedido = uow.pedidos.get_by_id(order_id)
+        return pedido is not None and pedido.usuario_id == user_id
 
     def get_historial(self, uow: UnitOfWork, pedido_id: int, current_user):
         """Retorna el historial de estados de un pedido, validando acceso del usuario."""

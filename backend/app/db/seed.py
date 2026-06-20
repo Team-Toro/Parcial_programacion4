@@ -538,12 +538,13 @@ def run() -> None:
             )
 
             producto = Producto(
-                nombre        = data["nombre"],
-                descripcion   = data.get("descripcion"),
-                precio_base   = precio_base,
-                imagenes_url  = data.get("imagenes_url"),
-                stock_cantidad= data.get("stock_cantidad", 0),
-                disponible    = data.get("disponible", True),
+                nombre            = data["nombre"],
+                descripcion       = data.get("descripcion"),
+                precio_base       = precio_base,
+                markup_porcentaje = Decimal(str(data.get("markup_porcentaje", "50"))),
+                imagenes_url      = data.get("imagenes_url"),
+                stock_cantidad    = data.get("stock_cantidad", 0),
+                disponible        = data.get("disponible", True),
             )
             session.add(producto)
             session.flush()
