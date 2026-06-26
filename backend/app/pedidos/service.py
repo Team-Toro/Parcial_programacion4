@@ -7,6 +7,7 @@ from .model import Pedido, DetallePedido, HistorialEstadoPedido
 from .schema import PedidoCreate
 from ..uow.unit_of_work import UnitOfWork
 from ..productos.service import calcular_stock_disponible
+from ..productos.model import Producto
 from ..estados_pedido.service import EstadoPedidoService
 from ..core.config import settings
 
@@ -31,6 +32,21 @@ _ROLES_POR_ESTADO: dict[str, list[str]] = {
     "ENTREGADO":  ["ADMIN", "PEDIDOS"],
     "CANCELADO":  ["ADMIN", "PEDIDOS"],
 }
+
+
+def _ajustar_stock(pedido: "Pedido", uow: "UnitOfWork", signo: int) -> None:
+    for detalle in pedido.detalles:
+        producto = uow.session.get(Producto, detalle.producto_id)
+        if producto is None:
+            continue
+        if not producto.ingredientes:
+            producto.stock_cantidad += signo * detalle.cantidad
+            uow.session.add(producto)
+        else:
+            for link in producto.ingredientes:
+                if link.ingrediente is not None:
+                    link.ingrediente.stock_actual += signo * link.cantidad * detalle.cantidad
+                    uow.session.add(link.ingrediente)
 
 
 class PedidoService:
@@ -61,7 +77,6 @@ class PedidoService:
 
         # 3. Validar items y construir snapshots
         item_snapshots = []
-        productos_por_item: list[tuple] = []  # (producto, cantidad) for stock decrement
         for item in data.items:
             producto = uow.productos.get_by_id_including_deleted(item.producto_id)
             if not producto:
@@ -97,7 +112,6 @@ class PedidoService:
                 "subtotal_snap": subtotal_snap,
                 "personalizacion": item.personalizacion,
             })
-            productos_por_item.append((producto, item.cantidad))
 
         # 4. Calcular totales
         subtotal = sum(s["subtotal_snap"] for s in item_snapshots)
@@ -127,15 +141,9 @@ class PedidoService:
         uow.pedidos.flush()
 
         # 6b. Descontar stock
-        for producto, cantidad in productos_por_item:
-            if not producto.ingredientes:
-                producto.stock_cantidad -= cantidad
-                uow.session.add(producto)
-            else:
-                for link in producto.ingredientes:
-                    if link.ingrediente is not None:
-                        link.ingrediente.stock_actual -= link.cantidad * cantidad
-                        uow.session.add(link.ingrediente)
+        uow.pedidos.flush()
+        uow.session.refresh(pedido)
+        _ajustar_stock(pedido, uow, signo=-1)
         uow.pedidos.flush()
 
         # 7. Registrar primer historial
@@ -229,6 +237,8 @@ class PedidoService:
                                 detail="El motivo es obligatorio al cancelar")
 
         # Ejecutar cambio
+        if nuevo_estado == "CANCELADO":
+            _ajustar_stock(pedido, uow, signo=+1)
         estado_anterior = pedido.estado_codigo
         pedido.estado_codigo = nuevo_estado
         pedido.updated_at = datetime.utcnow()
@@ -256,6 +266,8 @@ class PedidoService:
         if not EstadoPedidoService.es_transicion_valida(pedido.estado_codigo, nuevo_estado):
             return  # silently ignore invalid transition (no crash en webhook)
 
+        if nuevo_estado == "CANCELADO":
+            _ajustar_stock(pedido, uow, signo=+1)
         estado_anterior = pedido.estado_codigo
         pedido.estado_codigo = nuevo_estado
         pedido.updated_at = datetime.utcnow()

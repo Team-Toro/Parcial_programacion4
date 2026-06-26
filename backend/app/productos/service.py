@@ -79,6 +79,7 @@ class ProductoService:
             nombre=data.nombre,
             descripcion=data.descripcion,
             precio_base=data.precio_base,
+            markup_porcentaje=data.markup_porcentaje,
             imagenes_url=data.imagenes_url,
             stock_cantidad=data.stock_cantidad,
             disponible=data.disponible,

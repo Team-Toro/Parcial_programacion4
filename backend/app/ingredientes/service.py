@@ -51,6 +51,7 @@ class IngredienteService:
             es_alergeno=data.es_alergeno,
             unidad=data.unidad,
             stock_actual=data.stock_actual,
+            precio=data.precio,
         )
         repo.save(ing)
         return ing
