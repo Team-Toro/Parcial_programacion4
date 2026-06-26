@@ -90,7 +90,11 @@ class ProductoService:
         for cat_id in data.categoria_ids:
             if not repo.get_categoria(cat_id):
                 raise HTTPException(status_code=404, detail=f"Categoría {cat_id} no encontrada")
-            repo.add(ProductoCategoria(producto_id=producto.id, categoria_id=cat_id))
+            repo.add(ProductoCategoria(
+                producto_id=producto.id,
+                categoria_id=cat_id,
+                es_principal=(cat_id == data.categoria_principal_id),
+            ))
 
         for ing_data in data.ingredientes:
             if not repo.get_ingrediente(ing_data.ingrediente_id):
@@ -110,7 +114,7 @@ class ProductoService:
         """Actualiza los campos y relaciones de un producto existente."""
         repo = ProductoRepository(uow.session)
         producto = self.get_by_id(uow, producto_id)
-        update_data = data.model_dump(exclude_unset=True, exclude={"categoria_ids", "ingredientes"})
+        update_data = data.model_dump(exclude_unset=True, exclude={"categoria_ids", "categoria_principal_id", "ingredientes"})
         update_data["updated_at"] = datetime.utcnow()
         for key, value in update_data.items():
             setattr(producto, key, value)
@@ -122,7 +126,11 @@ class ProductoService:
             for pc in repo.get_categorias_pivot(producto_id):
                 repo.delete(pc)
             for cat_id in data.categoria_ids:
-                repo.add(ProductoCategoria(producto_id=producto_id, categoria_id=cat_id))
+                repo.add(ProductoCategoria(
+                    producto_id=producto_id,
+                    categoria_id=cat_id,
+                    es_principal=(cat_id == data.categoria_principal_id),
+                ))
 
         if data.ingredientes is not None:
             for ing_data in data.ingredientes:

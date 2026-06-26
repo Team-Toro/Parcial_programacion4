@@ -29,18 +29,22 @@ class AdminRepository:
 
         pedidos_hoy = self.session.execute(
             text(
-                "SELECT COUNT(id) FROM pedidos "
-                "WHERE estado_codigo != 'CANCELADO' AND deleted_at IS NULL "
-                "AND DATE(created_at) = :hoy"
+                "SELECT COUNT(p.id) FROM pedidos p "
+                "LEFT JOIN pagos pg ON pg.pedido_id = p.id "
+                "WHERE p.estado_codigo != 'CANCELADO' AND p.deleted_at IS NULL "
+                f"AND {_PAGO_CONFIRMADO} "
+                "AND DATE(p.created_at) = :hoy"
             ),
             {"hoy": hoy},
         ).scalar() or 0
 
         pedidos_mes = self.session.execute(
             text(
-                "SELECT COUNT(id) FROM pedidos "
-                "WHERE estado_codigo != 'CANCELADO' AND deleted_at IS NULL "
-                "AND created_at >= :primer_dia"
+                "SELECT COUNT(p.id) FROM pedidos p "
+                "LEFT JOIN pagos pg ON pg.pedido_id = p.id "
+                "WHERE p.estado_codigo != 'CANCELADO' AND p.deleted_at IS NULL "
+                f"AND {_PAGO_CONFIRMADO} "
+                "AND p.created_at >= :primer_dia"
             ),
             {"primer_dia": primer_dia_mes},
         ).scalar() or 0

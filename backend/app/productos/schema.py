@@ -39,6 +39,7 @@ class IngredienteEnProducto(SQLModel):
 
 class ProductoCreate(ProductoBase):
     categoria_ids: List[int] = []
+    categoria_principal_id: Optional[int] = None
     ingredientes: List[IngredienteEnProducto] = []
 
 
@@ -51,6 +52,7 @@ class ProductoUpdate(SQLModel):
     stock_cantidad: Optional[int] = None
     disponible: Optional[bool] = None
     categoria_ids: Optional[List[int]] = None
+    categoria_principal_id: Optional[int] = None
     ingredientes: Optional[List[IngredienteEnProducto]] = None
 
 

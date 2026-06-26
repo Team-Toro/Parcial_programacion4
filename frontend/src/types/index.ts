@@ -184,6 +184,7 @@ export interface ProductoCreate {
   stock_cantidad?: number;
   disponible: boolean;
   categoria_ids: number[];
+  categoria_principal_id?: number;
   ingredientes: IngredienteEnProducto[];
 }
 

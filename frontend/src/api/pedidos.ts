@@ -7,8 +7,8 @@ export const createPedido = (data: PedidoCreate): Promise<Pedido> =>
     body: JSON.stringify(data),
   });
 
-export const getMisPedidos = (offset = 0, limit = 20): Promise<Pedido[]> =>
-  apiFetch<Pedido[]>(`/api/v1/pedidos/mis-pedidos${buildQueryString({ offset, limit })}`);
+export const getMisPedidos = (offset = 0, limit = 20, soloActivos?: boolean): Promise<Pedido[]> =>
+  apiFetch<Pedido[]>(`/api/v1/pedidos/mis-pedidos${buildQueryString({ offset, limit, ...(soloActivos !== undefined && { solo_activos: soloActivos }) })}`);
 
 export const getAllPedidos = (params?: {
   usuario_id?: number;

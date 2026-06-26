@@ -7,8 +7,6 @@ import { useWsStore } from '../store/wsStore';
 import { useUiStore } from '../store/uiStore';
 import { SkeletonTable } from '../components/Skeleton';
 
-const TERMINALES = new Set(['ENTREGADO', 'CANCELADO']);
-
 const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: 'bg-amber-100 text-amber-700',
   CONFIRMADO: 'bg-blue-100 text-blue-700',
@@ -57,15 +55,16 @@ export default function MisPedidosPage() {
   const prevEstadosRT = useRef<Record<number, string>>({});
 
   const { data: pedidos = [], isLoading, isError } = useQuery({
-    queryKey: ['mis-pedidos', offset],
-    queryFn: () => getMisPedidos(offset, PAGE_SIZE),
+    queryKey: ['mis-pedidos', activeTab, offset],
+    queryFn: () => getMisPedidos(offset, PAGE_SIZE, activeTab === 'proceso'),
   });
 
   useEffect(() => {
-    const activeIds = pedidos.filter((p) => !TERMINALES.has(p.estado_codigo)).map((p) => p.id);
+    if (activeTab !== 'proceso') return;
+    const activeIds = pedidos.map((p) => p.id);
     activeIds.forEach(subscribeToOrder);
     return () => { activeIds.forEach(unsubscribeFromOrder); };
-  }, [pedidos, subscribeToOrder, unsubscribeFromOrder]);
+  }, [pedidos, activeTab, subscribeToOrder, unsubscribeFromOrder]);
 
   useEffect(() => {
     const prev = prevEstadosRT.current;
@@ -79,10 +78,6 @@ export default function MisPedidosPage() {
     }
     prevEstadosRT.current = { ...estadosRT };
   }, [estadosRT, addToast]);
-
-  const enProceso = pedidos.filter((p) => !TERMINALES.has(estadosRT[p.id] ?? p.estado_codigo));
-  const historial = pedidos.filter((p) => TERMINALES.has(estadosRT[p.id] ?? p.estado_codigo));
-  const pedidosVisibles = activeTab === 'proceso' ? enProceso : historial;
 
   const handleTabChange = (tab: 'proceso' | 'historial') => {
     setActiveTab(tab);
@@ -101,7 +96,7 @@ export default function MisPedidosPage() {
     <div className="px-4 sm:px-6 lg:px-12 py-8 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Mis pedidos</h1>
 
-      {pedidos.length === 0 && offset === 0 ? (
+      {pedidos.length === 0 && offset === 0 && activeTab === 'proceso' ? (
         <div className="text-center py-16">
           <p className="text-slate-500 mb-4">No tenés pedidos todavía.</p>
           <Link
@@ -123,7 +118,7 @@ export default function MisPedidosPage() {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              En proceso ({enProceso.length})
+              En proceso {activeTab === 'proceso' ? `(${pedidos.length})` : ''}
             </button>
             <button
               onClick={() => handleTabChange('historial')}
@@ -133,11 +128,11 @@ export default function MisPedidosPage() {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Historial ({historial.length})
+              Historial {activeTab === 'historial' ? `(${pedidos.length})` : ''}
             </button>
           </div>
 
-          {pedidosVisibles.length === 0 ? (
+          {pedidos.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               {activeTab === 'proceso' ? 'No tenés pedidos en proceso.' : 'No hay pedidos en tu historial.'}
             </div>
@@ -154,7 +149,7 @@ export default function MisPedidosPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {pedidosVisibles.map((p) => {
+                  {pedidos.map((p) => {
                     const estadoEfectivo = estadosRT[p.id] ?? p.estado_codigo;
                     return (
                       <tr key={p.id} className="hover:bg-slate-50 transition-colors">

@@ -23,7 +23,7 @@ const PAGE_SIZE = 12;
 
 const defaultForm: ProductoCreate = {
   nombre: '', descripcion: '', precio_base: 0, markup_porcentaje: 50,
-  disponible: true, categoria_ids: [], ingredientes: [], imagenes_url: [],
+  disponible: true, categoria_ids: [], categoria_principal_id: undefined, ingredientes: [], imagenes_url: [],
 };
 
 type SortField = 'nombre' | 'precio_base' | 'created_at' | 'stock_cantidad';
@@ -205,6 +205,7 @@ export default function ProductosPage() {
       markup_porcentaje: Number(p.markup_porcentaje),
       disponible: p.disponible,
       categoria_ids: p.categorias.map(pc => pc.categoria?.id).filter((id): id is number => id !== undefined),
+      categoria_principal_id: p.categorias.find(pc => pc.es_principal)?.categoria?.id,
       ingredientes: p.ingredientes.map(pi => ({
         ingrediente_id: pi.ingrediente.id,
         es_removible: pi.es_removible,
@@ -235,12 +236,14 @@ export default function ProductosPage() {
   };
 
   const toggleCategoria = (id: number) =>
-    setForm(f => ({
-      ...f,
-      categoria_ids: f.categoria_ids.includes(id)
-        ? f.categoria_ids.filter(x => x !== id)
-        : [...f.categoria_ids, id],
-    }));
+    setForm(f => {
+      const removing = f.categoria_ids.includes(id);
+      return {
+        ...f,
+        categoria_ids: removing ? f.categoria_ids.filter(x => x !== id) : [...f.categoria_ids, id],
+        categoria_principal_id: removing && f.categoria_principal_id === id ? undefined : f.categoria_principal_id,
+      };
+    });
 
   const toggleIngrediente = (id: number) => {
     const exists = form.ingredientes.find(pi => pi.ingrediente_id === id);
@@ -679,13 +682,23 @@ export default function ProductosPage() {
                   <span className="text-slate-400 text-xs">Ninguna categoría seleccionada</span>
                 ) : form.categoria_ids.map(catId => {
                   const cat = categorias.find(c => c.id === catId);
+                  const isPrincipal = form.categoria_principal_id === catId;
                   return cat ? (
-                    <span key={cat.id} className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                    <span
+                      key={cat.id}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm ${isPrincipal ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700'}`}
+                    >
+                      <button
+                        type="button"
+                        title={isPrincipal ? 'Quitar principal' : 'Marcar como principal'}
+                        onClick={() => setForm(f => ({ ...f, categoria_principal_id: isPrincipal ? undefined : catId }))}
+                        className="leading-none hover:opacity-70"
+                      >★</button>
                       {cat.nombre}
                       <button
                         type="button"
                         onClick={() => toggleCategoria(cat.id)}
-                        className="hover:bg-orange-200 rounded-full p-0.5 leading-none"
+                        className={`hover:opacity-70 rounded-full p-0.5 leading-none`}
                       >×</button>
                     </span>
                   ) : null;

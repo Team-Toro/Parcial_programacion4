@@ -172,9 +172,10 @@ class PedidoService:
         return pedido
 
     def list_user_pedidos(self, uow: UnitOfWork, usuario_id: int,
-                          offset: int = 0, limit: int = 20) -> List[Pedido]:
+                          offset: int = 0, limit: int = 20,
+                          solo_activos: bool | None = None) -> List[Pedido]:
         """Retorna los pedidos del usuario autenticado, paginados."""
-        return uow.pedidos.list_by_user(usuario_id, offset, limit)
+        return uow.pedidos.list_by_user(usuario_id, offset, limit, solo_activos)
 
     def list_all_pedidos(self, uow: UnitOfWork, offset: int = 0, limit: int = 20,
                          usuario_id: int | None = None,

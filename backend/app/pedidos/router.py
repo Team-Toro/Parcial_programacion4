@@ -155,6 +155,7 @@ def listar_mis_pedidos(
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    solo_activos: Annotated[Optional[bool], Query()] = None,
 ):
     roles = getattr(current_user, "roles", [])
     if "ADMIN" in roles or "PEDIDOS" in roles:
@@ -162,7 +163,7 @@ def listar_mis_pedidos(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Este endpoint es solo para clientes. Usá GET /pedidos/ para ver todos los pedidos",
         )
-    return service.list_user_pedidos(uow, current_user.id, offset, limit)
+    return service.list_user_pedidos(uow, current_user.id, offset, limit, solo_activos)
 
 
 @router.get(
