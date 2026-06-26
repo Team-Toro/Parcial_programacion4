@@ -45,6 +45,7 @@ class DetallePedidoPublic(BaseModel):
     precio_snapshot: Decimal
     subtotal_snap: Decimal
     personalizacion: Optional[List[int]]
+    personalizacion_snapshot: Optional[List[dict]] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

@@ -92,6 +92,7 @@ class PedidoService:
                     detail=f"Stock insuficiente para '{producto.nombre}' (disponible: {stock_disp}, solicitado: {item.cantidad})"
                 )
 
+            personalizacion_snapshot = None
             if item.personalizacion:
                 pi_removibles = uow.productos.get_ingredientes_removibles(item.producto_id)
                 removible_ids = {pi.ingrediente_id for pi in pi_removibles}
@@ -101,6 +102,16 @@ class PedidoService:
                             status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Ingrediente {ing_id} no es removible en '{producto.nombre}'"
                         )
+                # Build name snapshot from the loaded relationships
+                nombre_por_id = {
+                    pi.ingrediente_id: pi.ingrediente.nombre
+                    for pi in pi_removibles
+                    if pi.ingrediente is not None
+                }
+                personalizacion_snapshot = [
+                    {"id": ing_id, "nombre": nombre_por_id.get(ing_id, str(ing_id))}
+                    for ing_id in item.personalizacion
+                ]
 
             precio = (producto.precio_base * (1 + producto.markup_porcentaje / 100)).quantize(Decimal("0.01"))
             subtotal_snap = Decimal(str(item.cantidad)) * precio
@@ -111,6 +122,7 @@ class PedidoService:
                 "precio_snapshot": precio,
                 "subtotal_snap": subtotal_snap,
                 "personalizacion": item.personalizacion,
+                "personalizacion_snapshot": personalizacion_snapshot,
             })
 
         # 4. Calcular totales
