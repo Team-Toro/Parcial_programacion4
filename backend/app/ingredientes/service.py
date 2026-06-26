@@ -99,6 +99,7 @@ class IngredienteService:
         ing = self.get_by_id(uow, ingrediente_id)
         ing.deleted_at = datetime.utcnow()
         repo.save(ing)
+        self._recalcular_precios_productos(uow, ingrediente_id)
 
     def reactivate(self, uow: UnitOfWork, ingrediente_id: int) -> Ingrediente:
         repo = IngredienteRepository(uow.session)
@@ -110,4 +111,5 @@ class IngredienteService:
         ing.deleted_at = None
         ing.updated_at = datetime.utcnow()
         repo.save(ing)
+        self._recalcular_precios_productos(uow, ingrediente_id)
         return ing

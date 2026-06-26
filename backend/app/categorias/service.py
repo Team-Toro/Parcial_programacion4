@@ -193,15 +193,17 @@ class CategoriaService:
                 detail="No se puede eliminar la categoría: tiene productos activos asociados"
             )
 
-        subcategorias = repo.get_subcategorias(categoria_id)
-        for sub in subcategorias:
-            sub.deleted_at = now
-            repo.save(sub)
+        for cid in all_ids:
+            if cid == categoria_id:
+                continue
+            sub = repo.get_by_id(cid)
+            if sub:
+                sub.deleted_at = now
+                repo.save(sub)
 
-        productos_relaciones = repo.get_productos_relaciones(categoria_id)
-
-        for pc in productos_relaciones:
-            uow.session.delete(pc)
+        for cid in all_ids:
+            for pc in repo.get_productos_relaciones(cid):
+                uow.session.delete(pc)
 
         categoria.deleted_at = now
         repo.save(categoria)

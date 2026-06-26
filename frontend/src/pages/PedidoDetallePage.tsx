@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPedido, cancelarPedido } from '../api/pedidos';
 import { getPagoByPedido, crearPreferencia } from '../api/pagos';
+import { getProductoById } from '../api/productos';
 import TimelinePedido from '../components/pedidos/TimelinePedido';
 import ModalMotivo from '../components/pedidos/ModalMotivo';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -83,6 +84,28 @@ export default function PedidoDetallePage() {
     retry: false,
   });
 
+  const detallesConPersonalizacion = (pedido?.detalles ?? []).filter(
+    (d) => Array.isArray(d.personalizacion) && d.personalizacion.length > 0
+  );
+  const productosQueries = useQueries({
+    queries: detallesConPersonalizacion.map((d) => ({
+      queryKey: ['producto', d.producto_id],
+      queryFn: () => getProductoById(d.producto_id),
+      enabled: !!pedido,
+    })),
+  });
+  const ingredienteNombres = new Map<number, Map<number, string>>();
+  detallesConPersonalizacion.forEach((d, i) => {
+    const producto = productosQueries[i]?.data;
+    if (producto) {
+      const innerMap = new Map<number, string>();
+      for (const ic of (producto as any).ingredientes ?? []) {
+        innerMap.set(ic.ingrediente.id, ic.ingrediente.nombre);
+      }
+      ingredienteNombres.set(d.producto_id, innerMap);
+    }
+  });
+
   const mutCancelar = useMutation({
     mutationFn: (motivo: string) => cancelarPedido(Number(id), motivo),
     onSuccess: () => {
@@ -160,7 +183,9 @@ export default function PedidoDetallePage() {
                   <p className="font-medium text-slate-800">{d.nombre_snapshot}</p>
                   {Array.isArray(d.personalizacion) && d.personalizacion.length > 0 && (
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Sin ingredientes: {d.personalizacion.map(String).join(', ')}
+                      Sin ingredientes: {d.personalizacion.map(
+                        (ingId: number) => ingredienteNombres.get(d.producto_id)?.get(ingId) ?? String(ingId)
+                      ).join(', ')}
                     </p>
                   )}
                 </td>
