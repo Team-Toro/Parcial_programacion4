@@ -6,8 +6,8 @@ from fastapi import HTTPException, status
 from .model import Pedido, DetallePedido, HistorialEstadoPedido
 from .schema import PedidoCreate
 from ..uow.unit_of_work import UnitOfWork
-from ..productos.model import Producto
 from ..productos.service import calcular_stock_disponible
+from ..productos.model import Producto
 from ..estados_pedido.service import EstadoPedidoService
 from ..core.config import settings
 
@@ -32,6 +32,21 @@ _ROLES_POR_ESTADO: dict[str, list[str]] = {
     "ENTREGADO":  ["ADMIN", "PEDIDOS"],
     "CANCELADO":  ["ADMIN", "PEDIDOS"],
 }
+
+
+def _ajustar_stock(pedido: "Pedido", uow: "UnitOfWork", signo: int) -> None:
+    for detalle in pedido.detalles:
+        producto = uow.session.get(Producto, detalle.producto_id)
+        if producto is None:
+            continue
+        if not producto.ingredientes:
+            producto.stock_cantidad += signo * detalle.cantidad
+            uow.session.add(producto)
+        else:
+            for link in producto.ingredientes:
+                if link.ingrediente is not None:
+                    link.ingrediente.stock_actual += signo * link.cantidad * detalle.cantidad
+                    uow.session.add(link.ingrediente)
 
 
 class PedidoService:
@@ -77,6 +92,7 @@ class PedidoService:
                     detail=f"Stock insuficiente para '{producto.nombre}' (disponible: {stock_disp}, solicitado: {item.cantidad})"
                 )
 
+            personalizacion_snapshot = None
             if item.personalizacion:
                 pi_removibles = uow.productos.get_ingredientes_removibles(item.producto_id)
                 removible_ids = {pi.ingrediente_id for pi in pi_removibles}
@@ -86,8 +102,18 @@ class PedidoService:
                             status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Ingrediente {ing_id} no es removible en '{producto.nombre}'"
                         )
+                # Build name snapshot from the loaded relationships
+                nombre_por_id = {
+                    pi.ingrediente_id: pi.ingrediente.nombre
+                    for pi in pi_removibles
+                    if pi.ingrediente is not None
+                }
+                personalizacion_snapshot = [
+                    {"id": ing_id, "nombre": nombre_por_id.get(ing_id, str(ing_id))}
+                    for ing_id in item.personalizacion
+                ]
 
-            precio = producto.precio_base
+            precio = (producto.precio_base * (1 + producto.markup_porcentaje / 100)).quantize(Decimal("0.01"))
             subtotal_snap = Decimal(str(item.cantidad)) * precio
             item_snapshots.append({
                 "producto_id": item.producto_id,
@@ -96,6 +122,7 @@ class PedidoService:
                 "precio_snapshot": precio,
                 "subtotal_snap": subtotal_snap,
                 "personalizacion": item.personalizacion,
+                "personalizacion_snapshot": personalizacion_snapshot,
             })
 
         # 4. Calcular totales
@@ -125,6 +152,12 @@ class PedidoService:
             uow.pedidos.add_detalle(DetallePedido(pedido_id=pedido.id, **snap))
         uow.pedidos.flush()
 
+        # 6b. Descontar stock
+        uow.pedidos.flush()
+        uow.session.refresh(pedido)
+        _ajustar_stock(pedido, uow, signo=-1)
+        uow.pedidos.flush()
+
         # 7. Registrar primer historial
         primer_historial = HistorialEstadoPedido(
             pedido_id=pedido.id,
@@ -151,9 +184,10 @@ class PedidoService:
         return pedido
 
     def list_user_pedidos(self, uow: UnitOfWork, usuario_id: int,
-                          offset: int = 0, limit: int = 20) -> List[Pedido]:
+                          offset: int = 0, limit: int = 20,
+                          solo_activos: bool | None = None) -> List[Pedido]:
         """Retorna los pedidos del usuario autenticado, paginados."""
-        return uow.pedidos.list_by_user(usuario_id, offset, limit)
+        return uow.pedidos.list_by_user(usuario_id, offset, limit, solo_activos)
 
     def list_all_pedidos(self, uow: UnitOfWork, offset: int = 0, limit: int = 20,
                          usuario_id: int | None = None,
@@ -216,6 +250,8 @@ class PedidoService:
                                 detail="El motivo es obligatorio al cancelar")
 
         # Ejecutar cambio
+        if nuevo_estado == "CANCELADO":
+            _ajustar_stock(pedido, uow, signo=+1)
         estado_anterior = pedido.estado_codigo
         pedido.estado_codigo = nuevo_estado
         pedido.updated_at = datetime.utcnow()
@@ -243,6 +279,8 @@ class PedidoService:
         if not EstadoPedidoService.es_transicion_valida(pedido.estado_codigo, nuevo_estado):
             return  # silently ignore invalid transition (no crash en webhook)
 
+        if nuevo_estado == "CANCELADO":
+            _ajustar_stock(pedido, uow, signo=+1)
         estado_anterior = pedido.estado_codigo
         pedido.estado_codigo = nuevo_estado
         pedido.updated_at = datetime.utcnow()
@@ -257,6 +295,23 @@ class PedidoService:
         )
         uow.pedidos.add_historial(historial)
         uow.pedidos.flush()
+
+    def authenticate_ws_user(self, uow: UnitOfWork, email: str) -> tuple[int, list[str]]:
+        """Returns (user_id, roles) or raises HTTPException 403 if user is missing or disabled."""
+        user = uow.usuarios.get_by_username(email)
+        if not user or user.disabled:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Usuario no autorizado")
+        assert user.id is not None
+        roles: list[str] = uow.usuarios.get_roles_for_user(user.id)
+        return user.id, roles
+
+    def can_subscribe_to_order(self, uow: UnitOfWork, user_id: int, roles: list[str], order_id: int) -> bool:
+        """Returns True if user is allowed to subscribe to this order's WS feed."""
+        if "ADMIN" in roles or "PEDIDOS" in roles:
+            return True
+        pedido = uow.pedidos.get_by_id(order_id)
+        return pedido is not None and pedido.usuario_id == user_id
 
     def get_historial(self, uow: UnitOfWork, pedido_id: int, current_user):
         """Retorna el historial de estados de un pedido, validando acceso del usuario."""

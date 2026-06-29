@@ -36,6 +36,7 @@ class Producto(SQLModel, table=True):
     nombre: str = Field(max_length=150, nullable=False)
     descripcion: Optional[str] = Field(default=None)
     precio_base: Decimal = Field(decimal_places=2, max_digits=10, ge=0)
+    markup_porcentaje: Decimal = Field(default=Decimal("50"), decimal_places=2, max_digits=6)
     imagenes_url: Optional[List[str]] = Field(default=None, sa_column=Column(JSONB))
     stock_cantidad: int = Field(default=0, ge=0)
     disponible: bool = Field(default=True)

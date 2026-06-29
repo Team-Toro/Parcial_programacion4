@@ -1,10 +1,8 @@
 """Lógica de negocio para el dashboard de administración."""
 
 from datetime import date, timedelta
-from decimal import Decimal
 
-from sqlalchemy import text
-
+from app.admin.repository import AdminRepository, _money
 from app.admin.schema import (
     DashboardStats,
     EstadoCount,
@@ -15,13 +13,6 @@ from app.admin.schema import (
 )
 from app.uow.unit_of_work import UnitOfWork
 
-_PAGO_CONFIRMADO = "(p.forma_pago_codigo != 'MERCADOPAGO' OR pg.mp_status = 'approved')"
-
-
-def _money(value) -> Decimal:
-    """Convierte cualquier numérico a Decimal sin pasar por float (EST-04)."""
-    return Decimal(str(value)) if value is not None else Decimal("0")
-
 
 class AdminService:
     """Consultas agregadas para el dashboard de administración."""
@@ -29,135 +20,26 @@ class AdminService:
     @staticmethod
     def get_stats(uow: UnitOfWork) -> DashboardStats:
         """Retorna todos los KPIs, gráficos y tablas del dashboard en una sola llamada."""
-        session = uow.session
+        repo = AdminRepository(uow.session)
         hoy = date.today()
         primer_dia_mes = hoy.replace(day=1)
         inicio_14_dias = hoy - timedelta(days=13)
 
-        # ── KPIs ──────────────────────────────────────────────────────────────
+        kpis = repo.get_kpis(hoy, primer_dia_mes)
 
-        # Ventas confirmadas: solo pedidos con pago aprobado (MP) o efectivo/transferencia.
-        ventas_totales = session.execute(
-            text(
-                "SELECT COALESCE(SUM(p.total), 0) FROM pedidos p "
-                "LEFT JOIN pagos pg ON pg.pedido_id = p.id "
-                "WHERE p.estado_codigo != 'CANCELADO' AND p.deleted_at IS NULL "
-                f"AND {_PAGO_CONFIRMADO}"
-            )
-        ).scalar()
-
-        # Cantidad de pedidos (conteo de pedidos colocados, no ingresos): sin filtro de pago.
-        pedidos_hoy = session.execute(
-            text(
-                "SELECT COUNT(id) FROM pedidos "
-                "WHERE estado_codigo != 'CANCELADO' AND deleted_at IS NULL "
-                "AND DATE(created_at) = :hoy"
-            ),
-            {"hoy": hoy},
-        ).scalar() or 0
-
-        pedidos_mes = session.execute(
-            text(
-                "SELECT COUNT(id) FROM pedidos "
-                "WHERE estado_codigo != 'CANCELADO' AND deleted_at IS NULL "
-                "AND created_at >= :primer_dia"
-            ),
-            {"primer_dia": primer_dia_mes},
-        ).scalar() or 0
-
-        # Ticket promedio sobre ventas confirmadas.
-        ticket_promedio = session.execute(
-            text(
-                "SELECT COALESCE(AVG(p.total), 0) FROM pedidos p "
-                "LEFT JOIN pagos pg ON pg.pedido_id = p.id "
-                "WHERE p.estado_codigo != 'CANCELADO' AND p.deleted_at IS NULL "
-                f"AND {_PAGO_CONFIRMADO}"
-            )
-        ).scalar()
-
-        total_clientes = session.execute(
-            text(
-                "SELECT COUNT(id) FROM usuarios "
-                "WHERE deleted_at IS NULL "
-                "AND id NOT IN ("
-                "  SELECT usuario_id FROM usuario_rol "
-                "  WHERE role_id IN ('ADMIN', 'STOCK', 'PEDIDOS')"
-                ")"
-            )
-        ).scalar() or 0
-
-        productos_activos = session.execute(
-            text(
-                "SELECT COUNT(id) FROM productos "
-                "WHERE disponible = TRUE AND deleted_at IS NULL"
-            )
-        ).scalar() or 0
-
-        # ── Pedidos por estado ─────────────────────────────────────────────────
-
-        estados_rows = session.execute(
-            text(
-                "SELECT estado_codigo, COUNT(id) "
-                "FROM pedidos WHERE deleted_at IS NULL "
-                "GROUP BY estado_codigo ORDER BY COUNT(id) DESC"
-            )
-        ).fetchall()
+        estados_rows = repo.get_estados()
         estados = [EstadoCount(estado=r[0], cantidad=r[1]) for r in estados_rows]
 
-        # ── Ventas por día (últimos 14 días, solo confirmadas) ──────────────────
-
-        ventas_rows = session.execute(
-            text(
-                "SELECT DATE(p.created_at) AS fecha, COALESCE(SUM(p.total), 0) AS total "
-                "FROM pedidos p "
-                "LEFT JOIN pagos pg ON pg.pedido_id = p.id "
-                "WHERE p.estado_codigo != 'CANCELADO' AND p.deleted_at IS NULL "
-                "  AND p.created_at >= :inicio "
-                f"  AND {_PAGO_CONFIRMADO} "
-                "GROUP BY DATE(p.created_at) "
-                "ORDER BY DATE(p.created_at)"
-            ),
-            {"inicio": inicio_14_dias},
-        ).fetchall()
+        ventas_rows = repo.get_ventas_por_dia(inicio_14_dias)
         ventas_por_dia = [VentasPorDia(fecha=str(r[0]), total=_money(r[1])) for r in ventas_rows]
 
-        # ── Top 5 productos (ingresos de pedidos confirmados) ───────────────────
-
-        top_rows = session.execute(
-            text(
-                "SELECT dp.nombre_snapshot, "
-                "       SUM(dp.cantidad) AS total_unidades, "
-                "       COALESCE(SUM(dp.subtotal_snap), 0) AS total_ventas "
-                "FROM detalle_pedidos dp "
-                "JOIN pedidos p ON dp.pedido_id = p.id "
-                "LEFT JOIN pagos pg ON pg.pedido_id = p.id "
-                "WHERE p.estado_codigo != 'CANCELADO' AND p.deleted_at IS NULL "
-                f"  AND {_PAGO_CONFIRMADO} "
-                "GROUP BY dp.nombre_snapshot "
-                "ORDER BY total_unidades DESC "
-                "LIMIT 5"
-            )
-        ).fetchall()
+        top_rows = repo.get_top_productos()
         top_productos = [
             TopProducto(nombre=r[0], total_unidades=int(r[1]), total_ventas=_money(r[2]))
             for r in top_rows
         ]
 
-        # ── Ingresos por forma de pago (solo confirmados) ───────────────────────
-
-        ingresos_rows = session.execute(
-            text(
-                "SELECT p.forma_pago_codigo, "
-                "       COUNT(p.id) AS cantidad_pedidos, "
-                "       COALESCE(SUM(p.total), 0) AS total_ingresos "
-                "FROM pedidos p "
-                "LEFT JOIN pagos pg ON pg.pedido_id = p.id "
-                "WHERE p.deleted_at IS NULL AND p.estado_codigo != 'CANCELADO' "
-                f"  AND {_PAGO_CONFIRMADO} "
-                "GROUP BY p.forma_pago_codigo "
-                "ORDER BY total_ingresos DESC"
-            )
-        ).fetchall()
+        ingresos_rows = repo.get_ingresos_por_forma_pago()
         ingresos_por_forma_pago = [
             IngresoPorFormaPago(
                 forma_pago_codigo=r[0],
@@ -167,20 +49,7 @@ class AdminService:
             for r in ingresos_rows
         ]
 
-        # ── Últimos 10 pedidos ─────────────────────────────────────────────────
-
-        recientes_rows = session.execute(
-            text(
-                "SELECT p.id, "
-                "       CONCAT(u.first_name, ' ', u.last_name) AS cliente, "
-                "       u.email, p.estado_codigo, p.total, p.created_at "
-                "FROM pedidos p "
-                "JOIN usuarios u ON p.usuario_id = u.id "
-                "WHERE p.deleted_at IS NULL "
-                "ORDER BY p.created_at DESC "
-                "LIMIT 10"
-            )
-        ).fetchall()
+        recientes_rows = repo.get_pedidos_recientes()
         pedidos_recientes = [
             PedidoReciente(
                 id=r[0],
@@ -194,12 +63,7 @@ class AdminService:
         ]
 
         return DashboardStats(
-            ventas_totales=_money(ventas_totales),
-            pedidos_hoy=int(pedidos_hoy),
-            pedidos_mes=int(pedidos_mes),
-            ticket_promedio=_money(ticket_promedio),
-            total_clientes=int(total_clientes),
-            productos_activos=int(productos_activos),
+            **kpis,
             estados=estados,
             ventas_por_dia=ventas_por_dia,
             top_productos=top_productos,

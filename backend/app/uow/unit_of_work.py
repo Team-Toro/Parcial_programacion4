@@ -7,6 +7,7 @@ from app.estados_pedido.repository import EstadoPedidoRepository
 from app.pedidos.repository import PedidoRepository
 from app.pagos.repository import PagoRepository
 from app.productos.repository import ProductoRepository
+from app.usuarios.repository import UsuarioRepository
 
 
 class UnitOfWork:
@@ -19,6 +20,7 @@ class UnitOfWork:
         self.pedidos: PedidoRepository = PedidoRepository(self.session)
         self.pagos: PagoRepository = PagoRepository(self.session)
         self.productos: ProductoRepository = ProductoRepository(self.session)
+        self.usuarios: UsuarioRepository = UsuarioRepository(self.session)
 
     def __enter__(self):
         return self

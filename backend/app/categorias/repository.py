@@ -66,7 +66,7 @@ class CategoriaRepository:
         return self.session.get(Categoria, categoria_id)
 
     def get_by_nombre(self, nombre: str, exclude_id: Optional[int] = None) -> Optional[Categoria]:
-        """Busca una categoría por nombre exacto."""
+        """Busca una categoría activa por nombre exacto."""
         query = (
             select(Categoria)
             .where(Categoria.nombre == nombre)
@@ -75,6 +75,12 @@ class CategoriaRepository:
         if exclude_id is not None:
             query = query.where(Categoria.id != exclude_id)
         return self.session.exec(query).first()
+
+    def get_by_nombre_including_deleted(self, nombre: str) -> Optional[Categoria]:
+        """Busca una categoría por nombre exacto incluyendo eliminadas."""
+        return self.session.exec(
+            select(Categoria).where(Categoria.nombre == nombre)
+        ).first()
 
     def get_subcategorias(self, categoria_id: int) -> List[Categoria]:
         """Obtiene las subcategorías directas de una categoría."""
@@ -150,6 +156,13 @@ class CategoriaRepository:
         return self.session.exec(
             select(ProductoCategoria)
             .where(ProductoCategoria.categoria_id == categoria_id)
+        ).all()
+
+    def get_productos_relaciones_by_producto(self, producto_id: int):
+        """Obtiene todas las relaciones de categorías de un producto."""
+        return self.session.exec(
+            select(ProductoCategoria)
+            .where(ProductoCategoria.producto_id == producto_id)
         ).all()
 
     def count_all(self) -> int:

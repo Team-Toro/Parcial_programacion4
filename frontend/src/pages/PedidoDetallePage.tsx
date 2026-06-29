@@ -160,7 +160,14 @@ export default function PedidoDetallePage() {
                   <p className="font-medium text-slate-800">{d.nombre_snapshot}</p>
                   {Array.isArray(d.personalizacion) && d.personalizacion.length > 0 && (
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Sin ingredientes: {d.personalizacion.map(String).join(', ')}
+                      Sin ingredientes: {(() => {
+                        const snap: { id: number; nombre: string }[] | null | undefined =
+                          (d as any).personalizacion_snapshot;
+                        if (Array.isArray(snap) && snap.length > 0) {
+                          return snap.map((s) => s.nombre).join(', ');
+                        }
+                        return (d.personalizacion as number[]).map(String).join(', ');
+                      })()}
                     </p>
                   )}
                 </td>

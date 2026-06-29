@@ -48,6 +48,7 @@ class DetallePedido(SQLModel, table=True):
     precio_snapshot: Decimal = Field(default=Decimal("0.00"), sa_column=Column(Numeric(10, 2), nullable=False))
     subtotal_snap: Decimal = Field(default=Decimal("0.00"), sa_column=Column(Numeric(10, 2), nullable=False))
     personalizacion: Optional[List[int]] = Field(default=None, sa_column=Column(JSON, nullable=True))
+    personalizacion_snapshot: Optional[List[dict]] = Field(default=None, sa_column=Column(JSON, nullable=True))
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
     pedido: Optional["Pedido"] = Relationship(back_populates="detalles")

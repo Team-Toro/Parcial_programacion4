@@ -531,13 +531,20 @@ def run() -> None:
                 print(f"  [=] Ya existe: {data['nombre']}")
                 continue
 
+            precio_base = sum(
+                Decimal(str(ingredientes_por_nombre[d["nombre"]].precio)) * Decimal(str(d.get("cantidad", 1.0)))
+                for d in data.get("ingredientes", [])
+                if d["nombre"] in ingredientes_por_nombre
+            )
+
             producto = Producto(
-                nombre        = data["nombre"],
-                descripcion   = data.get("descripcion"),
-                precio_base   = data["precio_base"],
-                imagenes_url  = data.get("imagenes_url"),
-                stock_cantidad= data.get("stock_cantidad", 0),
-                disponible    = data.get("disponible", True),
+                nombre            = data["nombre"],
+                descripcion       = data.get("descripcion"),
+                precio_base       = precio_base,
+                markup_porcentaje = Decimal(str(data.get("markup_porcentaje", "50"))),
+                imagenes_url      = data.get("imagenes_url"),
+                stock_cantidad    = data.get("stock_cantidad", 0),
+                disponible        = data.get("disponible", True),
             )
             session.add(producto)
             session.flush()
@@ -561,7 +568,7 @@ def run() -> None:
                     ))
 
             prods_creados += 1
-            print(f"  [+] Creado: {data['nombre']} (${data['precio_base']})")
+            print(f"  [+] Creado: {data['nombre']} (${precio_base})")
         session.commit()
 
         # --- Seed de muestra: direcciones + pedidos + pagos de Juan ---

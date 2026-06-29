@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ShoppingCart, Package } from 'lucide-react';
 import { getProductoById } from '../api/productos';
@@ -34,12 +34,17 @@ export default function ProductoDetallePage() {
   const [toast, setToast] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { agregarItem, totalItems } = useCarritoStore();
+  const { agregarItem, totalItems, items } = useCarritoStore();
+  const navigate = useNavigate();
 
   if (isLoading) return <div className="p-8 text-slate-500">Cargando producto...</div>;
   if (isError || !producto) return <div className="p-8 text-red-500">Producto no encontrado.</div>;
 
-  const canComprar = isAuthenticated && !isStaff && producto.disponible && producto.stock_disponible > 0;
+  const enCarrito = items
+    .filter((i) => i.producto_id === producto.id)
+    .reduce((acc, i) => acc + i.cantidad, 0);
+  const stockRestante = Math.max(0, producto.stock_disponible - enCarrito);
+  const canComprar = isAuthenticated && !isStaff && producto.disponible && stockRestante > 0;
 
   const toggleRemovido = (ingId: number) =>
     setRemovidos((prev) =>
@@ -50,7 +55,7 @@ export default function ProductoDetallePage() {
     agregarItem({
       producto_id: producto.id,
       nombre: producto.nombre,
-      precio: Number(producto.precio_base),
+      precio: Number(producto.precio_final),
       cantidad,
       imagen_url: producto.imagenes_url?.[0],
       personalizacion: removidos,
@@ -84,12 +89,12 @@ export default function ProductoDetallePage() {
           &larr; Volver a productos
         </Link>
         {isAdmin && (
-          <Link
-            to={`/productos`}
+          <button
+            onClick={() => navigate('/productos', { state: { editId: producto.id } })}
             className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg transition-colors"
           >
             Editar
-          </Link>
+          </button>
         )}
       </div>
       <div className="bg-white rounded-2xl shadow p-6">
@@ -147,7 +152,7 @@ export default function ProductoDetallePage() {
         <p className="text-slate-500 mb-4">{producto.descripcion ?? 'Sin descripción.'}</p>
 
         <div className="flex items-center gap-4 mb-6 flex-wrap">
-          <p className="text-2xl font-bold text-orange-500">${Number(producto.precio_base).toFixed(2)}</p>
+          <p className="text-2xl font-bold text-orange-500">${Number(producto.precio_final).toFixed(2)}</p>
           {isAdmin && (
             <span className="text-sm bg-slate-100 px-3 py-1 rounded-full">
               Stock disponible: <StockBadge value={producto.stock_disponible} />
@@ -237,7 +242,7 @@ export default function ProductoDetallePage() {
                     >−</button>
                     <span className="px-4 py-2 text-sm font-medium">{cantidad}</span>
                     <button
-                      onClick={() => setCantidad((c) => Math.min(producto.stock_disponible, c + 1))}
+                      onClick={() => setCantidad((c) => Math.min(stockRestante, c + 1))}
                       className="px-3 py-2 text-slate-600 hover:bg-slate-100 font-bold"
                     >+</button>
                   </div>

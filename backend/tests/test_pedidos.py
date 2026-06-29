@@ -84,12 +84,23 @@ def test_rn05_cancelar_sin_motivo(client, seed_data):
 
 
 def test_rn05_cancelar_con_motivo(client, seed_data):
-    """RN-05: cancelación con motivo → OK, estado CANCELADO."""
+    """RN-05: cancelación con motivo → OK, estado CANCELADO y stock restaurado."""
     _login_cliente(client)
-    pid = _crear_pedido_efectivo(client, seed_data["producto_id"]).json()["id"]
+    producto_id = seed_data["producto_id"]
+
+    stock_antes = client.get(f"/api/v1/productos/{producto_id}").json()["stock_cantidad"]
+
+    pid = _crear_pedido_efectivo(client, producto_id, cantidad=2).json()["id"]
+
+    stock_tras_pedido = client.get(f"/api/v1/productos/{producto_id}").json()["stock_cantidad"]
+    assert stock_tras_pedido == stock_antes - 2
+
     resp = client.post(f"/api/v1/pedidos/{pid}/cancelar", json={"motivo": "Me arrepentí"})
     assert resp.status_code == 200, resp.text
     assert resp.json()["estado_codigo"] == "CANCELADO"
+
+    stock_tras_cancelar = client.get(f"/api/v1/productos/{producto_id}").json()["stock_cantidad"]
+    assert stock_tras_cancelar == stock_antes
 
 
 def test_rn06_avanzar_genera_historial(client, seed_data):

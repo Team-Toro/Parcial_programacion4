@@ -11,21 +11,25 @@ interface Props {
 }
 
 export default function ProductoCard({ producto }: Props) {
-  const { agregarItem } = useCarritoStore();
+  const { agregarItem, items } = useCarritoStore();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = user !== null;
   const isStaff = useAuthStore((s) => s.isStaff());
   const [added, setAdded] = useState(false);
 
-  const canAdd = isAuthenticated && !isStaff && producto.disponible && producto.stock_disponible > 0;
+  const enCarrito = items
+    .filter((i) => i.producto_id === producto.id)
+    .reduce((acc, i) => acc + i.cantidad, 0);
+  const canAdd = isAuthenticated && !isStaff && producto.disponible && producto.stock_disponible > enCarrito;
 
   const handleAgregar = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (producto.stock_disponible <= enCarrito) return;
     agregarItem({
       producto_id: producto.id,
       nombre: producto.nombre,
-      precio: Number(producto.precio_base),
+      precio: Number(producto.precio_final),
       cantidad: 1,
       imagen_url: producto.imagenes_url?.[0],
       personalizacion: [],
@@ -41,6 +45,8 @@ export default function ProductoCard({ producto }: Props) {
     ? 'No disponible'
     : producto.stock_disponible === 0
     ? 'Sin stock'
+    : producto.stock_disponible <= enCarrito
+    ? 'Máximo en carrito'
     : isStaff
     ? 'Solo para clientes'
     : !isAuthenticated
@@ -72,7 +78,7 @@ export default function ProductoCard({ producto }: Props) {
       <div className="bg-white p-4 flex flex-col gap-2">
         <p className="font-semibold text-slate-800 text-sm line-clamp-1">{producto.nombre}</p>
         <p className="text-orange-500 font-bold text-lg">
-          ${Number(producto.precio_base).toLocaleString('es-AR')}
+          ${Number(producto.precio_final).toLocaleString('es-AR')}
         </p>
         <button
           onClick={canAdd ? handleAgregar : undefined}

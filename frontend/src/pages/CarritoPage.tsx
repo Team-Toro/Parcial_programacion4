@@ -92,21 +92,21 @@ export default function CarritoPage() {
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden">
                     <button
-                      onClick={() => actualizarCantidad(item.producto_id, item.cantidad - 1)}
+                      onClick={() => actualizarCantidad(item.producto_id, item.personalizacion, item.cantidad - 1)}
                       className="px-2.5 py-1 text-slate-600 hover:bg-slate-100 font-bold text-sm"
                     >
                       −
                     </button>
                     <span className="px-3 py-1 text-sm font-medium">{item.cantidad}</span>
                     <button
-                      onClick={() => actualizarCantidad(item.producto_id, item.cantidad + 1)}
+                      onClick={() => actualizarCantidad(item.producto_id, item.personalizacion, item.cantidad + 1)}
                       className="px-2.5 py-1 text-slate-600 hover:bg-slate-100 font-bold text-sm"
                     >
                       +
                     </button>
                   </div>
                   <button
-                    onClick={() => removerItem(item.producto_id)}
+                    onClick={() => removerItem(item.producto_id, item.personalizacion)}
                     className="text-red-400 hover:text-red-600 transition-colors p-1"
                     title="Quitar"
                   >

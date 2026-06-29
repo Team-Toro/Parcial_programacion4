@@ -7,14 +7,21 @@ class PedidoRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def list_by_user(self, usuario_id: int, offset: int = 0, limit: int = 20) -> List[Pedido]:
-        pedidos = self.session.exec(
+    _TERMINALES = {"ENTREGADO", "CANCELADO"}
+
+    def list_by_user(self, usuario_id: int, offset: int = 0, limit: int = 20,
+                     solo_activos: Optional[bool] = None) -> List[Pedido]:
+        query = (
             select(Pedido)
             .where(Pedido.usuario_id == usuario_id)
             .where(col(Pedido.deleted_at).is_(None))
-            .order_by(col(Pedido.created_at).desc())
-            .offset(offset)
-            .limit(limit)
+        )
+        if solo_activos is True:
+            query = query.where(col(Pedido.estado_codigo).not_in(self._TERMINALES))
+        elif solo_activos is False:
+            query = query.where(col(Pedido.estado_codigo).in_(self._TERMINALES))
+        pedidos = self.session.exec(
+            query.order_by(col(Pedido.created_at).desc()).offset(offset).limit(limit)
         ).all()
         for p in pedidos:
             _ = p.detalles  # lazy load

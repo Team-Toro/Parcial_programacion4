@@ -346,6 +346,7 @@ export default function CategoriasPage() {
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<Categoria | null>(null);
   const [deleteStats, setDeleteStats] = useState<{ subcategorias_count: number; productos_count: number; nivel: number } | null>(null);
+  const [reactivarConfirm, setReactivarConfirm] = useState<{ id: number; nombre: string } | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [treeSearch, setTreeSearch] = useState('');
@@ -405,7 +406,16 @@ export default function CategoriasPage() {
   const createMutation = useMutation({
     mutationFn: createCategoria,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['categorias'] }); closeModal(); showToast('success', 'Categoría creada'); },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => {
+      try {
+        const parsed = JSON.parse(e.message);
+        if (parsed?.code === 'CATEGORIA_ELIMINADA_EXISTE') {
+          setReactivarConfirm({ id: parsed.id, nombre: form.nombre });
+          return;
+        }
+      } catch { /* not JSON — fall through */ }
+      setError(e.message);
+    },
   });
 
   const updateMutation = useMutation({
@@ -797,10 +807,9 @@ export default function CategoriasPage() {
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
               <p className="font-medium text-yellow-800">Esta categoría tiene:</p>
               <ul className="list-disc list-inside text-yellow-700 mt-1">
-                {(deleteStats ?? deleteStatsData)!.subcategorias_count > 0 && <li>{(deleteStats ?? deleteStatsData)!.subcategorias_count} subcategoría(s)</li>}
-                {(deleteStats ?? deleteStatsData)!.productos_count > 0 && <li>{(deleteStats ?? deleteStatsData)!.productos_count} producto(s) asociado(s)</li>}
+                {(deleteStats ?? deleteStatsData)!.subcategorias_count > 0 && <li>{(deleteStats ?? deleteStatsData)!.subcategorias_count} subcategoría(s) — también se darán de baja</li>}
+                {(deleteStats ?? deleteStatsData)!.productos_count > 0 && <li>{(deleteStats ?? deleteStatsData)!.productos_count} producto(s) — se reasignarán a "Sin categoría"</li>}
               </ul>
-              <p className="mt-2 text-yellow-800">Se eliminarán en cascada.</p>
             </div>
           )}
           <div className="flex gap-3 justify-end pt-2">
@@ -813,6 +822,34 @@ export default function CategoriasPage() {
               className="px-4 py-2 text-sm rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium disabled:opacity-50"
             >
               Eliminar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal reactivar categoría eliminada */}
+      <Modal isOpen={!!reactivarConfirm} onClose={() => setReactivarConfirm(null)} title="Categoría eliminada encontrada">
+        <div className="flex flex-col gap-4">
+          <p>
+            Ya existe una categoría llamada <strong>"{reactivarConfirm?.nombre}"</strong> que fue dada de baja.
+            ¿Querés reactivarla en lugar de crear una nueva?
+          </p>
+          <div className="flex gap-3 justify-end pt-2">
+            <button onClick={() => setReactivarConfirm(null)} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                if (reactivarConfirm) {
+                  reactivarMutation.mutate(reactivarConfirm.id);
+                  setReactivarConfirm(null);
+                  closeModal();
+                }
+              }}
+              disabled={reactivarMutation.isPending}
+              className="px-4 py-2 text-sm rounded-lg bg-green-500 hover:bg-green-600 text-white font-medium disabled:opacity-50"
+            >
+              Reactivar
             </button>
           </div>
         </div>

@@ -5,8 +5,8 @@ import type { ItemCarrito } from '../types';
 interface CarritoState {
   items: ItemCarrito[];
   agregarItem: (item: ItemCarrito) => void;
-  removerItem: (producto_id: number) => void;
-  actualizarCantidad: (producto_id: number, cantidad: number) => void;
+  removerItem: (producto_id: number, personalizacion: number[]) => void;
+  actualizarCantidad: (producto_id: number, personalizacion: number[], cantidad: number) => void;
   actualizarPersonalizacion: (producto_id: number, personalizacion: number[]) => void;
   vaciarCarrito: () => void;
   totalItems: () => number;
@@ -34,14 +34,27 @@ export const useCarritoStore = create<CarritoState>()(
           }
           return { items: [...state.items, item] };
         }),
-      removerItem: (producto_id) =>
+      removerItem: (producto_id, personalizacion) =>
         set((state) => ({
-          items: state.items.filter((i) => i.producto_id !== producto_id),
+          items: state.items.filter(
+            (i) =>
+              !(
+                i.producto_id === producto_id &&
+                JSON.stringify([...i.personalizacion].sort()) ===
+                  JSON.stringify([...personalizacion].sort())
+              )
+          ),
         })),
-      actualizarCantidad: (producto_id, cantidad) =>
+      actualizarCantidad: (producto_id, personalizacion, cantidad) =>
         set((state) => ({
           items: state.items
-            .map((i) => (i.producto_id === producto_id ? { ...i, cantidad } : i))
+            .map((i) =>
+              i.producto_id === producto_id &&
+              JSON.stringify([...i.personalizacion].sort()) ===
+                JSON.stringify([...personalizacion].sort())
+                ? { ...i, cantidad }
+                : i
+            )
             .filter((i) => i.cantidad > 0),
         })),
       actualizarPersonalizacion: (producto_id, personalizacion) =>
