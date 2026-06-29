@@ -128,6 +128,13 @@ class CategoriaService:
                 detail="Ya existe una categoría con ese nombre"
             )
 
+        existing_deleted = repo.get_by_nombre_including_deleted(data.nombre)
+        if existing_deleted and existing_deleted.deleted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"code": "CATEGORIA_ELIMINADA_EXISTE", "id": existing_deleted.id},
+            )
+
         if data.parent_id:
             self._validate_parent_exists(repo, data.parent_id)
 
@@ -173,7 +180,7 @@ class CategoriaService:
         return categoria
 
     def delete(self, uow: UnitOfWork, categoria_id: int) -> None:
-        """Soft delete de categoría y sus hijos; falla si tiene productos activos."""
+        """Soft delete de categoría y sus hijos; reasigna productos a 'Sin categoría'."""
         repo = CategoriaRepository(uow.session)
         categoria = repo.get_by_id(categoria_id)
 
@@ -184,15 +191,21 @@ class CategoriaService:
             )
 
         now = datetime.utcnow()
-
         all_ids = repo.get_all_children_ids(categoria_id)
 
-        if repo.count_active_productos_by_categoria_ids(all_ids) > 0:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="No se puede eliminar la categoría: tiene productos activos asociados"
-            )
+        # Upsert categoría "Sin categoría" para reasignar productos huérfanos
+        sin_cat = repo.get_by_nombre("Sin categoría")
+        if sin_cat is None:
+            sin_cat = Categoria(nombre="Sin categoría")
+            repo.save(sin_cat)
 
+        # Reasignar relaciones producto-categoría al nodo "Sin categoría"
+        for cid in all_ids:
+            for pc in repo.get_productos_relaciones(cid):
+                pc.categoria_id = sin_cat.id
+                pc.es_principal = False
+
+        # Soft-delete subcategorías hijas
         for cid in all_ids:
             if cid == categoria_id:
                 continue
@@ -200,10 +213,6 @@ class CategoriaService:
             if sub:
                 sub.deleted_at = now
                 repo.save(sub)
-
-        for cid in all_ids:
-            for pc in repo.get_productos_relaciones(cid):
-                uow.session.delete(pc)
 
         categoria.deleted_at = now
         repo.save(categoria)

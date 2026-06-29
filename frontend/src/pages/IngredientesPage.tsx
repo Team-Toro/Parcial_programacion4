@@ -462,6 +462,7 @@ export default function IngredientesPage() {
                 step={form.unidad === 'unidad' ? '1' : '0.01'}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 value={form.stock_actual}
+                onFocus={e => { if (Number(e.target.value) === 0) e.target.select(); }}
                 onChange={e => {
                   const val = parseFloat(e.target.value) || 0;
                   setForm(f => ({ ...f, stock_actual: f.unidad === 'unidad' ? Math.floor(val) : val }));
@@ -476,6 +477,7 @@ export default function IngredientesPage() {
                 step="0.01"
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 value={form.precio}
+                onFocus={e => { if (Number(e.target.value) === 0) e.target.select(); }}
                 onChange={e => setForm(f => ({ ...f, precio: parseFloat(e.target.value) || 0 }))}
               />
             </div>

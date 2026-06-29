@@ -11,17 +11,21 @@ interface Props {
 }
 
 export default function ProductoCard({ producto }: Props) {
-  const { agregarItem } = useCarritoStore();
+  const { agregarItem, items } = useCarritoStore();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = user !== null;
   const isStaff = useAuthStore((s) => s.isStaff());
   const [added, setAdded] = useState(false);
 
-  const canAdd = isAuthenticated && !isStaff && producto.disponible && producto.stock_disponible > 0;
+  const enCarrito = items
+    .filter((i) => i.producto_id === producto.id)
+    .reduce((acc, i) => acc + i.cantidad, 0);
+  const canAdd = isAuthenticated && !isStaff && producto.disponible && producto.stock_disponible > enCarrito;
 
   const handleAgregar = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (producto.stock_disponible <= enCarrito) return;
     agregarItem({
       producto_id: producto.id,
       nombre: producto.nombre,
@@ -41,6 +45,8 @@ export default function ProductoCard({ producto }: Props) {
     ? 'No disponible'
     : producto.stock_disponible === 0
     ? 'Sin stock'
+    : producto.stock_disponible <= enCarrito
+    ? 'Máximo en carrito'
     : isStaff
     ? 'Solo para clientes'
     : !isAuthenticated
