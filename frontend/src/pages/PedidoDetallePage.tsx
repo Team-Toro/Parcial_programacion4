@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPedido, cancelarPedido } from '../api/pedidos';
 import { getPagoByPedido, crearPreferencia } from '../api/pagos';
+import { getDirecciones } from '../api/direcciones';
 import TimelinePedido from '../components/pedidos/TimelinePedido';
 import ModalMotivo from '../components/pedidos/ModalMotivo';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -49,6 +50,8 @@ export default function PedidoDetallePage() {
   const pedidoId = Number(id);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith('/admin/');
   const [modalCancelar, setModalCancelar] = useState(false);
   const [retryLoading, setRetryLoading] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
@@ -83,6 +86,16 @@ export default function PedidoDetallePage() {
     retry: false,
   });
 
+  const { data: direcciones = [] } = useQuery({
+    queryKey: ['mis-direcciones'],
+    queryFn: getDirecciones,
+    enabled: !!pedido?.direccion_id,
+  });
+
+  const direccion = pedido?.direccion_id
+    ? direcciones.find((d) => d.id === pedido.direccion_id) ?? null
+    : null;
+
   const mutCancelar = useMutation({
     mutationFn: (motivo: string) => cancelarPedido(Number(id), motivo),
     onSuccess: () => {
@@ -100,8 +113,11 @@ export default function PedidoDetallePage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-12 py-8 max-w-3xl mx-auto">
-      <Link to="/mis-pedidos" className="text-orange-500 hover:underline text-sm inline-block mb-4">
-        &larr; Mis pedidos
+      <Link
+        to={isAdmin ? '/admin/pedidos' : '/mis-pedidos'}
+        className="text-orange-500 hover:underline text-sm inline-block mb-4"
+      >
+        &larr; {isAdmin ? 'Gestión de pedidos' : 'Mis pedidos'}
       </Link>
 
       {/* Header */}
@@ -125,9 +141,21 @@ export default function PedidoDetallePage() {
             <p className="font-medium text-slate-800">{pedido.forma_pago_codigo}</p>
           </div>
           {pedido.direccion_id && (
-            <div>
-              <span className="text-slate-500">Dirección ID:</span>
-              <p className="font-medium text-slate-800">{pedido.direccion_id}</p>
+            <div className="col-span-2">
+              <span className="text-slate-500">Dirección de entrega:</span>
+              {direccion ? (
+                <div className="mt-1 font-medium text-slate-800">
+                  <p>{direccion.linea1}</p>
+                  {direccion.linea2 && <p>{direccion.linea2}</p>}
+                  <p>
+                    {direccion.ciudad}
+                    {direccion.provincia ? `, ${direccion.provincia}` : ''}
+                    {direccion.codigo_postal ? ` (${direccion.codigo_postal})` : ''}
+                  </p>
+                </div>
+              ) : (
+                <p className="font-medium text-slate-400 mt-1">Dirección no disponible</p>
+              )}
             </div>
           )}
           {pedido.notas && (
@@ -166,7 +194,7 @@ export default function PedidoDetallePage() {
                         if (Array.isArray(snap) && snap.length > 0) {
                           return snap.map((s) => s.nombre).join(', ');
                         }
-                        return (d.personalizacion as number[]).map(String).join(', ');
+                        return '(datos no disponibles)';
                       })()}
                     </p>
                   )}

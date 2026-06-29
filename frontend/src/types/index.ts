@@ -60,6 +60,7 @@ export interface ItemCarrito {
   imagen_url?: string;
   personalizacion: number[];
   ingredientes_removibles: { id: number; nombre: string }[];
+  stock_cantidad?: number;
 }
 
 export interface ItemPedidoRequest {

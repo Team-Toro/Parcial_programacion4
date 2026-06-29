@@ -231,6 +231,14 @@ class UsuarioService:
             )
 
         requested = [r for r in (roles or []) if r in self.ALLOWED_ROLES]
+
+        STAFF_ROLES = {"ADMIN", "STOCK", "PEDIDOS"}
+        if "CLIENTE" in requested and any(r in STAFF_ROLES for r in requested):
+            raise HTTPException(
+                status_code=400,
+                detail="El rol CLIENTE no puede combinarse con roles de staff",
+            )
+
         final_roles = requested or ["CLIENTE"]
         repo.replace_roles_for_user(user_id, final_roles)
 

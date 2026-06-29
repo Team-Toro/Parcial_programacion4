@@ -62,6 +62,7 @@ export default function ProductoDetallePage() {
       ingredientes_removibles: producto.ingredientes
         .filter((pi) => pi.es_removible)
         .map((pi) => ({ id: pi.ingrediente.id, nombre: pi.ingrediente.nombre })),
+      stock_cantidad: producto.stock_disponible,
     });
     if (toastTimer.current) clearTimeout(toastTimer.current);
     const itemLabel = cantidad === 1 ? 'item' : 'items';

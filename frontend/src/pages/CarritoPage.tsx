@@ -99,8 +99,9 @@ export default function CarritoPage() {
                     </button>
                     <span className="px-3 py-1 text-sm font-medium">{item.cantidad}</span>
                     <button
-                      onClick={() => actualizarCantidad(item.producto_id, item.personalizacion, item.cantidad + 1)}
-                      className="px-2.5 py-1 text-slate-600 hover:bg-slate-100 font-bold text-sm"
+                      onClick={() => actualizarCantidad(item.producto_id, item.personalizacion, Math.min(item.stock_cantidad ?? item.cantidad + 1, item.cantidad + 1))}
+                      disabled={item.stock_cantidad != null && item.cantidad >= item.stock_cantidad}
+                      className="px-2.5 py-1 font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 hover:bg-slate-100 disabled:hover:bg-transparent"
                     >
                       +
                     </button>

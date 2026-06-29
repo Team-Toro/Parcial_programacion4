@@ -70,6 +70,7 @@ export default function App() {
               {/* Admin o staff con rol PEDIDOS */}
               <Route element={<StaffRoute />}>
                 <Route path="/admin/pedidos" element={<AdminPedidosPage />} />
+                <Route path="/admin/pedidos/:id" element={<PedidoDetallePage />} />
               </Route>
             </Route>
           </Route>
