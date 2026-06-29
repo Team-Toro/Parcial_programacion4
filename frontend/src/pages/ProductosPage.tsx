@@ -79,17 +79,6 @@ export default function ProductosPage() {
   const debouncedSearch = useDebounce(searchInput, 400);
   useEffect(() => { setPage(1); }, [debouncedSearch, sortBy, sortOrder, includeDeleted]);
 
-  // Abrir modal de edición cuando se navega desde el detalle de un producto
-  useEffect(() => {
-    const editId = (location.state as { editId?: number } | null)?.editId;
-    if (!editId || !isAdminView) return;
-    const p = productos.find((pr) => pr.id === editId);
-    if (p) {
-      openEdit(p);
-      window.history.replaceState({}, '');
-    }
-  }, [location.state, productos, isAdminView]);
-
   const params = {
     offset: (page - 1) * PAGE_SIZE,
     limit: PAGE_SIZE,
@@ -108,6 +97,17 @@ export default function ProductosPage() {
     queryFn: () => getProductos(params),
     placeholderData: (prev) => prev,
   });
+
+  // Abrir modal de edición cuando se navega desde el detalle de un producto
+  useEffect(() => {
+    const editId = (location.state as { editId?: number } | null)?.editId;
+    if (!editId || !isAdminView) return;
+    const p = productos.find((pr) => pr.id === editId);
+    if (p) {
+      openEdit(p);
+      window.history.replaceState({}, '');
+    }
+  }, [location.state, productos, isAdminView]);
 
   const { data: categorias = [] } = useQuery({
     queryKey: ['categorias'],
