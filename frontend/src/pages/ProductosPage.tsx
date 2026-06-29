@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import ProductoCard from '../components/ProductoCard';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -44,6 +44,7 @@ export default function ProductosPage() {
   const isProductManager = useAuthStore((s) => s.isProductManager());
   const isAdminView = isAdmin || isProductManager;
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const categoriaIdParam = searchParams.get('categoria_id');
 
   const [isOpen, setIsOpen] = useState(false);
@@ -77,6 +78,17 @@ export default function ProductosPage() {
 
   const debouncedSearch = useDebounce(searchInput, 400);
   useEffect(() => { setPage(1); }, [debouncedSearch, sortBy, sortOrder, includeDeleted]);
+
+  // Abrir modal de edición cuando se navega desde el detalle de un producto
+  useEffect(() => {
+    const editId = (location.state as { editId?: number } | null)?.editId;
+    if (!editId || !isAdminView) return;
+    const p = productos.find((pr) => pr.id === editId);
+    if (p) {
+      openEdit(p);
+      window.history.replaceState({}, '');
+    }
+  }, [location.state, productos, isAdminView]);
 
   const params = {
     offset: (page - 1) * PAGE_SIZE,

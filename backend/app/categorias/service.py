@@ -200,10 +200,20 @@ class CategoriaService:
             repo.save(sin_cat)
 
         # Reasignar relaciones producto-categoría al nodo "Sin categoría"
+        # y promover otra categoría a principal si la reasignada era la principal
         for cid in all_ids:
             for pc in repo.get_productos_relaciones(cid):
+                era_principal = pc.es_principal
                 pc.categoria_id = sin_cat.id
                 pc.es_principal = False
+                if era_principal:
+                    # Intentar promover otra categoría activa del mismo producto a principal
+                    otras = [
+                        r for r in repo.get_productos_relaciones_by_producto(pc.producto_id)
+                        if r.categoria_id not in all_ids and r.categoria_id != sin_cat.id
+                    ]
+                    if otras:
+                        otras[0].es_principal = True
 
         # Soft-delete subcategorías hijas
         for cid in all_ids:

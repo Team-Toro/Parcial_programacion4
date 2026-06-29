@@ -158,6 +158,13 @@ class CategoriaRepository:
             .where(ProductoCategoria.categoria_id == categoria_id)
         ).all()
 
+    def get_productos_relaciones_by_producto(self, producto_id: int):
+        """Obtiene todas las relaciones de categorías de un producto."""
+        return self.session.exec(
+            select(ProductoCategoria)
+            .where(ProductoCategoria.producto_id == producto_id)
+        ).all()
+
     def count_all(self) -> int:
         """Cuenta el total de categorías activas."""
         return self.session.exec(

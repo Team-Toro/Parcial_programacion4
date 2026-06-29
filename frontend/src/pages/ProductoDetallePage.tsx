@@ -90,7 +90,7 @@ export default function ProductoDetallePage() {
         </Link>
         {isAdmin && (
           <button
-            onClick={() => navigate(`/admin/productos/${producto.id}/editar`)}
+            onClick={() => navigate('/productos', { state: { editId: producto.id } })}
             className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg transition-colors"
           >
             Editar
