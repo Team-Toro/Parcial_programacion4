@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel, Field, ConfigDict
 from sqlmodel import SQLModel
+from ..direcciones.schema import DireccionPublic
 
 
 class HistorialEstadoPedidoPublic(BaseModel):
@@ -55,6 +56,7 @@ class PedidoPublic(BaseModel):
     id: int
     usuario_id: int
     direccion_id: Optional[int]
+    direccion: Optional[DireccionPublic] = None
     estado_codigo: str
     forma_pago_codigo: str
     subtotal: Decimal

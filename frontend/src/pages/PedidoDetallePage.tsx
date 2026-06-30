@@ -4,7 +4,6 @@ import { RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPedido, cancelarPedido } from '../api/pedidos';
 import { getPagoByPedido, crearPreferencia } from '../api/pagos';
-import { getDirecciones } from '../api/direcciones';
 import TimelinePedido from '../components/pedidos/TimelinePedido';
 import ModalMotivo from '../components/pedidos/ModalMotivo';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -86,15 +85,7 @@ export default function PedidoDetallePage() {
     retry: false,
   });
 
-  const { data: direcciones = [] } = useQuery({
-    queryKey: ['mis-direcciones'],
-    queryFn: getDirecciones,
-    enabled: !!pedido?.direccion_id,
-  });
-
-  const direccion = pedido?.direccion_id
-    ? direcciones.find((d) => d.id === pedido.direccion_id) ?? null
-    : null;
+  const direccion = pedido?.direccion ?? null;
 
   const mutCancelar = useMutation({
     mutationFn: (motivo: string) => cancelarPedido(Number(id), motivo),

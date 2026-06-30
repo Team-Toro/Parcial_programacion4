@@ -142,7 +142,7 @@ interface ClienteTreeNodeProps {
 }
 
 function ClienteTreeNode({ categoria, level, expandedIds, toggleExpand }: ClienteTreeNodeProps) {
-  const children = categoria.subcategorias ?? [];
+  const children = (categoria.subcategorias ?? []).filter((c) => !c.deleted_at);
   const hasChildren = children.length > 0;
   const isExpanded = expandedIds.has(categoria.id);
 
@@ -515,7 +515,7 @@ export default function CategoriasPage() {
   if (isError) return <div className="p-8 text-red-500">Error al cargar las categorías.</div>;
 
   if (!isAdmin) {
-    return <ClienteCategoriasView categoriasRaiz={categorias} />;
+    return <ClienteCategoriasView categoriasRaiz={categorias.filter((c) => !c.deleted_at)} />;
   }
 
   return (

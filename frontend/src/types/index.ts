@@ -26,6 +26,7 @@ export interface Pedido {
   id: number;
   usuario_id: number;
   direccion_id: number | null;
+  direccion?: Direccion | null;
   estado_codigo: string;
   forma_pago_codigo: string;
   subtotal: string;
