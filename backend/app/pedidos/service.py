@@ -8,6 +8,7 @@ from .schema import PedidoCreate
 from ..uow.unit_of_work import UnitOfWork
 from ..productos.service import calcular_stock_disponible
 from ..productos.model import Producto
+from ..ingredientes.model import UnidadMedida
 from ..estados_pedido.service import EstadoPedidoService
 from ..core.config import settings
 
@@ -45,7 +46,10 @@ def _ajustar_stock(pedido: "Pedido", uow: "UnitOfWork", signo: int) -> None:
         else:
             for link in producto.ingredientes:
                 if link.ingrediente is not None:
-                    link.ingrediente.stock_actual += signo * link.cantidad * detalle.cantidad
+                    new_stock = link.ingrediente.stock_actual + signo * link.cantidad * detalle.cantidad
+                    if link.ingrediente.unidad == UnidadMedida.UNIDAD:
+                        new_stock = round(new_stock)
+                    link.ingrediente.stock_actual = new_stock
                     uow.session.add(link.ingrediente)
 
 

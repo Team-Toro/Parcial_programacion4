@@ -642,7 +642,8 @@ export default function ProductosPage() {
                       type="number" step="0.01"
                       className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                       value={form.markup_porcentaje}
-                      onChange={e => handleMarkupChange(parseFloat(e.target.value) || 0)}
+                      onChange={e => { if (e.target.value !== '') handleMarkupChange(parseFloat(e.target.value) || 0); }}
+                      onBlur={e => { if (e.target.value === '') handleMarkupChange(0); }}
                     />
                   </div>
                   <div className="flex items-center gap-2">
@@ -651,7 +652,8 @@ export default function ProductosPage() {
                       type="number" min={0} step="0.01"
                       className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                       value={precioFinal ?? 0}
-                      onChange={e => handlePrecioFinalChange(parseFloat(e.target.value) || 0)}
+                      onChange={e => { if (e.target.value !== '') handlePrecioFinalChange(parseFloat(e.target.value) || 0); }}
+                      onBlur={e => { if (e.target.value === '') handlePrecioFinalChange(0); }}
                     />
                   </div>
                 </>
@@ -660,7 +662,8 @@ export default function ProductosPage() {
                   type="number" min={0} step="0.01"
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                   value={form.precio_base}
-                  onChange={e => setForm(f => ({ ...f, precio_base: parseFloat(e.target.value) || 0 }))}
+                  onChange={e => { if (e.target.value !== '') setForm(f => ({ ...f, precio_base: parseFloat(e.target.value) || 0 })); }}
+                  onBlur={e => { if (e.target.value === '') setForm(f => ({ ...f, precio_base: 0 })); }}
                 />
               )}
             </div>
@@ -812,7 +815,8 @@ export default function ProductosPage() {
                           min={0}
                           step="0.01"
                           value={pi.cantidad}
-                          onChange={e => updateIngProp(pi.ingrediente_id, 'cantidad', parseFloat(e.target.value) || 0)}
+                          onChange={e => { if (e.target.value !== '') updateIngProp(pi.ingrediente_id, 'cantidad', parseFloat(e.target.value) || 0); }}
+                          onBlur={e => { if (e.target.value === '') updateIngProp(pi.ingrediente_id, 'cantidad', 0); }}
                           className="w-20 border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400"
                         />
                         <span className="text-xs text-slate-400 w-10">{ing?.unidad ?? ''}</span>
