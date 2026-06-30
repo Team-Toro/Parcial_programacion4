@@ -46,8 +46,8 @@ export default function MainLayout() {
       });
   }, [error, setUser]);
 
-  // Si el usuario tiene únicamente el rol de PEDIDOS, lo forzamos a estar en /admin/pedidos
-  const isPedidosOnly = !!user && user.roles?.includes('PEDIDOS') && !user.roles?.includes('ADMIN');
+  // Si el usuario tiene PEDIDOS pero no ADMIN ni STOCK, lo forzamos a /admin/pedidos
+  const isPedidosOnly = !!user && user.roles?.includes('PEDIDOS') && !user.roles?.includes('ADMIN') && !user.roles?.includes('STOCK');
 
   useEffect(() => {
     if (isPedidosOnly && !pathname.startsWith('/admin/pedidos')) {
