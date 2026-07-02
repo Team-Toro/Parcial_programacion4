@@ -128,6 +128,15 @@ class CategoriaRepository:
         self.session.flush()  # asigna id antes de serializar
         return categoria
 
+    def delete_producto_relacion(self, pc: object) -> None:
+        """Elimina una relación producto-categoría y hace flush."""
+        self.session.delete(pc)
+        self.session.flush()
+
+    def add_producto_relacion(self, pc: object) -> None:
+        """Persiste una nueva relación producto-categoría."""
+        self.session.add(pc)
+
     def count_subcategorias(self, categoria_id: int) -> int:
         """Cuenta las subcategorías directas de una categoría."""
         return self.session.exec(

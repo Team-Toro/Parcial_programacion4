@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useParams, Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShoppingCart, Package } from 'lucide-react';
 import { getProductoById } from '../api/productos';
 import { useAuthStore } from '../store/authStore';
 import { useCarritoStore } from '../store/carritoStore';
 import { cloudinaryTransform } from '../lib/cloudinary';
+import EditProductoModal from '../components/productos/EditProductoModal';
 
 function StockBadge({ value }: { value: number }) {
   const color =
@@ -34,8 +35,9 @@ export default function ProductoDetallePage() {
   const [toast, setToast] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const { agregarItem, totalItems, items } = useCarritoStore();
-  const navigate = useNavigate();
+  const qc = useQueryClient();
 
   if (isLoading) return <div className="p-8 text-slate-500">Cargando producto...</div>;
   if (isError || !producto) return <div className="p-8 text-red-500">Producto no encontrado.</div>;
@@ -91,7 +93,7 @@ export default function ProductoDetallePage() {
         </Link>
         {isAdmin && (
           <button
-            onClick={() => navigate('/productos', { state: { editId: producto.id } })}
+            onClick={() => setIsEditOpen(true)}
             className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg transition-colors"
           >
             Editar
@@ -276,6 +278,12 @@ export default function ProductoDetallePage() {
           </div>
         )}
       </div>
+      <EditProductoModal
+        producto={producto}
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['producto', Number(id)] })}
+      />
     </div>
   );
 }

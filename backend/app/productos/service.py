@@ -5,6 +5,7 @@ from .model import Producto, ProductoCategoria, ProductoIngrediente
 from .schema import ProductoCreate, ProductoUpdate
 from .repository import ProductoRepository
 from ..uow.unit_of_work import UnitOfWork
+from ..ingredientes.model import UnidadMedida
 
 
 def calcular_stock_disponible(producto: Producto) -> int:
@@ -97,8 +98,11 @@ class ProductoService:
             ))
 
         for ing_data in data.ingredientes:
-            if not repo.get_ingrediente(ing_data.ingrediente_id):
+            ing = repo.get_ingrediente(ing_data.ingrediente_id)
+            if not ing:
                 raise HTTPException(status_code=404, detail=f"Ingrediente {ing_data.ingrediente_id} no encontrado")
+            if ing.unidad == UnidadMedida.UNIDAD and ing_data.cantidad != int(ing_data.cantidad):
+                raise HTTPException(status_code=422, detail=f"La cantidad de '{ing.nombre}' debe ser un número entero (se mide por unidad)")
             repo.add(ProductoIngrediente(
                 producto_id=producto.id,
                 ingrediente_id=ing_data.ingrediente_id,
@@ -134,8 +138,11 @@ class ProductoService:
 
         if data.ingredientes is not None:
             for ing_data in data.ingredientes:
-                if not repo.get_ingrediente(ing_data.ingrediente_id):
+                ing = repo.get_ingrediente(ing_data.ingrediente_id)
+                if not ing:
                     raise HTTPException(status_code=404, detail=f"Ingrediente {ing_data.ingrediente_id} no encontrado")
+                if ing.unidad == UnidadMedida.UNIDAD and ing_data.cantidad != int(ing_data.cantidad):
+                    raise HTTPException(status_code=422, detail=f"La cantidad de '{ing.nombre}' debe ser un número entero (se mide por unidad)")
             for pi in repo.get_ingredientes_pivot(producto_id):
                 repo.delete(pi)
             for ing_data in data.ingredientes:

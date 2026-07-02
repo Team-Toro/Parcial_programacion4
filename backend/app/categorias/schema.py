@@ -62,7 +62,7 @@ class CategoriaPublic(BaseModel):
     def none_to_empty_list(cls, v: object) -> list:
         if v is None:
             return []
-        return [c for c in v if getattr(c, "deleted_at", None) is None]
+        return list(v)
 
     model_config = ConfigDict(from_attributes=True)
 

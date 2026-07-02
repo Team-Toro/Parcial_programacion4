@@ -102,7 +102,9 @@ function CategoriaTreeNode({
             ) : (
               <>
                 <button onClick={() => onEdit(categoria)} className="text-blue-600 hover:underline text-sm">Editar</button>
-                <button onClick={() => onDelete(categoria)} className="text-red-500 hover:underline text-sm">Eliminar</button>
+                {categoria.nombre !== 'Sin categoría' && (
+                  <button onClick={() => onDelete(categoria)} className="text-red-500 hover:underline text-sm">Eliminar</button>
+                )}
               </>
             )}
           </div>
@@ -426,7 +428,7 @@ export default function CategoriasPage() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteCategoria,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['categorias'] }); setDeleteConfirm(null); setDeleteStats(null); showToast('success', 'Categoría eliminada'); },
+    onSuccess: () => { setIncludeDeleted(true); qc.invalidateQueries({ queryKey: ['categorias'] }); setDeleteConfirm(null); setDeleteStats(null); showToast('success', 'Categoría eliminada'); },
   });
 
   const reactivarMutation = useMutation({
@@ -626,7 +628,9 @@ export default function CategoriasPage() {
                     ) : (
                       <>
                         <button onClick={() => openEdit(cat)} className="text-blue-600 hover:underline text-sm">Editar</button>
-                        <button onClick={() => handleDeleteClick(cat)} className="text-red-500 hover:underline text-sm">Eliminar</button>
+                        {cat.nombre !== 'Sin categoría' && (
+                          <button onClick={() => handleDeleteClick(cat)} className="text-red-500 hover:underline text-sm">Eliminar</button>
+                        )}
                       </>
                     )}
                   </div>
