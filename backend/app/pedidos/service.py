@@ -7,7 +7,6 @@ from .model import Pedido, DetallePedido, HistorialEstadoPedido
 from .schema import PedidoCreate
 from ..uow.unit_of_work import UnitOfWork
 from ..productos.service import calcular_stock_disponible
-from ..productos.model import Producto
 from ..ingredientes.model import UnidadMedida
 from ..estados_pedido.service import EstadoPedidoService
 from ..core.config import settings
@@ -37,12 +36,12 @@ _ROLES_POR_ESTADO: dict[str, list[str]] = {
 
 def _ajustar_stock(pedido: "Pedido", uow: "UnitOfWork", signo: int) -> None:
     for detalle in pedido.detalles:
-        producto = uow.session.get(Producto, detalle.producto_id)
+        producto = uow.productos.get_by_id_including_deleted(detalle.producto_id)
         if producto is None:
             continue
         if not producto.ingredientes:
             producto.stock_cantidad += signo * detalle.cantidad
-            uow.session.add(producto)
+            uow.productos.add(producto)
         else:
             for link in producto.ingredientes:
                 if link.ingrediente is not None:
@@ -50,7 +49,7 @@ def _ajustar_stock(pedido: "Pedido", uow: "UnitOfWork", signo: int) -> None:
                     if link.ingrediente.unidad == UnidadMedida.UNIDAD:
                         new_stock = round(new_stock)
                     link.ingrediente.stock_actual = new_stock
-                    uow.session.add(link.ingrediente)
+                    uow.productos.add(link.ingrediente)
 
 
 class PedidoService:
@@ -158,7 +157,7 @@ class PedidoService:
 
         # 6b. Descontar stock
         uow.pedidos.flush()
-        uow.session.refresh(pedido)
+        uow.pedidos.refresh(pedido)
         _ajustar_stock(pedido, uow, signo=-1)
         uow.pedidos.flush()
 
@@ -174,7 +173,6 @@ class PedidoService:
         uow.pedidos.flush()
 
         # 8. Recargar con detalles e historial
-        uow.session.expire(pedido)
         pedido = uow.pedidos.get_by_id(pedido.id)
 
         # 9. Si la forma de pago es MERCADOPAGO, crear el Pago asociado
@@ -270,7 +268,7 @@ class PedidoService:
         )
         uow.pedidos.add_historial(historial)
         uow.pedidos.flush()
-        uow.session.refresh(pedido)
+        uow.pedidos.refresh(pedido)
         return pedido
 
     def cambiar_estado_por_sistema(self, uow: UnitOfWork, pedido_id: int,

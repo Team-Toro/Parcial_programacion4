@@ -49,7 +49,7 @@ class DireccionService:
         # Si es_principal pasa de false → true, desmarcar las demás primero
         if update_data.get("es_principal") is True and not direccion.es_principal:
             uow.direcciones.unmark_principal_for_user(usuario_id)
-            uow.session.expire(direccion)
+            uow.direcciones.expire(direccion)
 
         update_data["updated_at"] = datetime.utcnow()
         for key, value in update_data.items():
@@ -62,7 +62,7 @@ class DireccionService:
     def marcar_principal(self, uow: UnitOfWork, direccion_id: int, usuario_id: int) -> DireccionEntrega:
         direccion = self.get_user_address(uow, direccion_id, usuario_id)
         uow.direcciones.unmark_principal_for_user(usuario_id)
-        uow.session.expire(direccion)
+        uow.direcciones.expire(direccion)
         direccion.es_principal = True
         direccion.updated_at = datetime.utcnow()
         uow.direcciones.add(direccion)

@@ -8,7 +8,6 @@ from fastapi import HTTPException, status
 from ..core.config import settings
 from ..uow.unit_of_work import UnitOfWork
 from .model import Pago
-from .repository import PagoRepository
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +119,6 @@ class PagoService:
         Crea el registro Pago con estado 'pending' pero SIN preferencia MP todavía.
         La preferencia se crea al hacer click en 'Pagar' (POST /pagos/create-preference).
         """
-        repo: PagoRepository = uow.pagos
         pago = Pago(
             pedido_id=pedido.id,
             transaction_amount=pedido.total,
@@ -128,9 +126,9 @@ class PagoService:
             external_reference=str(pedido.id),
             idempotency_key=str(uuid.uuid4()),
         )
-        repo.add(pago)
-        uow.session.flush()
-        uow.session.refresh(pago)
+        uow.pagos.add(pago)
+        uow.pagos.flush()
+        uow.pagos.refresh(pago)
         logger.info("Pago pendiente creado para pedido=%s (sin preferencia MP)", pedido.id)
         return pago
 
@@ -213,7 +211,7 @@ class PagoService:
         pago.mp_init_point = mp_data["init_point"]
         pago.updated_at = datetime.utcnow()
         uow.pagos.add(pago)
-        uow.session.flush()
+        uow.pagos.flush()
 
         return {
             "pago_id": pago.id,
@@ -306,7 +304,7 @@ class PagoService:
         pago.payment_method_id = mp_info.get("payment_method_id")
         pago.updated_at = datetime.utcnow()
         uow.pagos.add(pago)
-        uow.session.flush()
+        uow.pagos.flush()
 
         pedido_avanzado = None
         if mp_status == "approved":
@@ -373,7 +371,7 @@ class PagoService:
         pago.payment_method_id = mp_info.get("payment_method_id")
         pago.updated_at = datetime.utcnow()
         uow.pagos.add(pago)
-        uow.session.flush()
+        uow.pagos.flush()
 
         pedido_avanzado = None
         if mp_status == "approved":
