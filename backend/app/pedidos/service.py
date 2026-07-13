@@ -34,6 +34,11 @@ _ROLES_POR_ESTADO: dict[str, list[str]] = {
 }
 
 
+# NOTE: Race condition — stock validation (calcular_stock_disponible) and deduction
+# (_ajustar_stock) are two separate steps with no row-level locking (no SELECT FOR UPDATE).
+# A concurrent request could pass the stock check and then both deplete the same stock.
+# This is a known limitation accepted for this university project given the expected
+# low concurrent user count.
 def _ajustar_stock(pedido: "Pedido", uow: "UnitOfWork", signo: int) -> None:
     for detalle in pedido.detalles:
         producto = uow.productos.get_by_id_including_deleted(detalle.producto_id)

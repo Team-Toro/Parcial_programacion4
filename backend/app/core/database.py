@@ -24,5 +24,10 @@ def create_all_tables() -> None:
     import app.categorias.model  # noqa: F401
     import app.productos.model  # noqa: F401
     import app.ingredientes.model  # noqa: F401
+    import app.pedidos.model  # noqa: F401
+    import app.pagos.model  # noqa: F401
+    import app.direcciones.model  # noqa: F401
+    import app.formas_pago.model  # noqa: F401
+    import app.estados_pedido.model  # noqa: F401
 
     SQLModel.metadata.create_all(engine)
