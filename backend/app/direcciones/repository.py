@@ -38,6 +38,9 @@ class DireccionRepository:
     def refresh(self, direccion: DireccionEntrega) -> None:
         self.session.refresh(direccion)
 
+    def expire(self, obj) -> None:
+        self.session.expire(obj)
+
     def unmark_principal_for_user(self, usuario_id: int) -> None:
         stmt = (
             update(DireccionEntrega)

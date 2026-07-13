@@ -464,9 +464,12 @@ export default function IngredientesPage() {
                 value={form.stock_actual}
                 onFocus={e => { if (Number(e.target.value) === 0) e.target.select(); }}
                 onChange={e => {
-                  const val = parseFloat(e.target.value) || 0;
+                  const raw = e.target.value;
+                  if (raw === '') return;
+                  const val = parseFloat(raw) || 0;
                   setForm(f => ({ ...f, stock_actual: f.unidad === 'unidad' ? Math.floor(val) : val }));
                 }}
+                onBlur={e => { if (e.target.value === '') setForm(f => ({ ...f, stock_actual: 0 })); }}
               />
             </div>
             <div>
@@ -478,7 +481,8 @@ export default function IngredientesPage() {
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                 value={form.precio}
                 onFocus={e => { if (Number(e.target.value) === 0) e.target.select(); }}
-                onChange={e => setForm(f => ({ ...f, precio: parseFloat(e.target.value) || 0 }))}
+                onChange={e => { if (e.target.value !== '') setForm(f => ({ ...f, precio: parseFloat(e.target.value) || 0 })); }}
+                onBlur={e => { if (e.target.value === '') setForm(f => ({ ...f, precio: 0 })); }}
               />
             </div>
             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer mt-1">

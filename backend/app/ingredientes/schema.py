@@ -2,7 +2,7 @@ from typing import Optional
 from decimal import Decimal
 from datetime import datetime
 from sqlmodel import SQLModel
-from pydantic import field_validator
+from pydantic import field_validator, ValidationInfo
 from .model import UnidadMedida
 
 
@@ -21,6 +21,13 @@ class IngredienteBase(SQLModel):
             raise ValueError("El nombre no puede estar vacío")
         return v.strip()
 
+    @field_validator("stock_actual")
+    @classmethod
+    def stock_entero_si_unidad(cls, v: float, info: ValidationInfo) -> float:
+        if info.data.get("unidad") == UnidadMedida.UNIDAD and v != int(v):
+            raise ValueError("stock_actual debe ser un número entero cuando la unidad es 'unidad'")
+        return v
+
 
 class IngredienteCreate(IngredienteBase):
     pass
@@ -33,6 +40,13 @@ class IngredienteUpdate(SQLModel):
     unidad: Optional[UnidadMedida] = None
     stock_actual: Optional[float] = None
     precio: Optional[Decimal] = None
+
+    @field_validator("stock_actual")
+    @classmethod
+    def stock_entero_si_unidad(cls, v: Optional[float], info: ValidationInfo) -> Optional[float]:
+        if v is not None and info.data.get("unidad") == UnidadMedida.UNIDAD and v != int(v):
+            raise ValueError("stock_actual debe ser un número entero cuando la unidad es 'unidad'")
+        return v
 
 
 class IngredienteRead(IngredienteBase):

@@ -95,10 +95,19 @@ export default function AdminUsuariosPage() {
     setShowWarning(false);
   };
 
+  const STAFF_ROLES = ['ADMIN', 'STOCK', 'PEDIDOS'];
+
   const toggleRole = (role: string) => {
-    setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    );
+    setSelectedRoles((prev) => {
+      if (prev.includes(role)) {
+        return prev.filter((r) => r !== role);
+      }
+      if (role === 'CLIENTE') {
+        return ['CLIENTE', ...prev.filter((r) => !STAFF_ROLES.includes(r))];
+      }
+      // toggling ON a staff role: remove CLIENTE
+      return [...prev.filter((r) => r !== 'CLIENTE'), role];
+    });
   };
 
   const handleSaveRoles = () => {

@@ -49,7 +49,7 @@ class CategoriaService:
 
     def get_stats(self, uow: UnitOfWork, categoria_id: int) -> CategoriaStats:
         """Retorna conteo de subcategorías, productos y nivel jerárquico de una categoría."""
-        self.get_by_id(uow, categoria_id)
+        self.get_by_id(uow, categoria_id, include_deleted=True)
 
         repo = CategoriaRepository(uow.session)
         subcategorias_count = repo.count_subcategorias(categoria_id)
@@ -190,6 +190,12 @@ class CategoriaService:
                 detail=f"Categoría {categoria_id} no encontrada"
             )
 
+        if categoria.nombre == "Sin categoría":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se puede eliminar la categoría predeterminada 'Sin categoría'"
+            )
+
         now = datetime.utcnow()
         all_ids = repo.get_all_children_ids(categoria_id)
 
@@ -200,16 +206,24 @@ class CategoriaService:
             repo.save(sin_cat)
 
         # Reasignar relaciones producto-categoría al nodo "Sin categoría"
-        # y promover otra categoría a principal si la reasignada era la principal
+        # y promover otra categoría activa a principal si la reasignada era la principal
+        from ..productos.model import ProductoCategoria
         for cid in all_ids:
             for pc in repo.get_productos_relaciones(cid):
                 era_principal = pc.es_principal
-                pc.categoria_id = sin_cat.id
-                pc.es_principal = False
+                producto_id = pc.producto_id
+                repo.delete_producto_relacion(pc)
+                todas_del_producto = repo.get_productos_relaciones_by_producto(producto_id)
+                ya_en_sin_cat = any(r.categoria_id == sin_cat.id for r in todas_del_producto)
+                if not ya_en_sin_cat:
+                    repo.add_producto_relacion(ProductoCategoria(
+                        producto_id=producto_id,
+                        categoria_id=sin_cat.id,
+                        es_principal=False,
+                    ))
                 if era_principal:
-                    # Intentar promover otra categoría activa del mismo producto a principal
                     otras = [
-                        r for r in repo.get_productos_relaciones_by_producto(pc.producto_id)
+                        r for r in todas_del_producto
                         if r.categoria_id not in all_ids and r.categoria_id != sin_cat.id
                     ]
                     if otras:

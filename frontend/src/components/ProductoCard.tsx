@@ -36,6 +36,7 @@ export default function ProductoCard({ producto }: Props) {
       ingredientes_removibles: producto.ingredientes
         .filter((pi) => pi.es_removible)
         .map((pi) => ({ id: pi.ingrediente.id, nombre: pi.ingrediente.nombre })),
+      stock_cantidad: producto.stock_disponible,
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);

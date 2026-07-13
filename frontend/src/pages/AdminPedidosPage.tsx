@@ -238,7 +238,7 @@ export default function AdminPedidosPage() {
                     <tr key={p.id} className={`transition-colors duration-500 ${isFlashing ? 'bg-orange-100' : 'bg-white hover:bg-slate-50'}`}>
                       <td className="px-4 py-3">
                         <Link
-                          to={`/mis-pedidos/${p.id}`}
+                          to={`/admin/pedidos/${p.id}`}
                           className="text-orange-500 hover:underline font-medium"
                         >
                           #{p.id}

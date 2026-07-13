@@ -320,7 +320,7 @@ PRODUCTOS_INICIALES = [
         "precio_base": Decimal("3600.00"),
         "stock_cantidad": 16,
         "disponible": True,
-        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371495/foodstore/seed/kfskp7gjq16cor4cee6m.jpg"],
+        "imagenes_url": ["https://res.cloudinary.com/dx9stcpo4/image/upload/v1781371110/foodstore/seed/yeciwfx17foxqugflk47.jpg"],
         "categorias": ["Comidas", "Hamburguesas"],
         "ingredientes": [
             {"nombre": "Carne vacuna", "es_removible": False, "cantidad": 0.15},

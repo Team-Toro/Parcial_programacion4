@@ -27,7 +27,6 @@ from app.core.security import (
 from app.uow.unit_of_work import UnitOfWork
 from .model import Usuario, UsuarioRol
 from app.refresh_tokens.model import RefreshToken
-from .repository import UsuarioRepository
 from .schema import UsuarioCreate, UsuarioPublic, UsuarioToken
 
 
@@ -38,8 +37,7 @@ class UsuarioService:
 
     def get_by_username(self, uow: UnitOfWork, username: str) -> Usuario | None:
         """Obtiene un usuario por username (sin lanzar HTTPException)."""
-        repo = UsuarioRepository(uow.session)
-        return repo.get_by_username(username)
+        return uow.usuarios.get_by_username(username)
 
     def get_roles(self, uow: UnitOfWork, user_id: int) -> list[str]:
         """Return the list of role codes assigned to the user.
@@ -47,13 +45,11 @@ class UsuarioService:
         Minimal implementation that delegates to the repository to avoid
         changing the models. Returns a list of role ids (strings).
         """
-        repo = UsuarioRepository(uow.session)
-        return repo.get_roles_for_user(user_id)
+        return uow.usuarios.get_roles_for_user(user_id)
 
     def register(self, uow: UnitOfWork, user_in: UsuarioCreate) -> Usuario:
         """Registra un nuevo usuario. El rol siempre es 'user'."""
-        repo = UsuarioRepository(uow.session)
-        if repo.get_by_email(user_in.email):
+        if uow.usuarios.get_by_email(user_in.email):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="El email ya está registrado",
@@ -66,10 +62,10 @@ class UsuarioService:
             celular=user_in.celular,
             hashed_password=hash_password(user_in.password),
         )
-        repo.add(usuario)
-        repo.flush()
-        repo.refresh(usuario)
-        repo.add(UsuarioRol(
+        uow.usuarios.add(usuario)
+        uow.usuarios.flush()
+        uow.usuarios.refresh(usuario)
+        uow.usuarios.add(UsuarioRol(
             usuario_id=usuario.id,
             role_id="CLIENTE",
             assigned_by=None,
@@ -79,8 +75,7 @@ class UsuarioService:
 
     def authenticate(self, uow: UnitOfWork, username: str, password: str) -> UsuarioToken:
         """Autentica con username + password y retorna un Token con JWT + refresh token."""
-        repo = UsuarioRepository(uow.session)
-        user = repo.get_by_username(username)
+        user = uow.usuarios.get_by_username(username)
 
         if not user or not verify_password(password, user.hashed_password):
             raise HTTPException(
@@ -95,7 +90,7 @@ class UsuarioService:
                 detail="Cuenta de usuario desactivada",
             )
 
-        roles = repo.get_roles_for_user(user.id)
+        roles = uow.usuarios.get_roles_for_user(user.id)
         access_token = create_access_token(
             data={"sub": user.email, "roles": roles}
         )
@@ -126,8 +121,7 @@ class UsuarioService:
                 detail="Refresh token inválido o expirado",
             )
 
-        repo = UsuarioRepository(uow.session)
-        usuario = repo.get_by_id(rt.usuario_id)
+        usuario = uow.usuarios.get_by_id(rt.usuario_id)
         if not usuario or usuario.disabled:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -146,7 +140,7 @@ class UsuarioService:
         uow.refresh_tokens.add(new_rt)
 
         # Roles actuales del usuario (no del JWT viejo)
-        roles = repo.get_roles_for_user(usuario.id)
+        roles = uow.usuarios.get_roles_for_user(usuario.id)
         access_token = create_access_token(data={"sub": usuario.email, "roles": roles})
 
         return UsuarioToken(
@@ -165,8 +159,7 @@ class UsuarioService:
 
     def to_public(self, uow: UnitOfWork, usuario: Usuario) -> UsuarioPublic:
         """Serializa un Usuario ORM al schema público incluyendo sus roles actuales."""
-        repo = UsuarioRepository(uow.session)
-        roles = repo.get_roles_for_user(usuario.id)
+        roles = uow.usuarios.get_roles_for_user(usuario.id)
         return UsuarioPublic(
             id=usuario.id,
             first_name=usuario.first_name,
@@ -179,8 +172,7 @@ class UsuarioService:
 
     def list_all(self, uow: UnitOfWork) -> list[Usuario]:
         """Lista todos los usuarios."""
-        repo = UsuarioRepository(uow.session)
-        return repo.get_all()
+        return uow.usuarios.get_all()
 
     def list_users(
         self,
@@ -194,8 +186,7 @@ class UsuarioService:
         order: str = "asc",
     ) -> list[Usuario]:
         """Lista usuarios con filtros de búsqueda, rol, estado y paginación."""
-        repo = UsuarioRepository(uow.session)
-        return repo.list(
+        return uow.usuarios.list(
             offset=offset,
             limit=limit,
             q=q,
@@ -207,23 +198,21 @@ class UsuarioService:
 
     def set_disabled(self, uow: UnitOfWork, user_id: int, disabled: bool) -> Usuario:
         """Activa o desactiva la cuenta de un usuario."""
-        repo = UsuarioRepository(uow.session)
-        user = repo.get_by_id(user_id)
+        user = uow.usuarios.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Usuario no encontrado",
             )
         user.disabled = disabled
-        repo.add(user)
-        repo.flush()
-        repo.refresh(user)
+        uow.usuarios.add(user)
+        uow.usuarios.flush()
+        uow.usuarios.refresh(user)
         return user
 
     def set_roles(self, uow: UnitOfWork, user_id: int, roles: list[str] | None) -> Usuario:
         """Reemplaza los roles del usuario; si queda sin roles válidos, desactiva la cuenta."""
-        repo = UsuarioRepository(uow.session)
-        user = repo.get_by_id(user_id)
+        user = uow.usuarios.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -231,19 +220,26 @@ class UsuarioService:
             )
 
         requested = [r for r in (roles or []) if r in self.ALLOWED_ROLES]
+
+        STAFF_ROLES = {"ADMIN", "STOCK", "PEDIDOS"}
+        if "CLIENTE" in requested and any(r in STAFF_ROLES for r in requested):
+            raise HTTPException(
+                status_code=400,
+                detail="El rol CLIENTE no puede combinarse con roles de staff",
+            )
+
         final_roles = requested or ["CLIENTE"]
-        repo.replace_roles_for_user(user_id, final_roles)
+        uow.usuarios.replace_roles_for_user(user_id, final_roles)
 
         if not requested:
             user.disabled = True
-        repo.add(user)
-        repo.flush()
-        repo.refresh(user)
+        uow.usuarios.add(user)
+        uow.usuarios.flush()
+        uow.usuarios.refresh(user)
         return user
 
     def ensure_default_role_on_activate(self, uow: UnitOfWork, user: Usuario) -> None:
         """Asigna el rol CLIENTE si el usuario no tiene ningún rol al reactivarse."""
-        repo = UsuarioRepository(uow.session)
-        roles = repo.get_roles_for_user(user.id)
+        roles = uow.usuarios.get_roles_for_user(user.id)
         if not roles:
-            repo.replace_roles_for_user(user.id, ["CLIENTE"])
+            uow.usuarios.replace_roles_for_user(user.id, ["CLIENTE"])

@@ -42,3 +42,9 @@ class PagoRepository:
 
     def add(self, pago: Pago) -> None:
         self.session.add(pago)
+
+    def flush(self) -> None:
+        self.session.flush()
+
+    def refresh(self, pago: Pago) -> None:
+        self.session.refresh(pago)

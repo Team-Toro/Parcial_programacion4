@@ -5,7 +5,6 @@ from fastapi import HTTPException
 from .model import Ingrediente
 from .schema import IngredienteCreate, IngredienteUpdate
 from .repository import IngredienteRepository
-from ..productos.model import Producto
 from ..productos.repository import ProductoRepository
 from ..uow.unit_of_work import UnitOfWork
 
@@ -81,7 +80,7 @@ class IngredienteService:
         for pivot in pivots:
             if pivot.producto_id is None or pivot.producto_id in seen_producto_ids:
                 continue
-            producto = uow.session.get(Producto, pivot.producto_id)
+            producto = producto_repo.get_by_id_including_deleted(pivot.producto_id)
             if producto is None or producto.deleted_at is not None:
                 continue
             nuevo_precio = Decimal("0")
@@ -91,7 +90,7 @@ class IngredienteService:
                 nuevo_precio += Decimal(str(link.ingrediente.precio)) * Decimal(str(link.cantidad))
             producto.precio_base = nuevo_precio
             producto.updated_at = now
-            uow.session.add(producto)
+            producto_repo.add(producto)
             seen_producto_ids.add(pivot.producto_id)
 
     def delete(self, uow: UnitOfWork, ingrediente_id: int) -> None:

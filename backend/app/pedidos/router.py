@@ -17,6 +17,7 @@ from ..core.deps import get_current_active_user, require_role
 from ..core.security import decode_access_token
 from ..core.websocket import manager
 from ..usuarios.model import Usuario
+from ..direcciones.schema import DireccionPublic
 
 router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
 logger = logging.getLogger(__name__)
@@ -254,4 +255,10 @@ def obtener_pedido(
     current_user: Annotated[Usuario, Depends(get_current_active_user)],
 ):
     roles = getattr(current_user, "roles", [])
-    return service.get_pedido_for_user(uow, pedido_id, current_user.id, roles)
+    pedido = service.get_pedido_for_user(uow, pedido_id, current_user.id, roles)
+    response = PedidoPublic.model_validate(pedido)
+    if pedido.direccion_id:
+        dir_obj = uow.DireccionRepository.get_by_id(pedido.direccion_id, include_deleted=True)
+        if dir_obj:
+            response.direccion = DireccionPublic.model_validate(dir_obj)
+    return response

@@ -73,7 +73,8 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
           step="0.01"
           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
           value={form.precio_base}
-          onChange={e => onChange({ ...form, precio_base: parseFloat(e.target.value) || 0 })}
+          onChange={e => { if (e.target.value !== '') onChange({ ...form, precio_base: parseFloat(e.target.value) || 0 }); }}
+          onBlur={e => { if (e.target.value === '') onChange({ ...form, precio_base: 0 }); }}
         />
       </div>
       <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
@@ -168,7 +169,8 @@ export default function ProductoForm({ form, onChange, categorias, ingredientes 
                       min={0}
                       step="0.01"
                       value={sel.cantidad}
-                      onChange={e => updateIngProp(ing.id, 'cantidad', parseFloat(e.target.value) || 0)}
+                      onChange={e => { if (e.target.value !== '') updateIngProp(ing.id, 'cantidad', parseFloat(e.target.value) || 0); }}
+                      onBlur={e => { if (e.target.value === '') updateIngProp(ing.id, 'cantidad', 0); }}
                       className="w-20 border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400"
                     />
                     <span className="text-xs text-slate-400">{ing.unidad}</span>

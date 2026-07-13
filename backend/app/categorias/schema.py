@@ -60,7 +60,9 @@ class CategoriaPublic(BaseModel):
     @field_validator("subcategorias", mode="before")
     @classmethod
     def none_to_empty_list(cls, v: object) -> list:
-        return [] if v is None else v
+        if v is None:
+            return []
+        return list(v)
 
     model_config = ConfigDict(from_attributes=True)
 

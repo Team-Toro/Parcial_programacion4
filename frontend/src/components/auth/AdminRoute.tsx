@@ -16,10 +16,10 @@ export default function AdminRoute() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['me'],
     queryFn: getMe,
-    enabled: !user,
+    enabled: true,
     retry: (failureCount, err) => !isAuthError(err) && failureCount < 2,
     retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 2000),
-    staleTime: 30_000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const effectiveUser = user ?? data ?? null;

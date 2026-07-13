@@ -8,7 +8,7 @@ Los valores sensibles (SECRET_KEY, POSTGRES_PASSWORD) viven en .env.
 
 from decimal import Decimal
 from typing import Optional
-from pydantic import computed_field
+from pydantic import computed_field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -33,12 +33,23 @@ class Settings(BaseSettings):
     # ─── JWT ──────────────────────────────────────────────────────────────────
     SECRET_KEY: str  # Obligatorio — sin default. Mínimo 32 chars.
     ALGORITHM: str = "HS256"
+
+    @field_validator("SECRET_KEY", mode="after")
+    @classmethod
+    def secret_key_min_length(cls, v: str) -> str:
+        if len(v) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters")
+        return v
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     COSTO_ENVIO_DEFAULT: Decimal = Decimal("50.00")
 
     FRONTEND_URL: str = "http://localhost:5173"
+
+    SECURE_COOKIES: bool = False
+
+    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:5174"]
 
     # ─── MercadoPago ─────────────────────────────────────────────────────────
     MP_ACCESS_TOKEN: Optional[str] = None
